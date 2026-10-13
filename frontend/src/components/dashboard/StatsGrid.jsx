@@ -1,6 +1,7 @@
 import React from 'react';
 import { FileText, Share2, FolderKanban, Users, BarChart3 } from 'lucide-react';
 import Skeleton from '../common/Skeleton';
+import './DashboardPremium.css';
 
 const ICONS = { documents: FileText, shared: Share2, projects: FolderKanban, collaborators: Users };
 

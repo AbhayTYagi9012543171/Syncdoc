@@ -6,6 +6,7 @@ import Topbar from "./Topbar";
 import CommandPalette from "../common/CommandPalette";
 import SystemStatus from "../common/SystemStatus";
 import QuickActions from "../common/QuickActions";
+import "./LayoutPremium.css";
 
 export default function AppLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);

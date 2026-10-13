@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import Card from '../common/Card';
+import './DashboardPremium.css';
 
 const Y_AXIS_VALUES = [100, 75, 50, 25, 0];
 

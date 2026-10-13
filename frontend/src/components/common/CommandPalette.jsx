@@ -1,3 +1,4 @@
+import './CommonPremium.css';
 import React, { useEffect, useRef, useState } from 'react';
 import { FileText, Search, Users, Briefcase, ArrowRight, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';

@@ -2,6 +2,7 @@
 import React from 'react';
 
 import Button from '../common/Button';
+import './DashboardPremium.css';
 
 export default function DashboardHeader({
   onCreate,

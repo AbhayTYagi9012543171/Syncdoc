@@ -1,5 +1,6 @@
 
 import React from 'react';
+import './DocumentPremium.css';
 
 import DocumentCard from './DocumentCard';
 import EmptyState from '../common/EmptyState';

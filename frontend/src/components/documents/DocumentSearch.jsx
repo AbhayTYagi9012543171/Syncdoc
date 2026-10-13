@@ -1,5 +1,6 @@
 
 import React, { useRef } from 'react';
+import './DocumentPremium.css';
 
 export default function DocumentSearch({
   value = '',

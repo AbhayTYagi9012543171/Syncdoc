@@ -3,6 +3,7 @@ import Avatar from '../common/Avatar';
 import Card from '../common/Card';
 import Skeleton from '../common/Skeleton';
 import { formatRelativeDate } from '../../utils/formatDate';
+import './DashboardPremium.css';
 
 function ActivitySkeleton() {
   return (

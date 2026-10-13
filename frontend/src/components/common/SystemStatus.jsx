@@ -1,3 +1,4 @@
+import './CommonPremium.css';
 import React, { useEffect, useState } from "react";
 import { Cloud, CloudOff, ShieldCheck, Zap } from "lucide-react";
 import api from "../../services/api";

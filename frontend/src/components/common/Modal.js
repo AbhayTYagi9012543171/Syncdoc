@@ -1,3 +1,4 @@
+import './CommonPremium.css';
 import React, { useEffect, useId, useRef } from 'react';
 
 const ALLOWED_SIZES = ['xs', 'sm', 'md', 'lg', 'xl', 'full'];

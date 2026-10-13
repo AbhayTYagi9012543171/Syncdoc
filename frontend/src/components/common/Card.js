@@ -1,3 +1,4 @@
+import './CommonPremium.css';
 
 import React from 'react';
 

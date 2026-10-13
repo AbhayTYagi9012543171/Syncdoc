@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 
 import Avatar from '../common/Avatar';
 import Skeleton from '../common/Skeleton';
+import './DashboardPremium.css';
 
 const getDocumentId = (document) => {
   if (!document) {

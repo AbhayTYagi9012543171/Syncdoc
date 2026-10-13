@@ -1,5 +1,6 @@
 
 import React from 'react';
+import './DocumentPremium.css';
 
 const FILTER_OPTIONS = [
   {

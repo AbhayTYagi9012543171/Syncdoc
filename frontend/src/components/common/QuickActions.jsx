@@ -1,3 +1,4 @@
+import './CommonPremium.css';
 import React, { useEffect, useState } from "react";
 import { FilePlus2, Keyboard, Maximize2, Minimize2, Plus, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";

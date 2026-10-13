@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import './DocumentPremium.css';
 
 import Button from '../common/Button';
 import Modal from '../common/Modal';
