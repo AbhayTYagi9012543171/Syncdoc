@@ -1,0 +1,434 @@
+{"level":"info","message":"MongoDB connected successfully","service":"syncdoc-backend","timestamp":"2026-09-10 20:38:26"}
+{"level":"warn","message":"Redis unavailable. Continuing without Redis.","service":"syncdoc-backend","timestamp":"2026-09-10 20:38:26"}
+{"level":"info","message":"Global API rate limit: 50000 requests / 15 minutes (development)","service":"syncdoc-backend","timestamp":"2026-09-10 20:38:26"}
+{"level":"info","message":"Development mode: localhost global rate limiting is bypassed.","service":"syncdoc-backend","timestamp":"2026-09-10 20:38:26"}
+{"level":"info","message":"============================================================","service":"syncdoc-backend","timestamp":"2026-09-10 20:38:26"}
+{"level":"info","message":"SyncDoc Backend Started","service":"syncdoc-backend","timestamp":"2026-09-10 20:38:26"}
+{"level":"info","message":"Server: http://localhost:5000","service":"syncdoc-backend","timestamp":"2026-09-10 20:38:26"}
+{"level":"info","message":"Health: http://localhost:5000/api/health","service":"syncdoc-backend","timestamp":"2026-09-10 20:38:26"}
+{"level":"info","message":"System Status: http://localhost:5000/api/system/status","service":"syncdoc-backend","timestamp":"2026-09-10 20:38:26"}
+{"level":"info","message":"API: http://localhost:5000/api","service":"syncdoc-backend","timestamp":"2026-09-10 20:38:26"}
+{"level":"info","message":"Socket.IO: enabled","service":"syncdoc-backend","timestamp":"2026-09-10 20:38:26"}
+{"level":"info","message":"Yjs WebSocket: enabled","service":"syncdoc-backend","timestamp":"2026-09-10 20:38:26"}
+{"level":"info","message":"Yjs URL: ws://localhost:5000/yjs/:documentId?token=JWT","service":"syncdoc-backend","timestamp":"2026-09-10 20:38:26"}
+{"level":"info","message":"MongoDB: connected","service":"syncdoc-backend","timestamp":"2026-09-10 20:38:26"}
+{"level":"info","message":"Redis: optional/unavailable","service":"syncdoc-backend","timestamp":"2026-09-10 20:38:26"}
+{"level":"info","message":"Environment: development","service":"syncdoc-backend","timestamp":"2026-09-10 20:38:26"}
+{"level":"info","message":"Rate Limit: 50000 requests / 15 minutes","service":"syncdoc-backend","timestamp":"2026-09-10 20:38:26"}
+{"level":"info","message":"Localhost development rate limiting: BYPASSED","service":"syncdoc-backend","timestamp":"2026-09-10 20:38:26"}
+{"level":"info","message":"============================================================","service":"syncdoc-backend","timestamp":"2026-09-10 20:38:26"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-09-10 20:38:43"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-09-10 20:38:44"}
+{"level":"info","message":"[GET] /api/auth/me","service":"syncdoc-backend","timestamp":"2026-09-10 20:38:45"}
+{"level":"info","message":"[GET] /api/auth/me","service":"syncdoc-backend","timestamp":"2026-09-10 20:38:45"}
+{"level":"info","message":"[POST] /api/auth/login","service":"syncdoc-backend","timestamp":"2026-09-10 20:39:21"}
+{"level":"error","message":"Login error: Invalid email or password","service":"syncdoc-backend","stack":"Error: Invalid email or password\n    at UserSchema.statics.findByCredentials (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\backend\\src\\models\\User.js:341:11)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async login (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\backend\\src\\controllers\\AuthController.js:217:20)","timestamp":"2026-09-10 20:39:21"}
+{"level":"info","message":"[POST] /api/auth/login","service":"syncdoc-backend","timestamp":"2026-09-10 20:39:24"}
+{"level":"error","message":"Login error: Invalid email or password","service":"syncdoc-backend","stack":"Error: Invalid email or password\n    at UserSchema.statics.findByCredentials (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\backend\\src\\models\\User.js:341:11)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async login (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\backend\\src\\controllers\\AuthController.js:217:20)","timestamp":"2026-09-10 20:39:24"}
+{"level":"info","message":"[POST] /api/auth/login","service":"syncdoc-backend","timestamp":"2026-09-10 20:39:49"}
+{"level":"error","message":"Login error: secretOrPrivateKey must have a value","service":"syncdoc-backend","stack":"Error: secretOrPrivateKey must have a value\n    at module.exports [as sign] (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\node_modules\\jsonwebtoken\\sign.js:111:20)\n    at UserSchema.methods.generateAuthToken (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\backend\\src\\models\\User.js:238:14)\n    at login (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\backend\\src\\controllers\\AuthController.js:240:14)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)","timestamp":"2026-09-10 20:39:49"}
+{"level":"info","message":"[POST] /api/auth/login","service":"syncdoc-backend","timestamp":"2026-09-10 20:40:01"}
+{"level":"error","message":"Login error: secretOrPrivateKey must have a value","service":"syncdoc-backend","stack":"Error: secretOrPrivateKey must have a value\n    at module.exports [as sign] (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\node_modules\\jsonwebtoken\\sign.js:111:20)\n    at UserSchema.methods.generateAuthToken (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\backend\\src\\models\\User.js:238:14)\n    at login (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\backend\\src\\controllers\\AuthController.js:240:14)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)","timestamp":"2026-09-10 20:40:01"}
+{"level":"info","message":"[POST] /api/auth/login","service":"syncdoc-backend","timestamp":"2026-09-10 20:40:27"}
+{"level":"error","message":"Login error: secretOrPrivateKey must have a value","service":"syncdoc-backend","stack":"Error: secretOrPrivateKey must have a value\n    at module.exports [as sign] (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\node_modules\\jsonwebtoken\\sign.js:111:20)\n    at UserSchema.methods.generateAuthToken (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\backend\\src\\models\\User.js:238:14)\n    at login (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\backend\\src\\controllers\\AuthController.js:240:14)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)","timestamp":"2026-09-10 20:40:27"}
+{"level":"info","message":"SIGINT received. Shutting down gracefully...","service":"syncdoc-backend","timestamp":"2026-09-10 20:42:08"}
+{"level":"info","message":"MongoDB connected successfully","service":"syncdoc-backend","timestamp":"2026-09-10 20:42:19"}
+{"level":"warn","message":"Redis unavailable. Continuing without Redis.","service":"syncdoc-backend","timestamp":"2026-09-10 20:42:19"}
+{"level":"info","message":"Global API rate limit: 50000 requests / 15 minutes (development)","service":"syncdoc-backend","timestamp":"2026-09-10 20:42:19"}
+{"level":"info","message":"Development mode: localhost global rate limiting is bypassed.","service":"syncdoc-backend","timestamp":"2026-09-10 20:42:19"}
+{"level":"info","message":"============================================================","service":"syncdoc-backend","timestamp":"2026-09-10 20:42:19"}
+{"level":"info","message":"SyncDoc Backend Started","service":"syncdoc-backend","timestamp":"2026-09-10 20:42:19"}
+{"level":"info","message":"Server: http://localhost:5000","service":"syncdoc-backend","timestamp":"2026-09-10 20:42:19"}
+{"level":"info","message":"Health: http://localhost:5000/api/health","service":"syncdoc-backend","timestamp":"2026-09-10 20:42:19"}
+{"level":"info","message":"System Status: http://localhost:5000/api/system/status","service":"syncdoc-backend","timestamp":"2026-09-10 20:42:19"}
+{"level":"info","message":"API: http://localhost:5000/api","service":"syncdoc-backend","timestamp":"2026-09-10 20:42:19"}
+{"level":"info","message":"Socket.IO: enabled","service":"syncdoc-backend","timestamp":"2026-09-10 20:42:19"}
+{"level":"info","message":"Yjs WebSocket: enabled","service":"syncdoc-backend","timestamp":"2026-09-10 20:42:19"}
+{"level":"info","message":"Yjs URL: ws://localhost:5000/yjs/:documentId?token=JWT","service":"syncdoc-backend","timestamp":"2026-09-10 20:42:19"}
+{"level":"info","message":"MongoDB: connected","service":"syncdoc-backend","timestamp":"2026-09-10 20:42:19"}
+{"level":"info","message":"Redis: optional/unavailable","service":"syncdoc-backend","timestamp":"2026-09-10 20:42:19"}
+{"level":"info","message":"Environment: development","service":"syncdoc-backend","timestamp":"2026-09-10 20:42:19"}
+{"level":"info","message":"Rate Limit: 50000 requests / 15 minutes","service":"syncdoc-backend","timestamp":"2026-09-10 20:42:19"}
+{"level":"info","message":"Localhost development rate limiting: BYPASSED","service":"syncdoc-backend","timestamp":"2026-09-10 20:42:19"}
+{"level":"info","message":"============================================================","service":"syncdoc-backend","timestamp":"2026-09-10 20:42:19"}
+{"level":"info","message":"[POST] /api/auth/login","service":"syncdoc-backend","timestamp":"2026-09-10 20:43:36"}
+{"level":"info","message":"User login successful: prashantsharmaps7417@gmail.com","service":"syncdoc-backend","timestamp":"2026-09-10 20:43:36"}
+{"level":"info","message":"[GET] /api/workspaces","service":"syncdoc-backend","timestamp":"2026-09-10 20:43:36"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-09-10 20:43:36"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-09-10 20:43:36"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-09-10 20:48:17"}
+{"level":"info","message":"MongoDB connected successfully","service":"syncdoc-backend","timestamp":"2026-09-10 20:48:34"}
+{"level":"warn","message":"Redis unavailable. Continuing without Redis.","service":"syncdoc-backend","timestamp":"2026-09-10 20:48:34"}
+{"level":"info","message":"Global API rate limit: 50000 requests / 15 minutes (development)","service":"syncdoc-backend","timestamp":"2026-09-10 20:48:34"}
+{"level":"info","message":"Development mode: localhost global rate limiting is bypassed.","service":"syncdoc-backend","timestamp":"2026-09-10 20:48:34"}
+{"level":"info","message":"============================================================","service":"syncdoc-backend","timestamp":"2026-09-10 20:48:34"}
+{"level":"info","message":"SyncDoc Backend Started","service":"syncdoc-backend","timestamp":"2026-09-10 20:48:34"}
+{"level":"info","message":"Server: http://localhost:5000","service":"syncdoc-backend","timestamp":"2026-09-10 20:48:34"}
+{"level":"info","message":"Health: http://localhost:5000/api/health","service":"syncdoc-backend","timestamp":"2026-09-10 20:48:34"}
+{"level":"info","message":"System Status: http://localhost:5000/api/system/status","service":"syncdoc-backend","timestamp":"2026-09-10 20:48:34"}
+{"level":"info","message":"API: http://localhost:5000/api","service":"syncdoc-backend","timestamp":"2026-09-10 20:48:34"}
+{"level":"info","message":"Socket.IO: enabled","service":"syncdoc-backend","timestamp":"2026-09-10 20:48:34"}
+{"level":"info","message":"Yjs WebSocket: enabled","service":"syncdoc-backend","timestamp":"2026-09-10 20:48:34"}
+{"level":"info","message":"Yjs URL: ws://localhost:5000/yjs/:documentId?token=JWT","service":"syncdoc-backend","timestamp":"2026-09-10 20:48:34"}
+{"level":"info","message":"MongoDB: connected","service":"syncdoc-backend","timestamp":"2026-09-10 20:48:34"}
+{"level":"info","message":"Redis: optional/unavailable","service":"syncdoc-backend","timestamp":"2026-09-10 20:48:34"}
+{"level":"info","message":"Environment: development","service":"syncdoc-backend","timestamp":"2026-09-10 20:48:34"}
+{"level":"info","message":"Rate Limit: 50000 requests / 15 minutes","service":"syncdoc-backend","timestamp":"2026-09-10 20:48:34"}
+{"level":"info","message":"Localhost development rate limiting: BYPASSED","service":"syncdoc-backend","timestamp":"2026-09-10 20:48:34"}
+{"level":"info","message":"============================================================","service":"syncdoc-backend","timestamp":"2026-09-10 20:48:34"}
+{"level":"info","message":"MongoDB connected successfully","service":"syncdoc-backend","timestamp":"2026-09-12 12:35:15"}
+{"level":"warn","message":"Redis unavailable. Continuing without Redis.","service":"syncdoc-backend","timestamp":"2026-09-12 12:35:15"}
+{"level":"info","message":"Global API rate limit: 50000 requests / 15 minutes (development)","service":"syncdoc-backend","timestamp":"2026-09-12 12:35:15"}
+{"level":"info","message":"Development mode: localhost global rate limiting is bypassed.","service":"syncdoc-backend","timestamp":"2026-09-12 12:35:15"}
+{"level":"info","message":"============================================================","service":"syncdoc-backend","timestamp":"2026-09-12 12:35:15"}
+{"level":"info","message":"SyncDoc Backend Started","service":"syncdoc-backend","timestamp":"2026-09-12 12:35:15"}
+{"level":"info","message":"Server: http://localhost:5000","service":"syncdoc-backend","timestamp":"2026-09-12 12:35:15"}
+{"level":"info","message":"Health: http://localhost:5000/api/health","service":"syncdoc-backend","timestamp":"2026-09-12 12:35:15"}
+{"level":"info","message":"System Status: http://localhost:5000/api/system/status","service":"syncdoc-backend","timestamp":"2026-09-12 12:35:15"}
+{"level":"info","message":"API: http://localhost:5000/api","service":"syncdoc-backend","timestamp":"2026-09-12 12:35:15"}
+{"level":"info","message":"Socket.IO: enabled","service":"syncdoc-backend","timestamp":"2026-09-12 12:35:15"}
+{"level":"info","message":"Yjs WebSocket: enabled","service":"syncdoc-backend","timestamp":"2026-09-12 12:35:15"}
+{"level":"info","message":"Yjs URL: ws://localhost:5000/yjs/:documentId?token=JWT","service":"syncdoc-backend","timestamp":"2026-09-12 12:35:15"}
+{"level":"info","message":"MongoDB: connected","service":"syncdoc-backend","timestamp":"2026-09-12 12:35:15"}
+{"level":"info","message":"Redis: optional/unavailable","service":"syncdoc-backend","timestamp":"2026-09-12 12:35:15"}
+{"level":"info","message":"Environment: development","service":"syncdoc-backend","timestamp":"2026-09-12 12:35:15"}
+{"level":"info","message":"Rate Limit: 50000 requests / 15 minutes","service":"syncdoc-backend","timestamp":"2026-09-12 12:35:15"}
+{"level":"info","message":"Localhost development rate limiting: BYPASSED","service":"syncdoc-backend","timestamp":"2026-09-12 12:35:15"}
+{"level":"info","message":"============================================================","service":"syncdoc-backend","timestamp":"2026-09-12 12:35:15"}
+{"level":"info","message":"[GET] /api/auth/me","service":"syncdoc-backend","timestamp":"2026-09-12 12:36:58"}
+{"level":"info","message":"[GET] /api/auth/me","service":"syncdoc-backend","timestamp":"2026-09-12 12:36:58"}
+{"level":"info","message":"[GET] /api/workspaces","service":"syncdoc-backend","timestamp":"2026-09-12 12:36:58"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-09-12 12:36:58"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-09-12 12:36:58"}
+{"level":"info","message":"[GET] /api/documents","service":"syncdoc-backend","timestamp":"2026-09-12 12:37:16"}
+{"level":"info","message":"[GET] /api/documents","service":"syncdoc-backend","timestamp":"2026-09-12 12:37:16"}
+{"level":"info","message":"[GET] /api/analytics?days=30","service":"syncdoc-backend","timestamp":"2026-09-12 12:37:23"}
+{"level":"info","message":"[GET] /api/analytics?days=30","service":"syncdoc-backend","timestamp":"2026-09-12 12:37:23"}
+{"level":"info","message":"[GET] /api/notifications","service":"syncdoc-backend","timestamp":"2026-09-12 12:37:25"}
+{"level":"info","message":"[GET] /api/notifications","service":"syncdoc-backend","timestamp":"2026-09-12 12:37:25"}
+{"level":"info","message":"[GET] /api/documents/trash/list","service":"syncdoc-backend","timestamp":"2026-09-12 12:37:27"}
+{"level":"info","message":"[GET] /api/documents/trash/list","service":"syncdoc-backend","timestamp":"2026-09-12 12:37:27"}
+{"level":"info","message":"[GET] /api/settings","service":"syncdoc-backend","timestamp":"2026-09-12 12:37:29"}
+{"level":"info","message":"[GET] /api/settings","service":"syncdoc-backend","timestamp":"2026-09-12 12:37:29"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-09-12 12:37:41"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-09-12 12:37:41"}
+{"level":"info","message":"MongoDB connected successfully","service":"syncdoc-backend","timestamp":"2026-09-14 16:42:16"}
+{"level":"warn","message":"Redis unavailable. Continuing without Redis.","service":"syncdoc-backend","timestamp":"2026-09-14 16:42:16"}
+{"level":"info","message":"Global API rate limit: 50000 requests / 15 minutes (development)","service":"syncdoc-backend","timestamp":"2026-09-14 16:42:16"}
+{"level":"info","message":"Development mode: localhost global rate limiting is bypassed.","service":"syncdoc-backend","timestamp":"2026-09-14 16:42:16"}
+{"level":"info","message":"============================================================","service":"syncdoc-backend","timestamp":"2026-09-14 16:42:16"}
+{"level":"info","message":"SyncDoc Backend Started","service":"syncdoc-backend","timestamp":"2026-09-14 16:42:16"}
+{"level":"info","message":"Server: http://localhost:5000","service":"syncdoc-backend","timestamp":"2026-09-14 16:42:16"}
+{"level":"info","message":"Health: http://localhost:5000/api/health","service":"syncdoc-backend","timestamp":"2026-09-14 16:42:16"}
+{"level":"info","message":"System Status: http://localhost:5000/api/system/status","service":"syncdoc-backend","timestamp":"2026-09-14 16:42:16"}
+{"level":"info","message":"API: http://localhost:5000/api","service":"syncdoc-backend","timestamp":"2026-09-14 16:42:16"}
+{"level":"info","message":"Socket.IO: enabled","service":"syncdoc-backend","timestamp":"2026-09-14 16:42:16"}
+{"level":"info","message":"Yjs WebSocket: enabled","service":"syncdoc-backend","timestamp":"2026-09-14 16:42:16"}
+{"level":"info","message":"Yjs URL: ws://localhost:5000/yjs/:documentId?token=JWT","service":"syncdoc-backend","timestamp":"2026-09-14 16:42:16"}
+{"level":"info","message":"MongoDB: connected","service":"syncdoc-backend","timestamp":"2026-09-14 16:42:16"}
+{"level":"info","message":"Redis: optional/unavailable","service":"syncdoc-backend","timestamp":"2026-09-14 16:42:16"}
+{"level":"info","message":"Environment: development","service":"syncdoc-backend","timestamp":"2026-09-14 16:42:16"}
+{"level":"info","message":"Rate Limit: 50000 requests / 15 minutes","service":"syncdoc-backend","timestamp":"2026-09-14 16:42:16"}
+{"level":"info","message":"Localhost development rate limiting: BYPASSED","service":"syncdoc-backend","timestamp":"2026-09-14 16:42:16"}
+{"level":"info","message":"============================================================","service":"syncdoc-backend","timestamp":"2026-09-14 16:42:16"}
+{"level":"info","message":"[GET] /api/auth/me","service":"syncdoc-backend","timestamp":"2026-09-14 16:46:09"}
+{"level":"info","message":"[GET] /api/auth/me","service":"syncdoc-backend","timestamp":"2026-09-14 16:46:09"}
+{"level":"info","message":"[GET] /api/workspaces","service":"syncdoc-backend","timestamp":"2026-09-14 16:46:10"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-09-14 16:46:10"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-09-14 16:46:10"}
+{"level":"info","message":"[GET] /api/documents","service":"syncdoc-backend","timestamp":"2026-09-14 16:46:26"}
+{"level":"info","message":"[GET] /api/documents","service":"syncdoc-backend","timestamp":"2026-09-14 16:46:26"}
+{"level":"info","message":"[GET] /api/analytics?days=30","service":"syncdoc-backend","timestamp":"2026-09-14 16:46:33"}
+{"level":"info","message":"[GET] /api/analytics?days=30","service":"syncdoc-backend","timestamp":"2026-09-14 16:46:33"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-09-14 16:46:40"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-09-14 16:46:40"}
+{"level":"info","message":"[GET] /api/documents","service":"syncdoc-backend","timestamp":"2026-09-14 16:47:55"}
+{"level":"info","message":"[GET] /api/documents","service":"syncdoc-backend","timestamp":"2026-09-14 16:47:55"}
+{"level":"info","message":"[GET] /api/documents","service":"syncdoc-backend","timestamp":"2026-09-14 16:47:58"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-09-14 16:48:08"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-09-14 16:48:08"}
+{"level":"info","message":"[GET] /api/notifications","service":"syncdoc-backend","timestamp":"2026-09-14 16:49:11"}
+{"level":"info","message":"[GET] /api/notifications","service":"syncdoc-backend","timestamp":"2026-09-14 16:49:11"}
+{"level":"info","message":"[GET] /api/notifications","service":"syncdoc-backend","timestamp":"2026-09-14 16:49:11"}
+{"level":"info","message":"[GET] /api/notifications","service":"syncdoc-backend","timestamp":"2026-09-14 16:49:11"}
+{"level":"info","message":"[GET] /api/notifications","service":"syncdoc-backend","timestamp":"2026-09-14 16:49:15"}
+{"level":"info","message":"[GET] /api/notifications","service":"syncdoc-backend","timestamp":"2026-09-14 16:49:15"}
+{"level":"info","message":"[GET] /api/notifications","service":"syncdoc-backend","timestamp":"2026-09-14 16:49:19"}
+{"level":"info","message":"[GET] /api/notifications","service":"syncdoc-backend","timestamp":"2026-09-14 16:49:19"}
+{"level":"info","message":"[GET] /api/notifications","service":"syncdoc-backend","timestamp":"2026-09-14 16:49:19"}
+{"level":"info","message":"[GET] /api/notifications","service":"syncdoc-backend","timestamp":"2026-09-14 16:49:19"}
+{"level":"info","message":"MongoDB connected successfully","service":"syncdoc-backend","timestamp":"2026-09-14 16:50:36"}
+{"level":"warn","message":"Redis unavailable. Continuing without Redis.","service":"syncdoc-backend","timestamp":"2026-09-14 16:50:36"}
+{"level":"info","message":"Global API rate limit: 50000 requests / 15 minutes (development)","service":"syncdoc-backend","timestamp":"2026-09-14 16:50:36"}
+{"level":"info","message":"Development mode: localhost global rate limiting is bypassed.","service":"syncdoc-backend","timestamp":"2026-09-14 16:50:36"}
+{"level":"info","message":"============================================================","service":"syncdoc-backend","timestamp":"2026-09-14 16:50:36"}
+{"level":"info","message":"SyncDoc Backend Started","service":"syncdoc-backend","timestamp":"2026-09-14 16:50:36"}
+{"level":"info","message":"Server: http://localhost:5000","service":"syncdoc-backend","timestamp":"2026-09-14 16:50:36"}
+{"level":"info","message":"Health: http://localhost:5000/api/health","service":"syncdoc-backend","timestamp":"2026-09-14 16:50:36"}
+{"level":"info","message":"System Status: http://localhost:5000/api/system/status","service":"syncdoc-backend","timestamp":"2026-09-14 16:50:36"}
+{"level":"info","message":"API: http://localhost:5000/api","service":"syncdoc-backend","timestamp":"2026-09-14 16:50:36"}
+{"level":"info","message":"Socket.IO: enabled","service":"syncdoc-backend","timestamp":"2026-09-14 16:50:36"}
+{"level":"info","message":"Yjs WebSocket: enabled","service":"syncdoc-backend","timestamp":"2026-09-14 16:50:36"}
+{"level":"info","message":"Yjs URL: ws://localhost:5000/yjs/:documentId?token=JWT","service":"syncdoc-backend","timestamp":"2026-09-14 16:50:36"}
+{"level":"info","message":"MongoDB: connected","service":"syncdoc-backend","timestamp":"2026-09-14 16:50:36"}
+{"level":"info","message":"Redis: optional/unavailable","service":"syncdoc-backend","timestamp":"2026-09-14 16:50:36"}
+{"level":"info","message":"Environment: development","service":"syncdoc-backend","timestamp":"2026-09-14 16:50:36"}
+{"level":"info","message":"Rate Limit: 50000 requests / 15 minutes","service":"syncdoc-backend","timestamp":"2026-09-14 16:50:36"}
+{"level":"info","message":"Localhost development rate limiting: BYPASSED","service":"syncdoc-backend","timestamp":"2026-09-14 16:50:36"}
+{"level":"info","message":"============================================================","service":"syncdoc-backend","timestamp":"2026-09-14 16:50:36"}
+{"level":"info","message":"MongoDB connected successfully","service":"syncdoc-backend","timestamp":"2026-09-16 11:20:57"}
+{"level":"warn","message":"Redis unavailable. Continuing without Redis.","service":"syncdoc-backend","timestamp":"2026-09-16 11:20:57"}
+{"level":"info","message":"Global API rate limit: 50000 requests / 15 minutes (development)","service":"syncdoc-backend","timestamp":"2026-09-16 11:20:57"}
+{"level":"info","message":"Development mode: localhost global rate limiting is bypassed.","service":"syncdoc-backend","timestamp":"2026-09-16 11:20:57"}
+{"level":"info","message":"============================================================","service":"syncdoc-backend","timestamp":"2026-09-16 11:20:57"}
+{"level":"info","message":"SyncDoc Backend Started","service":"syncdoc-backend","timestamp":"2026-09-16 11:20:57"}
+{"level":"info","message":"Server: http://localhost:5000","service":"syncdoc-backend","timestamp":"2026-09-16 11:20:57"}
+{"level":"info","message":"Health: http://localhost:5000/api/health","service":"syncdoc-backend","timestamp":"2026-09-16 11:20:57"}
+{"level":"info","message":"System Status: http://localhost:5000/api/system/status","service":"syncdoc-backend","timestamp":"2026-09-16 11:20:57"}
+{"level":"info","message":"API: http://localhost:5000/api","service":"syncdoc-backend","timestamp":"2026-09-16 11:20:57"}
+{"level":"info","message":"Socket.IO: enabled","service":"syncdoc-backend","timestamp":"2026-09-16 11:20:57"}
+{"level":"info","message":"Yjs WebSocket: enabled","service":"syncdoc-backend","timestamp":"2026-09-16 11:20:57"}
+{"level":"info","message":"Yjs URL: ws://localhost:5000/yjs/:documentId?token=JWT","service":"syncdoc-backend","timestamp":"2026-09-16 11:20:57"}
+{"level":"info","message":"MongoDB: connected","service":"syncdoc-backend","timestamp":"2026-09-16 11:20:57"}
+{"level":"info","message":"Redis: optional/unavailable","service":"syncdoc-backend","timestamp":"2026-09-16 11:20:57"}
+{"level":"info","message":"Environment: development","service":"syncdoc-backend","timestamp":"2026-09-16 11:20:57"}
+{"level":"info","message":"Rate Limit: 50000 requests / 15 minutes","service":"syncdoc-backend","timestamp":"2026-09-16 11:20:57"}
+{"level":"info","message":"Localhost development rate limiting: BYPASSED","service":"syncdoc-backend","timestamp":"2026-09-16 11:20:57"}
+{"level":"info","message":"============================================================","service":"syncdoc-backend","timestamp":"2026-09-16 11:20:57"}
+{"level":"info","message":"[GET] /api/auth/me","service":"syncdoc-backend","timestamp":"2026-09-16 11:23:33"}
+{"level":"info","message":"[GET] /api/auth/me","service":"syncdoc-backend","timestamp":"2026-09-16 11:23:33"}
+{"level":"info","message":"[GET] /api/workspaces","service":"syncdoc-backend","timestamp":"2026-09-16 11:23:33"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-09-16 11:23:33"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-09-16 11:23:34"}
+{"level":"warn","message":"CORS blocked origin: http://10.21.193.218:3000","service":"syncdoc-backend","timestamp":"2026-09-16 11:27:06"}
+{"level":"error","message":"OPTIONS /api/auth/login - 500 - CORS policy blocked origin: http://10.21.193.218:3000","service":"syncdoc-backend","stack":"Error: CORS policy blocked origin: http://10.21.193.218:3000\n    at origin (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\backend\\src\\index.js:177:13)\n    at D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\node_modules\\cors\\lib\\index.js:219:13\n    at optionsCallback (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\node_modules\\cors\\lib\\index.js:199:9)\n    at corsMiddleware (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\node_modules\\cors\\lib\\index.js:204:7)\n    at Layer.handle [as handle_request] (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\node_modules\\express\\lib\\router\\layer.js:95:5)\n    at trim_prefix (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\node_modules\\express\\lib\\router\\index.js:328:13)\n    at D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\node_modules\\express\\lib\\router\\index.js:286:9\n    at router.process_params (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\node_modules\\express\\lib\\router\\index.js:346:12)\n    at next (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\node_modules\\express\\lib\\router\\index.js:280:10)\n    at expressInit (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\node_modules\\express\\lib\\middleware\\init.js:40:5)","timestamp":"2026-09-16 11:27:06"}
+{"level":"warn","message":"CORS blocked origin: http://10.21.193.218:3000","service":"syncdoc-backend","timestamp":"2026-09-16 11:27:09"}
+{"level":"error","message":"OPTIONS /api/auth/login - 500 - CORS policy blocked origin: http://10.21.193.218:3000","service":"syncdoc-backend","stack":"Error: CORS policy blocked origin: http://10.21.193.218:3000\n    at origin (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\backend\\src\\index.js:177:13)\n    at D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\node_modules\\cors\\lib\\index.js:219:13\n    at optionsCallback (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\node_modules\\cors\\lib\\index.js:199:9)\n    at corsMiddleware (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\node_modules\\cors\\lib\\index.js:204:7)\n    at Layer.handle [as handle_request] (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\node_modules\\express\\lib\\router\\layer.js:95:5)\n    at trim_prefix (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\node_modules\\express\\lib\\router\\index.js:328:13)\n    at D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\node_modules\\express\\lib\\router\\index.js:286:9\n    at router.process_params (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\node_modules\\express\\lib\\router\\index.js:346:12)\n    at next (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\node_modules\\express\\lib\\router\\index.js:280:10)\n    at expressInit (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\node_modules\\express\\lib\\middleware\\init.js:40:5)","timestamp":"2026-09-16 11:27:09"}
+{"level":"warn","message":"CORS blocked origin: http://10.21.193.218:3000","service":"syncdoc-backend","timestamp":"2026-09-16 11:27:13"}
+{"level":"error","message":"OPTIONS /api/auth/login - 500 - CORS policy blocked origin: http://10.21.193.218:3000","service":"syncdoc-backend","stack":"Error: CORS policy blocked origin: http://10.21.193.218:3000\n    at origin (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\backend\\src\\index.js:177:13)\n    at D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\node_modules\\cors\\lib\\index.js:219:13\n    at optionsCallback (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\node_modules\\cors\\lib\\index.js:199:9)\n    at corsMiddleware (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\node_modules\\cors\\lib\\index.js:204:7)\n    at Layer.handle [as handle_request] (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\node_modules\\express\\lib\\router\\layer.js:95:5)\n    at trim_prefix (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\node_modules\\express\\lib\\router\\index.js:328:13)\n    at D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\node_modules\\express\\lib\\router\\index.js:286:9\n    at router.process_params (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\node_modules\\express\\lib\\router\\index.js:346:12)\n    at next (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\node_modules\\express\\lib\\router\\index.js:280:10)\n    at expressInit (D:\\SYNCDOC Major Project Prashant\\syncdoc_fix\\syncdoc_fix\\node_modules\\express\\lib\\middleware\\init.js:40:5)","timestamp":"2026-09-16 11:27:13"}
+{"level":"info","message":"MongoDB connected successfully","service":"syncdoc-backend","timestamp":"2026-09-16 15:52:00"}
+{"level":"warn","message":"Redis unavailable. Continuing without Redis.","service":"syncdoc-backend","timestamp":"2026-09-16 15:52:00"}
+{"level":"info","message":"Global API rate limit: 50000 requests / 15 minutes (development)","service":"syncdoc-backend","timestamp":"2026-09-16 15:52:00"}
+{"level":"info","message":"Development mode: localhost global rate limiting is bypassed.","service":"syncdoc-backend","timestamp":"2026-09-16 15:52:00"}
+{"level":"info","message":"============================================================","service":"syncdoc-backend","timestamp":"2026-09-16 15:52:00"}
+{"level":"info","message":"SyncDoc Backend Started","service":"syncdoc-backend","timestamp":"2026-09-16 15:52:00"}
+{"level":"info","message":"Server: http://localhost:5000","service":"syncdoc-backend","timestamp":"2026-09-16 15:52:00"}
+{"level":"info","message":"Health: http://localhost:5000/api/health","service":"syncdoc-backend","timestamp":"2026-09-16 15:52:00"}
+{"level":"info","message":"System Status: http://localhost:5000/api/system/status","service":"syncdoc-backend","timestamp":"2026-09-16 15:52:00"}
+{"level":"info","message":"API: http://localhost:5000/api","service":"syncdoc-backend","timestamp":"2026-09-16 15:52:00"}
+{"level":"info","message":"Socket.IO: enabled","service":"syncdoc-backend","timestamp":"2026-09-16 15:52:00"}
+{"level":"info","message":"Yjs WebSocket: enabled","service":"syncdoc-backend","timestamp":"2026-09-16 15:52:00"}
+{"level":"info","message":"Yjs URL: ws://localhost:5000/yjs/:documentId?token=JWT","service":"syncdoc-backend","timestamp":"2026-09-16 15:52:00"}
+{"level":"info","message":"MongoDB: connected","service":"syncdoc-backend","timestamp":"2026-09-16 15:52:00"}
+{"level":"info","message":"Redis: optional/unavailable","service":"syncdoc-backend","timestamp":"2026-09-16 15:52:00"}
+{"level":"info","message":"Environment: development","service":"syncdoc-backend","timestamp":"2026-09-16 15:52:00"}
+{"level":"info","message":"Rate Limit: 50000 requests / 15 minutes","service":"syncdoc-backend","timestamp":"2026-09-16 15:52:00"}
+{"level":"info","message":"Localhost development rate limiting: BYPASSED","service":"syncdoc-backend","timestamp":"2026-09-16 15:52:00"}
+{"level":"info","message":"============================================================","service":"syncdoc-backend","timestamp":"2026-09-16 15:52:00"}
+{"level":"info","message":"MongoDB connected successfully","service":"syncdoc-backend","timestamp":"2026-09-30 16:19:19"}
+{"level":"warn","message":"Redis unavailable. Continuing without Redis.","service":"syncdoc-backend","timestamp":"2026-09-30 16:19:19"}
+{"level":"info","message":"Global API rate limit: 50000 requests / 15 minutes (development)","service":"syncdoc-backend","timestamp":"2026-09-30 16:19:19"}
+{"level":"info","message":"Development mode: localhost global rate limiting is bypassed.","service":"syncdoc-backend","timestamp":"2026-09-30 16:19:19"}
+{"level":"info","message":"============================================================","service":"syncdoc-backend","timestamp":"2026-09-30 16:19:19"}
+{"level":"info","message":"SyncDoc Backend Started","service":"syncdoc-backend","timestamp":"2026-09-30 16:19:19"}
+{"level":"info","message":"Server: http://localhost:5000","service":"syncdoc-backend","timestamp":"2026-09-30 16:19:19"}
+{"level":"info","message":"Health: http://localhost:5000/api/health","service":"syncdoc-backend","timestamp":"2026-09-30 16:19:19"}
+{"level":"info","message":"System Status: http://localhost:5000/api/system/status","service":"syncdoc-backend","timestamp":"2026-09-30 16:19:19"}
+{"level":"info","message":"API: http://localhost:5000/api","service":"syncdoc-backend","timestamp":"2026-09-30 16:19:19"}
+{"level":"info","message":"Socket.IO: enabled","service":"syncdoc-backend","timestamp":"2026-09-30 16:19:19"}
+{"level":"info","message":"Yjs WebSocket: enabled","service":"syncdoc-backend","timestamp":"2026-09-30 16:19:19"}
+{"level":"info","message":"Yjs URL: ws://localhost:5000/yjs/:documentId?token=JWT","service":"syncdoc-backend","timestamp":"2026-09-30 16:19:19"}
+{"level":"info","message":"MongoDB: connected","service":"syncdoc-backend","timestamp":"2026-09-30 16:19:19"}
+{"level":"info","message":"Redis: optional/unavailable","service":"syncdoc-backend","timestamp":"2026-09-30 16:19:19"}
+{"level":"info","message":"Environment: development","service":"syncdoc-backend","timestamp":"2026-09-30 16:19:19"}
+{"level":"info","message":"Rate Limit: 50000 requests / 15 minutes","service":"syncdoc-backend","timestamp":"2026-09-30 16:19:19"}
+{"level":"info","message":"Localhost development rate limiting: BYPASSED","service":"syncdoc-backend","timestamp":"2026-09-30 16:19:19"}
+{"level":"info","message":"============================================================","service":"syncdoc-backend","timestamp":"2026-09-30 16:19:19"}
+{"level":"info","message":"[GET] /api/auth/me","service":"syncdoc-backend","timestamp":"2026-09-30 16:19:32"}
+{"level":"info","message":"[GET] /api/auth/me","service":"syncdoc-backend","timestamp":"2026-09-30 16:19:32"}
+{"level":"info","message":"[POST] /api/auth/login","service":"syncdoc-backend","timestamp":"2026-09-30 16:20:04"}
+{"level":"info","message":"User login successful: prashantsharmaps7417@gmail.com","service":"syncdoc-backend","timestamp":"2026-09-30 16:20:04"}
+{"level":"info","message":"[GET] /api/workspaces","service":"syncdoc-backend","timestamp":"2026-09-30 16:20:04"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-09-30 16:20:04"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-09-30 16:20:04"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-09-30 16:31:15"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-09-30 16:31:15"}
+{"level":"info","message":"[GET] /api/documents","service":"syncdoc-backend","timestamp":"2026-09-30 16:32:28"}
+{"level":"info","message":"[GET] /api/documents","service":"syncdoc-backend","timestamp":"2026-09-30 16:32:28"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-09-30 16:33:35"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-09-30 16:33:35"}
+{"level":"info","message":"[GET] /api/documents","service":"syncdoc-backend","timestamp":"2026-09-30 16:34:57"}
+{"level":"info","message":"[GET] /api/documents","service":"syncdoc-backend","timestamp":"2026-09-30 16:34:57"}
+{"level":"info","message":"[GET] /api/documents","service":"syncdoc-backend","timestamp":"2026-09-30 16:35:02"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-09-30 16:45:50"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-09-30 16:45:50"}
+{"level":"info","message":"MongoDB connected successfully","service":"syncdoc-backend","timestamp":"2026-09-30 16:46:51"}
+{"level":"warn","message":"Redis unavailable. Continuing without Redis.","service":"syncdoc-backend","timestamp":"2026-09-30 16:46:51"}
+{"level":"info","message":"Global API rate limit: 50000 requests / 15 minutes (development)","service":"syncdoc-backend","timestamp":"2026-09-30 16:46:51"}
+{"level":"info","message":"Development mode: localhost global rate limiting is bypassed.","service":"syncdoc-backend","timestamp":"2026-09-30 16:46:51"}
+{"level":"info","message":"============================================================","service":"syncdoc-backend","timestamp":"2026-09-30 16:46:51"}
+{"level":"info","message":"SyncDoc Backend Started","service":"syncdoc-backend","timestamp":"2026-09-30 16:46:51"}
+{"level":"info","message":"Server: http://localhost:5000","service":"syncdoc-backend","timestamp":"2026-09-30 16:46:51"}
+{"level":"info","message":"Health: http://localhost:5000/api/health","service":"syncdoc-backend","timestamp":"2026-09-30 16:46:51"}
+{"level":"info","message":"System Status: http://localhost:5000/api/system/status","service":"syncdoc-backend","timestamp":"2026-09-30 16:46:51"}
+{"level":"info","message":"API: http://localhost:5000/api","service":"syncdoc-backend","timestamp":"2026-09-30 16:46:51"}
+{"level":"info","message":"Socket.IO: enabled","service":"syncdoc-backend","timestamp":"2026-09-30 16:46:51"}
+{"level":"info","message":"Yjs WebSocket: enabled","service":"syncdoc-backend","timestamp":"2026-09-30 16:46:51"}
+{"level":"info","message":"Yjs URL: ws://localhost:5000/yjs/:documentId?token=JWT","service":"syncdoc-backend","timestamp":"2026-09-30 16:46:51"}
+{"level":"info","message":"MongoDB: connected","service":"syncdoc-backend","timestamp":"2026-09-30 16:46:51"}
+{"level":"info","message":"Redis: optional/unavailable","service":"syncdoc-backend","timestamp":"2026-09-30 16:46:51"}
+{"level":"info","message":"Environment: development","service":"syncdoc-backend","timestamp":"2026-09-30 16:46:51"}
+{"level":"info","message":"Rate Limit: 50000 requests / 15 minutes","service":"syncdoc-backend","timestamp":"2026-09-30 16:46:51"}
+{"level":"info","message":"Localhost development rate limiting: BYPASSED","service":"syncdoc-backend","timestamp":"2026-09-30 16:46:51"}
+{"level":"info","message":"============================================================","service":"syncdoc-backend","timestamp":"2026-09-30 16:46:51"}
+{"level":"info","message":"MongoDB connected successfully","service":"syncdoc-backend","timestamp":"2026-10-07 16:23:32"}
+{"level":"warn","message":"Redis unavailable. Continuing without Redis.","service":"syncdoc-backend","timestamp":"2026-10-07 16:23:32"}
+{"level":"info","message":"Global API rate limit: 50000 requests / 15 minutes (development)","service":"syncdoc-backend","timestamp":"2026-10-07 16:23:32"}
+{"level":"info","message":"Development mode: localhost global rate limiting is bypassed.","service":"syncdoc-backend","timestamp":"2026-10-07 16:23:32"}
+{"level":"info","message":"============================================================","service":"syncdoc-backend","timestamp":"2026-10-07 16:23:32"}
+{"level":"info","message":"SyncDoc Backend Started","service":"syncdoc-backend","timestamp":"2026-10-07 16:23:32"}
+{"level":"info","message":"Server: http://localhost:5000","service":"syncdoc-backend","timestamp":"2026-10-07 16:23:32"}
+{"level":"info","message":"Health: http://localhost:5000/api/health","service":"syncdoc-backend","timestamp":"2026-10-07 16:23:32"}
+{"level":"info","message":"System Status: http://localhost:5000/api/system/status","service":"syncdoc-backend","timestamp":"2026-10-07 16:23:32"}
+{"level":"info","message":"API: http://localhost:5000/api","service":"syncdoc-backend","timestamp":"2026-10-07 16:23:32"}
+{"level":"info","message":"Socket.IO: enabled","service":"syncdoc-backend","timestamp":"2026-10-07 16:23:32"}
+{"level":"info","message":"Yjs WebSocket: enabled","service":"syncdoc-backend","timestamp":"2026-10-07 16:23:32"}
+{"level":"info","message":"Yjs URL: ws://localhost:5000/yjs/:documentId?token=JWT","service":"syncdoc-backend","timestamp":"2026-10-07 16:23:32"}
+{"level":"info","message":"MongoDB: connected","service":"syncdoc-backend","timestamp":"2026-10-07 16:23:32"}
+{"level":"info","message":"Redis: optional/unavailable","service":"syncdoc-backend","timestamp":"2026-10-07 16:23:32"}
+{"level":"info","message":"Environment: development","service":"syncdoc-backend","timestamp":"2026-10-07 16:23:32"}
+{"level":"info","message":"Rate Limit: 50000 requests / 15 minutes","service":"syncdoc-backend","timestamp":"2026-10-07 16:23:32"}
+{"level":"info","message":"Localhost development rate limiting: BYPASSED","service":"syncdoc-backend","timestamp":"2026-10-07 16:23:32"}
+{"level":"info","message":"============================================================","service":"syncdoc-backend","timestamp":"2026-10-07 16:23:32"}
+{"level":"info","message":"[GET] /api/auth/me","service":"syncdoc-backend","timestamp":"2026-10-07 16:23:46"}
+{"level":"info","message":"[GET] /api/auth/me","service":"syncdoc-backend","timestamp":"2026-10-07 16:23:46"}
+{"level":"info","message":"[POST] /api/auth/login","service":"syncdoc-backend","timestamp":"2026-10-07 16:24:06"}
+{"level":"info","message":"User login successful: prashantsharmaps7417@gmail.com","service":"syncdoc-backend","timestamp":"2026-10-07 16:24:06"}
+{"level":"info","message":"[GET] /api/workspaces","service":"syncdoc-backend","timestamp":"2026-10-07 16:24:06"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-10-07 16:24:06"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-10-07 16:24:07"}
+{"level":"info","message":"[GET] /api/documents","service":"syncdoc-backend","timestamp":"2026-10-07 16:24:16"}
+{"level":"info","message":"[GET] /api/documents","service":"syncdoc-backend","timestamp":"2026-10-07 16:24:16"}
+{"level":"info","message":"[POST] /api/workspaces","service":"syncdoc-backend","timestamp":"2026-10-07 16:24:36"}
+{"level":"info","message":"[GET] /api/analytics?days=30","service":"syncdoc-backend","timestamp":"2026-10-07 16:25:08"}
+{"level":"info","message":"[GET] /api/analytics?days=30","service":"syncdoc-backend","timestamp":"2026-10-07 16:25:08"}
+{"level":"info","message":"[GET] /api/notifications","service":"syncdoc-backend","timestamp":"2026-10-07 16:25:22"}
+{"level":"info","message":"[GET] /api/notifications","service":"syncdoc-backend","timestamp":"2026-10-07 16:25:22"}
+{"level":"info","message":"[GET] /api/documents/trash/list","service":"syncdoc-backend","timestamp":"2026-10-07 16:25:27"}
+{"level":"info","message":"[GET] /api/documents/trash/list","service":"syncdoc-backend","timestamp":"2026-10-07 16:25:27"}
+{"level":"info","message":"[GET] /api/settings","service":"syncdoc-backend","timestamp":"2026-10-07 16:25:30"}
+{"level":"info","message":"[GET] /api/settings","service":"syncdoc-backend","timestamp":"2026-10-07 16:25:30"}
+{"level":"info","message":"[POST] /api/auth/login","service":"syncdoc-backend","timestamp":"2026-10-07 16:26:40"}
+{"level":"info","message":"User login successful: prashantsharmaps7417@gmail.com","service":"syncdoc-backend","timestamp":"2026-10-07 16:26:40"}
+{"level":"info","message":"[GET] /api/workspaces","service":"syncdoc-backend","timestamp":"2026-10-07 16:26:40"}
+{"level":"info","message":"[GET] /api/settings","service":"syncdoc-backend","timestamp":"2026-10-07 16:26:40"}
+{"level":"info","message":"[GET] /api/settings","service":"syncdoc-backend","timestamp":"2026-10-07 16:26:40"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-10-07 16:26:50"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-10-07 16:26:50"}
+{"level":"info","message":"[GET] /api/settings","service":"syncdoc-backend","timestamp":"2026-10-07 16:26:55"}
+{"level":"info","message":"[GET] /api/settings","service":"syncdoc-backend","timestamp":"2026-10-07 16:26:55"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-10-07 16:27:14"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-10-07 16:27:14"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-10-07 16:27:41"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-10-07 16:27:41"}
+{"level":"info","message":"[GET] /api/documents","service":"syncdoc-backend","timestamp":"2026-10-07 16:27:52"}
+{"level":"info","message":"[GET] /api/documents","service":"syncdoc-backend","timestamp":"2026-10-07 16:27:52"}
+{"level":"info","message":"[GET] /api/analytics?days=30","service":"syncdoc-backend","timestamp":"2026-10-07 16:28:10"}
+{"level":"info","message":"[GET] /api/analytics?days=30","service":"syncdoc-backend","timestamp":"2026-10-07 16:28:10"}
+{"level":"info","message":"[GET] /api/notifications","service":"syncdoc-backend","timestamp":"2026-10-07 16:28:14"}
+{"level":"info","message":"[GET] /api/notifications","service":"syncdoc-backend","timestamp":"2026-10-07 16:28:14"}
+{"level":"info","message":"[GET] /api/documents/trash/list","service":"syncdoc-backend","timestamp":"2026-10-07 16:28:15"}
+{"level":"info","message":"[GET] /api/documents/trash/list","service":"syncdoc-backend","timestamp":"2026-10-07 16:28:15"}
+{"level":"info","message":"[GET] /api/settings","service":"syncdoc-backend","timestamp":"2026-10-07 16:28:18"}
+{"level":"info","message":"[GET] /api/settings","service":"syncdoc-backend","timestamp":"2026-10-07 16:28:18"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-10-07 16:28:41"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-10-07 16:28:42"}
+{"level":"info","message":"[GET] /api/workspaces","service":"syncdoc-backend","timestamp":"2026-10-07 16:29:30"}
+{"level":"info","message":"[GET] /api/workspaces","service":"syncdoc-backend","timestamp":"2026-10-07 16:29:36"}
+{"level":"info","message":"[GET] /api/workspaces","service":"syncdoc-backend","timestamp":"2026-10-07 16:29:41"}
+{"level":"info","message":"[GET] /api/documents","service":"syncdoc-backend","timestamp":"2026-10-07 16:29:57"}
+{"level":"info","message":"[GET] /api/documents","service":"syncdoc-backend","timestamp":"2026-10-07 16:29:57"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:17"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:17"}
+{"level":"info","message":"[GET] /api/settings","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:18"}
+{"level":"info","message":"[GET] /api/settings","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:18"}
+{"level":"info","message":"[GET] /api/documents/trash/list","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:20"}
+{"level":"info","message":"[GET] /api/documents/trash/list","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:20"}
+{"level":"info","message":"[GET] /api/notifications","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:20"}
+{"level":"info","message":"[GET] /api/notifications","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:20"}
+{"level":"info","message":"[GET] /api/analytics?days=30","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:21"}
+{"level":"info","message":"[GET] /api/analytics?days=30","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:21"}
+{"level":"info","message":"[GET] /api/documents","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:24"}
+{"level":"info","message":"[GET] /api/documents","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:24"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:25"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:25"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:27"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:27"}
+{"level":"info","message":"[GET] /api/settings","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:28"}
+{"level":"info","message":"[GET] /api/settings","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:28"}
+{"level":"info","message":"[GET] /api/documents/trash/list","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:30"}
+{"level":"info","message":"[GET] /api/documents/trash/list","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:30"}
+{"level":"info","message":"[GET] /api/notifications","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:30"}
+{"level":"info","message":"[GET] /api/notifications","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:30"}
+{"level":"info","message":"[GET] /api/analytics?days=30","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:31"}
+{"level":"info","message":"[GET] /api/analytics?days=30","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:31"}
+{"level":"info","message":"[GET] /api/documents","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:32"}
+{"level":"info","message":"[GET] /api/documents","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:32"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:33"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:33"}
+{"level":"info","message":"[GET] /api/settings","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:33"}
+{"level":"info","message":"[GET] /api/settings","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:33"}
+{"level":"info","message":"[GET] /api/documents/trash/list","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:33"}
+{"level":"info","message":"[GET] /api/documents/trash/list","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:33"}
+{"level":"info","message":"[GET] /api/notifications","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:34"}
+{"level":"info","message":"[GET] /api/notifications","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:34"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:38"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:38"}
+{"level":"info","message":"[GET] /api/documents","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:46"}
+{"level":"info","message":"[GET] /api/documents","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:46"}
+{"level":"info","message":"[GET] /api/workspaces","service":"syncdoc-backend","timestamp":"2026-10-07 16:30:56"}
+{"level":"info","message":"[GET] /api/auth/me","service":"syncdoc-backend","timestamp":"2026-10-07 16:34:20"}
+{"level":"info","message":"[GET] /api/auth/me","service":"syncdoc-backend","timestamp":"2026-10-07 16:34:20"}
+{"level":"info","message":"[GET] /api/workspaces","service":"syncdoc-backend","timestamp":"2026-10-07 16:34:20"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-10-07 16:34:20"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-10-07 16:34:20"}
+{"level":"info","message":"[GET] /api/auth/me","service":"syncdoc-backend","timestamp":"2026-10-07 16:34:22"}
+{"level":"info","message":"[GET] /api/auth/me","service":"syncdoc-backend","timestamp":"2026-10-07 16:34:22"}
+{"level":"info","message":"[GET] /api/workspaces","service":"syncdoc-backend","timestamp":"2026-10-07 16:34:22"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-10-07 16:34:22"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-10-07 16:34:22"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-10-07 16:34:43"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-10-07 16:34:43"}
+{"level":"info","message":"[GET] /api/auth/me","service":"syncdoc-backend","timestamp":"2026-10-07 16:34:54"}
+{"level":"info","message":"[GET] /api/auth/me","service":"syncdoc-backend","timestamp":"2026-10-07 16:34:54"}
+{"level":"info","message":"[GET] /api/workspaces","service":"syncdoc-backend","timestamp":"2026-10-07 16:34:54"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-10-07 16:34:54"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-10-07 16:34:54"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-10-07 16:37:10"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-10-07 16:37:10"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-10-07 16:46:24"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-10-07 16:46:24"}
+{"level":"info","message":"MongoDB connected successfully","service":"syncdoc-backend","timestamp":"2026-10-13 17:21:35"}
+{"level":"warn","message":"Redis unavailable. Continuing without Redis.","service":"syncdoc-backend","timestamp":"2026-10-13 17:21:35"}
+{"level":"info","message":"Global API rate limit: 50000 requests / 15 minutes (development)","service":"syncdoc-backend","timestamp":"2026-10-13 17:21:35"}
+{"level":"info","message":"Development mode: localhost global rate limiting is bypassed.","service":"syncdoc-backend","timestamp":"2026-10-13 17:21:35"}
+{"level":"info","message":"============================================================","service":"syncdoc-backend","timestamp":"2026-10-13 17:21:35"}
+{"level":"info","message":"SyncDoc Backend Started","service":"syncdoc-backend","timestamp":"2026-10-13 17:21:35"}
+{"level":"info","message":"Server: http://localhost:5000","service":"syncdoc-backend","timestamp":"2026-10-13 17:21:35"}
+{"level":"info","message":"Health: http://localhost:5000/api/health","service":"syncdoc-backend","timestamp":"2026-10-13 17:21:35"}
+{"level":"info","message":"System Status: http://localhost:5000/api/system/status","service":"syncdoc-backend","timestamp":"2026-10-13 17:21:35"}
+{"level":"info","message":"API: http://localhost:5000/api","service":"syncdoc-backend","timestamp":"2026-10-13 17:21:35"}
+{"level":"info","message":"Socket.IO: enabled","service":"syncdoc-backend","timestamp":"2026-10-13 17:21:35"}
+{"level":"info","message":"Yjs WebSocket: enabled","service":"syncdoc-backend","timestamp":"2026-10-13 17:21:35"}
+{"level":"info","message":"Yjs URL: ws://localhost:5000/yjs/:documentId?token=JWT","service":"syncdoc-backend","timestamp":"2026-10-13 17:21:35"}
+{"level":"info","message":"MongoDB: connected","service":"syncdoc-backend","timestamp":"2026-10-13 17:21:35"}
+{"level":"info","message":"Redis: optional/unavailable","service":"syncdoc-backend","timestamp":"2026-10-13 17:21:35"}
+{"level":"info","message":"Environment: development","service":"syncdoc-backend","timestamp":"2026-10-13 17:21:35"}
+{"level":"info","message":"Rate Limit: 50000 requests / 15 minutes","service":"syncdoc-backend","timestamp":"2026-10-13 17:21:35"}
+{"level":"info","message":"Localhost development rate limiting: BYPASSED","service":"syncdoc-backend","timestamp":"2026-10-13 17:21:35"}
+{"level":"info","message":"============================================================","service":"syncdoc-backend","timestamp":"2026-10-13 17:21:35"}
+{"level":"info","message":"[POST] /api/auth/login","service":"syncdoc-backend","timestamp":"2026-10-13 17:23:20"}
+{"level":"info","message":"User login successful: tyagiabhay2004@gmail.com","service":"syncdoc-backend","timestamp":"2026-10-13 17:23:20"}
+{"level":"info","message":"[GET] /api/workspaces","service":"syncdoc-backend","timestamp":"2026-10-13 17:23:20"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-10-13 17:23:20"}
+{"level":"info","message":"[GET] /api/dashboard","service":"syncdoc-backend","timestamp":"2026-10-13 17:23:20"}

@@ -1,0 +1,1982 @@
+
+/* ============================================================
+   SYNCDOC — RESPONSIVE & LAYOUT SYSTEM
+   High-Level Production Responsive Layer
+   ------------------------------------------------------------
+   Version: 2.0
+   Purpose:
+   - Responsive application shell
+   - Sidebar / mobile navigation
+   - Adaptive topbar
+   - Dashboard / project / document grids
+   - Editor workspace responsiveness
+   - Settings responsiveness
+   - Tables and forms
+   - Touch optimization
+   - Safe-area support
+   - Accessibility
+   - Print optimization
+   ============================================================ */
+
+
+/* ============================================================
+   01. RESPONSIVE DESIGN TOKENS
+============================================================ */
+
+:root {
+  --sd-sidebar-width: 270px;
+  --sd-sidebar-tablet-width: 250px;
+  --sd-sidebar-mobile-width: min(86vw, 300px);
+  --sd-sidebar-collapsed-width: 76px;
+
+  --sd-topbar-height: 76px;
+  --sd-topbar-mobile-height: 64px;
+
+  --sd-content-padding: clamp(16px, 2.2vw, 32px);
+  --sd-mobile-padding: 15px;
+
+  --sd-grid-gap: clamp(14px, 1.5vw, 24px);
+
+  --sd-radius-sm: 8px;
+  --sd-radius-md: 12px;
+  --sd-radius-lg: 16px;
+
+  --sd-overlay: rgba(15, 23, 42, 0.42);
+
+  --sd-shadow-sidebar:
+    18px 0 55px rgba(15, 23, 42, 0.16);
+
+  --sd-focus-ring:
+    0 0 0 3px rgba(37, 99, 235, 0.18);
+}
+
+
+/* ============================================================
+   02. MOBILE ELEMENTS — DEFAULT
+============================================================ */
+
+.mobile-menu,
+.mobile-bottom-menu,
+.sidebar-close,
+.sidebar-overlay {
+  display: none;
+}
+
+
+/* ============================================================
+   03. GLOBAL RESPONSIVE SAFETY
+============================================================ */
+
+html {
+  max-width: 100%;
+  overflow-x: hidden;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.app-shell,
+.app-main,
+.app-content,
+.page-container,
+.page,
+.dashboard-page,
+.documents-page,
+.projects-page,
+.editor-page,
+.settings-page,
+.auth-page {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.app-main,
+.app-content {
+  box-sizing: border-box;
+}
+
+img,
+video,
+canvas,
+svg,
+iframe {
+  max-width: 100%;
+}
+
+img,
+video {
+  height: auto;
+}
+
+button,
+input,
+textarea,
+select {
+  max-width: 100%;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  touch-action: manipulation;
+}
+
+
+/* ============================================================
+   04. FLEX / GRID OVERFLOW PROTECTION
+============================================================ */
+
+.flex-container,
+.flex-row,
+.toolbar,
+.topbar,
+.topbar-actions,
+.page-heading,
+.dashboard-header,
+.card-header,
+.editor-header,
+.editor-actions {
+  min-width: 0;
+}
+
+.grid,
+.document-grid,
+.project-grid,
+.stats-grid,
+.form-grid,
+.dashboard-two-column,
+.workspace-layout,
+.editor-workspace,
+.settings-layout {
+  min-width: 0;
+}
+
+.grid > *,
+.document-grid > *,
+.project-grid > *,
+.stats-grid > *,
+.form-grid > *,
+.dashboard-two-column > *,
+.workspace-layout > *,
+.editor-workspace > *,
+.settings-layout > * {
+  min-width: 0;
+}
+
+
+/* ============================================================
+   05. TABLE RESPONSIVENESS
+============================================================ */
+
+.table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-wrap .data-table {
+  min-width: 620px;
+}
+
+
+/* ============================================================
+   06. APP CONTENT
+============================================================ */
+
+.app-content {
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: clip;
+}
+
+
+/* ============================================================
+   07. PAGE CONTAINER
+============================================================ */
+
+.page-container {
+  width: 100%;
+  max-width: 1600px;
+  margin-inline: auto;
+  padding:
+    var(--sd-content-padding)
+    var(--sd-content-padding)
+    calc(var(--sd-content-padding) + 8px);
+  box-sizing: border-box;
+}
+
+
+/* ============================================================
+   08. LARGE DESKTOP
+   >= 1440px
+============================================================ */
+
+@media (min-width: 1440px) {
+
+  .page-container {
+    padding-inline: clamp(28px, 3vw, 48px);
+  }
+
+  .document-grid {
+    grid-template-columns:
+      repeat(4, minmax(0, 1fr));
+  }
+
+  .project-grid {
+    grid-template-columns:
+      repeat(4, minmax(0, 1fr));
+  }
+
+  .stats-grid {
+    grid-template-columns:
+      repeat(4, minmax(0, 1fr));
+  }
+
+  .editor-workspace {
+    max-width: 1500px;
+    margin-inline: auto;
+  }
+}
+
+
+/* ============================================================
+   09. LARGE TABLET / SMALL DESKTOP
+   <= 1200px
+============================================================ */
+
+@media (max-width: 1200px) {
+
+  /* ----------------------------------------------------------
+     PAGE
+  ---------------------------------------------------------- */
+
+  .page-container {
+    padding: 26px;
+  }
+
+
+  /* ----------------------------------------------------------
+     DOCUMENTS
+  ---------------------------------------------------------- */
+
+  .document-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+
+  /* ----------------------------------------------------------
+     PROJECTS
+  ---------------------------------------------------------- */
+
+  .project-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+
+  /* ----------------------------------------------------------
+     DASHBOARD
+  ---------------------------------------------------------- */
+
+  .dashboard-two-column {
+    grid-template-columns: 1fr;
+  }
+
+
+  /* ----------------------------------------------------------
+     WORKSPACE
+  ---------------------------------------------------------- */
+
+  .workspace-layout {
+    grid-template-columns: 1fr;
+  }
+
+
+  /* ----------------------------------------------------------
+     EDITOR
+  ---------------------------------------------------------- */
+
+  .editor-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .comments-panel {
+    display: none;
+  }
+
+  .editor-main {
+    width: 100%;
+    min-width: 0;
+  }
+
+
+  /* ----------------------------------------------------------
+     SETTINGS
+  ---------------------------------------------------------- */
+
+  .settings-layout {
+    max-width: 100%;
+  }
+
+
+  /* ----------------------------------------------------------
+     AUTH
+  ---------------------------------------------------------- */
+
+  .auth-layout {
+    gap: 40px;
+  }
+}
+
+
+/* ============================================================
+   10. TABLET
+   <= 1024px
+============================================================ */
+
+@media (max-width: 1024px) {
+
+  /* ----------------------------------------------------------
+     SIDEBAR
+  ---------------------------------------------------------- */
+
+  .sidebar {
+    width: var(--sd-sidebar-tablet-width);
+    min-width: var(--sd-sidebar-tablet-width);
+    max-width: var(--sd-sidebar-tablet-width);
+  }
+
+  .app-main {
+    width: calc(
+      100% - var(--sd-sidebar-tablet-width)
+    );
+
+    margin-left: var(--sd-sidebar-tablet-width);
+  }
+
+  .sidebar.sidebar-collapsed {
+    width: var(--sd-sidebar-collapsed-width);
+    min-width: var(--sd-sidebar-collapsed-width);
+    max-width: var(--sd-sidebar-collapsed-width);
+  }
+
+  .sidebar.sidebar-collapsed ~ .app-main {
+    width: calc(
+      100% - var(--sd-sidebar-collapsed-width)
+    );
+
+    margin-left: var(--sd-sidebar-collapsed-width);
+  }
+
+
+  /* ----------------------------------------------------------
+     TOPBAR
+  ---------------------------------------------------------- */
+
+  .topbar {
+    min-height: var(--sd-topbar-height);
+    padding-inline: 20px;
+  }
+
+  .global-search {
+    width: min(100%, 480px);
+    max-width: 480px;
+  }
+
+
+  /* ----------------------------------------------------------
+     STATS
+  ---------------------------------------------------------- */
+
+  .stats-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+
+  /* ----------------------------------------------------------
+     AUTH
+  ---------------------------------------------------------- */
+
+  .auth-layout {
+    grid-template-columns: 1fr;
+    width: min(100%, 760px);
+    margin-inline: auto;
+  }
+
+  .auth-promo {
+    text-align: center;
+  }
+
+  .auth-promo > p {
+    margin-inline: auto;
+  }
+
+  .auth-card {
+    width: 100%;
+    max-width: 520px;
+    margin-inline: auto;
+  }
+}
+
+
+/* ============================================================
+   11. MOBILE NAVIGATION
+   <= 900px
+============================================================ */
+
+@media (max-width: 900px) {
+
+  /* ----------------------------------------------------------
+     ROOT / BODY
+  ---------------------------------------------------------- */
+
+  body {
+    overflow-x: hidden;
+  }
+
+
+  /* ----------------------------------------------------------
+     SIDEBAR DRAWER
+  ---------------------------------------------------------- */
+
+  .sidebar {
+    position: fixed;
+    inset-block: 0;
+    inset-inline-start: 0;
+
+    z-index: 1000;
+
+    width: var(--sd-sidebar-mobile-width);
+    min-width: var(--sd-sidebar-mobile-width);
+    max-width: var(--sd-sidebar-mobile-width);
+
+    transform: translate3d(-105%, 0, 0);
+
+    box-shadow: none;
+
+    transition:
+      transform 240ms cubic-bezier(0.4, 0, 0.2, 1),
+      box-shadow 240ms ease;
+
+    will-change: transform;
+
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    overscroll-behavior: contain;
+
+    -webkit-overflow-scrolling: touch;
+  }
+
+
+  /* ----------------------------------------------------------
+     COLLAPSED SIDEBAR
+     Mobile has no collapsed state.
+  ---------------------------------------------------------- */
+
+  .sidebar.sidebar-collapsed {
+    width: var(--sd-sidebar-mobile-width);
+    min-width: var(--sd-sidebar-mobile-width);
+    max-width: var(--sd-sidebar-mobile-width);
+
+    transform: translate3d(-105%, 0, 0);
+  }
+
+
+  /* ----------------------------------------------------------
+     OPEN SIDEBAR
+  ---------------------------------------------------------- */
+
+  .sidebar.mobile-open {
+    transform: translate3d(0, 0, 0);
+
+    box-shadow: var(--sd-shadow-sidebar);
+  }
+
+
+  /* ----------------------------------------------------------
+     MOBILE SIDEBAR CONTENT
+  ---------------------------------------------------------- */
+
+  .sidebar.mobile-open .sidebar-brand {
+    padding-inline: 18px;
+    justify-content: flex-start;
+  }
+
+  .sidebar.mobile-open .sidebar-brand-link {
+    flex: 1;
+    justify-content: flex-start;
+    min-width: 0;
+  }
+
+  .sidebar.mobile-open .sidebar-brand-copy,
+  .sidebar.mobile-open .sidebar-workspace,
+  .sidebar.mobile-open .nav-label,
+  .sidebar.mobile-open .nav-item-label,
+  .sidebar.mobile-open .user-mini {
+    display: block;
+  }
+
+  .sidebar.mobile-open .nav-item {
+    justify-content: flex-start;
+    padding: 10px 12px;
+  }
+
+  .sidebar.mobile-open .sidebar-footer {
+    padding: 14px;
+  }
+
+  .sidebar.mobile-open .user-mini {
+    display: flex;
+  }
+
+
+  /* ----------------------------------------------------------
+     SIDEBAR CONTROLS
+  ---------------------------------------------------------- */
+
+  .sidebar-close {
+    display: grid;
+    place-items: center;
+  }
+
+  .sidebar-collapse {
+    display: none;
+  }
+
+
+  /* ----------------------------------------------------------
+     MOBILE OVERLAY
+  ---------------------------------------------------------- */
+
+  .sidebar-overlay {
+    position: fixed;
+    inset: 0;
+
+    z-index: 950;
+
+    display: block;
+
+    background: var(--sd-overlay);
+
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+
+    animation: sd-overlay-in 180ms ease both;
+  }
+
+  @keyframes sd-overlay-in {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+
+  /* ----------------------------------------------------------
+     LOCK BODY WHEN MENU OPEN
+  ---------------------------------------------------------- */
+
+  body:has(.sidebar.mobile-open) {
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+
+  /* ----------------------------------------------------------
+     MAIN
+  ---------------------------------------------------------- */
+
+  .app-main,
+  .sidebar.sidebar-collapsed ~ .app-main {
+    width: 100%;
+    margin-left: 0;
+  }
+
+
+  /* ----------------------------------------------------------
+     CONTENT
+  ---------------------------------------------------------- */
+
+  .app-content {
+    width: 100%;
+    padding: 0;
+  }
+
+  .page-container {
+    padding: 22px;
+  }
+
+
+  /* ----------------------------------------------------------
+     TOPBAR
+  ---------------------------------------------------------- */
+
+  .topbar {
+    height: 64px;
+    min-height: 64px;
+
+    padding-inline: 18px;
+
+    gap: 10px;
+
+    padding-top:
+      env(safe-area-inset-top, 0px);
+  }
+
+  .mobile-menu {
+    display: grid;
+    place-items: center;
+
+    flex: 0 0 38px;
+
+    width: 38px;
+    height: 38px;
+  }
+
+  .topbar-context {
+    display: none;
+  }
+
+  .global-search {
+    flex: 1 1 auto;
+    width: auto;
+    max-width: none;
+    min-width: 0;
+  }
+
+  .topbar-actions {
+    flex: 0 0 auto;
+    gap: 7px;
+  }
+
+
+  /* ----------------------------------------------------------
+     DASHBOARD
+  ---------------------------------------------------------- */
+
+  .dashboard-two-column,
+  .workspace-layout {
+    grid-template-columns: 1fr;
+  }
+
+
+  /* ----------------------------------------------------------
+     PROJECTS / DOCUMENTS
+  ---------------------------------------------------------- */
+
+  .project-grid,
+  .document-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+
+  /* ----------------------------------------------------------
+     EDITOR
+  ---------------------------------------------------------- */
+
+  .editor-workspace {
+    grid-template-columns: 1fr;
+
+    width: 100%;
+    max-width: 100%;
+
+    padding-inline: 14px;
+
+    margin-top: 14px;
+  }
+
+  .comments-panel {
+    display: none;
+  }
+
+  .editor-main {
+    width: 100%;
+  }
+
+  .editor-content {
+    min-height: 620px;
+  }
+
+
+  /* ----------------------------------------------------------
+     SETTINGS
+  ---------------------------------------------------------- */
+
+  .settings-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-nav {
+    display: flex;
+
+    flex-direction: row;
+
+    width: 100%;
+
+    overflow-x: auto;
+    overflow-y: hidden;
+
+    scrollbar-width: none;
+
+    padding-bottom: 3px;
+
+    overscroll-behavior-x: contain;
+  }
+
+  .settings-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .settings-nav button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+
+  /* ----------------------------------------------------------
+     AUTH
+  ---------------------------------------------------------- */
+
+  .auth-layout {
+    margin-block: 35px;
+  }
+
+  .auth-promo {
+    display: none;
+  }
+}
+
+
+/* ============================================================
+   12. MOBILE
+   <= 640px
+============================================================ */
+
+@media (max-width: 640px) {
+
+  :root {
+    --sd-topbar-height: 62px;
+    --topbar-height: 62px;
+    --sd-content-padding: 15px;
+  }
+
+
+  /* ----------------------------------------------------------
+     GLOBAL
+  ---------------------------------------------------------- */
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    overflow-x: hidden;
+  }
+
+
+  /* ----------------------------------------------------------
+     CONTENT
+  ---------------------------------------------------------- */
+
+  .app-content {
+    padding: 0;
+  }
+
+  .page-container {
+    padding: 15px;
+  }
+
+  .page,
+  .dashboard-page,
+  .documents-page,
+  .projects-page {
+    width: 100%;
+    max-width: 100%;
+  }
+
+
+  /* ----------------------------------------------------------
+     TOPBAR
+  ---------------------------------------------------------- */
+
+  .topbar {
+    height: 62px;
+    min-height: 62px;
+
+    padding-inline: 12px;
+
+    gap: 8px;
+  }
+
+  .mobile-menu {
+    width: 35px;
+    height: 35px;
+    flex-basis: 35px;
+  }
+
+  .profile-name,
+  .topbar-context,
+  .global-search kbd {
+    display: none;
+  }
+
+  .global-search {
+    height: 38px;
+    min-width: 0;
+    padding-inline: 9px;
+  }
+
+  .global-search input {
+    min-width: 0;
+    width: 100%;
+    font-size: 12px;
+  }
+
+  .topbar-actions {
+    gap: 4px;
+  }
+
+  .icon-btn {
+    width: 35px;
+    height: 35px;
+  }
+
+
+  /* ----------------------------------------------------------
+     PAGE HEADER
+  ---------------------------------------------------------- */
+
+  .dashboard-header,
+  .page-heading {
+    align-items: flex-start;
+    flex-direction: column;
+
+    gap: 9px;
+
+    margin-bottom: 20px;
+  }
+
+  .dashboard-header h1,
+  .page-heading h1 {
+    font-size: clamp(22px, 6vw, 25px);
+    line-height: 1.15;
+  }
+
+  .dashboard-header p,
+  .page-heading p {
+    font-size: 12px;
+    line-height: 1.55;
+  }
+
+
+  /* ----------------------------------------------------------
+     STATS
+  ---------------------------------------------------------- */
+
+  .stats-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+
+    gap: 9px;
+
+    margin-bottom: 12px;
+  }
+
+  .stat-card {
+    padding: 13px;
+    border-radius: var(--sd-radius-md);
+  }
+
+  .stat-top {
+    margin-bottom: 10px;
+  }
+
+  .stat-icon {
+    width: 30px;
+    height: 30px;
+  }
+
+  .stat-change {
+    font-size: 8px;
+    padding: 3px 5px;
+  }
+
+  .stat-card > strong {
+    font-size: 21px;
+    line-height: 1.15;
+  }
+
+  .stat-card > span:last-child {
+    font-size: 9px;
+  }
+
+
+  /* ----------------------------------------------------------
+     CARDS
+  ---------------------------------------------------------- */
+
+  .card {
+    border-radius: var(--sd-radius-md);
+  }
+
+  .card-header {
+    min-height: 52px;
+    padding-inline: 14px;
+
+    gap: 8px;
+  }
+
+  .card-body {
+    padding: 14px;
+  }
+
+
+  /* ----------------------------------------------------------
+     PROJECTS / DOCUMENTS
+  ---------------------------------------------------------- */
+
+  .document-grid,
+  .project-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .project-card {
+    padding: 16px;
+  }
+
+
+  /* ----------------------------------------------------------
+     DOCUMENT TOOLBAR
+  ---------------------------------------------------------- */
+
+  .document-toolbar {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+
+    gap: 10px;
+  }
+
+  .document-filters {
+    width: 100%;
+
+    display: flex;
+
+    overflow-x: auto;
+    overflow-y: hidden;
+
+    scrollbar-width: none;
+
+    padding-bottom: 3px;
+  }
+
+  .document-filters::-webkit-scrollbar {
+    display: none;
+  }
+
+  .document-filters > * {
+    flex: 0 0 auto;
+  }
+
+
+  /* ----------------------------------------------------------
+     TABLES
+  ---------------------------------------------------------- */
+
+  .table-wrap {
+    margin-inline: -14px;
+    padding-inline: 14px;
+
+    scrollbar-width: thin;
+  }
+
+  .data-table {
+    min-width: 620px;
+  }
+
+
+  /* ----------------------------------------------------------
+     FORMS
+  ---------------------------------------------------------- */
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-stack {
+    gap: 13px;
+  }
+
+
+  /* ----------------------------------------------------------
+     SETTINGS
+  ---------------------------------------------------------- */
+
+  .settings-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-nav {
+    display: grid;
+
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+
+    gap: 5px;
+
+    overflow: visible;
+  }
+
+  .settings-nav button {
+    min-width: 0;
+    text-align: center;
+  }
+
+
+  /* ----------------------------------------------------------
+     EDITOR PAGE
+  ---------------------------------------------------------- */
+
+  .editor-page {
+    width: calc(100% + 30px);
+    margin: -15px;
+
+    min-height:
+      calc(
+        100vh -
+        var(--sd-topbar-height)
+      );
+  }
+
+
+  /* ----------------------------------------------------------
+     EDITOR HEADER
+  ---------------------------------------------------------- */
+
+  .editor-header {
+    min-height: 62px;
+
+    padding: 10px 13px;
+
+    gap: 8px;
+  }
+
+  .editor-title-group {
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .back-link {
+    width: 32px;
+    height: 32px;
+
+    flex: 0 0 32px;
+  }
+
+  .editor-title-group h1 {
+    max-width: min(44vw, 190px);
+
+    min-width: 0;
+
+    font-size: 14px;
+    line-height: 1.25;
+
+    white-space: nowrap;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+  }
+
+
+  /* ----------------------------------------------------------
+     EDITOR ACTIONS
+  ---------------------------------------------------------- */
+
+  .editor-actions {
+    flex: 0 0 auto;
+    gap: 4px;
+  }
+
+  .editor-actions .collaborator-stack,
+  .editor-actions .btn:first-of-type {
+    display: none;
+  }
+
+
+  /* ----------------------------------------------------------
+     EDITOR TOOLBAR
+  ---------------------------------------------------------- */
+
+  .editor-toolbar {
+    width: 100%;
+
+    padding: 5px 7px;
+
+    gap: 2px;
+
+    overflow-x: auto;
+    overflow-y: hidden;
+
+    flex-wrap: nowrap;
+
+    scrollbar-width: none;
+
+    overscroll-behavior-x: contain;
+  }
+
+  .editor-toolbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .editor-toolbar button {
+    flex: 0 0 auto;
+
+    min-width: 30px;
+  }
+
+  .toolbar-separator {
+    flex: 0 0 1px;
+  }
+
+
+  /* ----------------------------------------------------------
+     EDITOR STATUS BAR
+  ---------------------------------------------------------- */
+
+  .editor-statusbar {
+    padding-inline: 13px;
+  }
+
+
+  /* ----------------------------------------------------------
+     EDITOR WORKSPACE
+  ---------------------------------------------------------- */
+
+  .editor-workspace {
+    grid-template-columns: 1fr;
+
+    width: 100%;
+
+    padding-inline: 8px;
+
+    margin: 10px auto;
+  }
+
+  .editor-main {
+    width: 100%;
+    min-width: 0;
+
+    border-radius: 10px;
+  }
+
+  .editor-content {
+    min-height: 560px;
+
+    padding: 35px 20px;
+
+    font-size: 13px;
+
+    line-height: 1.75;
+
+    overflow-wrap: anywhere;
+  }
+
+  .editor-content h1 {
+    font-size: clamp(24px, 7vw, 28px);
+  }
+
+  .editor-content h2 {
+    font-size: 19px;
+    margin-top: 28px;
+  }
+
+
+  /* ----------------------------------------------------------
+     NOTIFICATION PANEL
+  ---------------------------------------------------------- */
+
+  .notification-panel {
+    position: fixed;
+
+    top:
+      calc(
+        var(--topbar-height) + 7px
+      );
+
+    left: 10px;
+    right: 10px;
+
+    width: auto;
+    max-width: none;
+
+    max-height:
+      calc(
+        100dvh -
+        var(--topbar-height) -
+        25px
+      );
+
+    overflow-y: auto;
+
+    overscroll-behavior: contain;
+
+    z-index: 1100;
+  }
+
+
+  /* ----------------------------------------------------------
+     PROFILE DROPDOWN
+  ---------------------------------------------------------- */
+
+  .profile-dropdown {
+    position: fixed;
+
+    top:
+      calc(
+        var(--topbar-height) + 7px
+      );
+
+    right: 10px;
+    left: auto;
+
+    width:
+      min(
+        320px,
+        calc(100vw - 20px)
+      );
+
+    max-height:
+      calc(100dvh - 90px);
+
+    overflow-y: auto;
+
+    overscroll-behavior: contain;
+
+    z-index: 1100;
+  }
+
+
+  /* ----------------------------------------------------------
+     AUTH
+  ---------------------------------------------------------- */
+
+  .auth-page {
+    padding: 18px;
+  }
+
+  .auth-layout {
+    grid-template-columns: 1fr;
+
+    margin: 25px auto;
+  }
+
+  .auth-card {
+    padding: 22px;
+
+    border-radius: 14px;
+  }
+
+  .auth-card h2 {
+    font-size: 22px;
+  }
+
+
+  /* ----------------------------------------------------------
+     MOBILE BOTTOM MENU
+  ---------------------------------------------------------- */
+
+  .mobile-bottom-menu {
+    position: fixed;
+
+    right: 15px;
+
+    bottom:
+      calc(
+        15px +
+        env(safe-area-inset-bottom, 0px)
+      );
+
+    z-index: 900;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 7px;
+
+    min-height: 42px;
+
+    padding: 8px 13px;
+
+    border: 1px solid
+      rgba(255, 255, 255, 0.1);
+
+    border-radius: 24px;
+
+    background: #111827;
+
+    color: #fff;
+
+    box-shadow:
+      0 12px 35px
+      rgba(15, 23, 42, 0.22);
+
+    font-size: 11px;
+
+    -webkit-tap-highlight-color: transparent;
+
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  .mobile-bottom-menu button,
+  .mobile-bottom-menu a {
+    min-height: 30px;
+
+    min-width: 30px;
+
+    display: inline-flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border: 0;
+
+    background: transparent;
+
+    color: inherit;
+  }
+}
+
+
+/* ============================================================
+   13. SMALL MOBILE
+   <= 480px
+============================================================ */
+
+@media (max-width: 480px) {
+
+  /* ----------------------------------------------------------
+     TOPBAR
+  ---------------------------------------------------------- */
+
+  .topbar {
+    padding-inline: 9px;
+  }
+
+  .topbar-actions {
+    gap: 2px;
+  }
+
+  .global-search {
+    height: 37px;
+  }
+
+  .global-search input {
+    font-size: 11px;
+  }
+
+
+  /* ----------------------------------------------------------
+     CONTENT
+  ---------------------------------------------------------- */
+
+  .app-content {
+    padding: 0;
+  }
+
+  .page-container {
+    padding: 12px;
+  }
+
+
+  /* ----------------------------------------------------------
+     STATS
+  ---------------------------------------------------------- */
+
+  .stats-grid {
+    gap: 7px;
+  }
+
+  .stat-card {
+    padding: 11px;
+  }
+
+  .stat-card > strong {
+    font-size: 19px;
+  }
+
+  .stat-card > span:last-child {
+    font-size: 8px;
+  }
+
+
+  /* ----------------------------------------------------------
+     CARDS
+  ---------------------------------------------------------- */
+
+  .card-header {
+    padding-inline: 12px;
+  }
+
+  .card-body {
+    padding: 12px;
+  }
+
+
+  /* ----------------------------------------------------------
+     NOTIFICATIONS
+  ---------------------------------------------------------- */
+
+  .notification-panel {
+    left: 8px;
+    right: 8px;
+
+    top:
+      calc(
+        var(--topbar-height) + 6px
+      );
+  }
+
+
+  /* ----------------------------------------------------------
+     PROFILE
+  ---------------------------------------------------------- */
+
+  .profile-dropdown {
+    right: 8px;
+
+    width:
+      calc(100vw - 16px);
+  }
+
+
+  /* ----------------------------------------------------------
+     EDITOR
+  ---------------------------------------------------------- */
+
+  .editor-title-group h1 {
+    max-width: 130px;
+  }
+
+  .editor-actions .btn {
+    padding: 7px 8px;
+    font-size: 9px;
+  }
+
+  .editor-content {
+    padding: 28px 17px;
+  }
+
+  .editor-content h1 {
+    font-size: 24px;
+  }
+
+  .editor-content h2 {
+    font-size: 18px;
+  }
+
+
+  /* ----------------------------------------------------------
+     AUTH
+  ---------------------------------------------------------- */
+
+  .auth-page {
+    padding: 12px;
+  }
+
+  .auth-card {
+    padding: 18px;
+  }
+
+
+  /* ----------------------------------------------------------
+     MOBILE BOTTOM MENU
+  ---------------------------------------------------------- */
+
+  .mobile-bottom-menu {
+    right: 10px;
+
+    padding: 8px 11px;
+  }
+}
+
+
+/* ============================================================
+   14. VERY SMALL DEVICES
+   <= 360px
+============================================================ */
+
+@media (max-width: 360px) {
+
+  .topbar {
+    padding-inline: 7px;
+  }
+
+  .mobile-menu {
+    width: 32px;
+    height: 32px;
+    flex-basis: 32px;
+  }
+
+  .global-search {
+    padding-inline: 7px;
+  }
+
+  .global-search > span {
+    font-size: 14px;
+  }
+
+
+  /* ----------------------------------------------------------
+     STATS
+  ---------------------------------------------------------- */
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+
+  /* ----------------------------------------------------------
+     SETTINGS
+  ---------------------------------------------------------- */
+
+  .settings-nav {
+    grid-template-columns: 1fr;
+  }
+
+
+  /* ----------------------------------------------------------
+     EDITOR
+  ---------------------------------------------------------- */
+
+  .editor-content {
+    padding: 25px 14px;
+  }
+
+  .editor-title-group h1 {
+    max-width: 105px;
+  }
+
+  .editor-content h1 {
+    font-size: 22px;
+  }
+
+  .editor-content h2 {
+    font-size: 17px;
+  }
+}
+
+
+/* ============================================================
+   15. LANDSCAPE MOBILE
+   <= 900px + LANDSCAPE
+============================================================ */
+
+@media (max-width: 900px) and (orientation: landscape) {
+
+  .topbar {
+    height: 58px;
+    min-height: 58px;
+  }
+
+  .editor-page {
+    min-height:
+      calc(100dvh - 58px);
+  }
+
+  .notification-panel,
+  .profile-dropdown {
+    max-height:
+      calc(100dvh - 75px);
+  }
+
+  .mobile-bottom-menu {
+    bottom:
+      calc(
+        8px +
+        env(safe-area-inset-bottom, 0px)
+      );
+  }
+}
+
+
+/* ============================================================
+   16. TOUCH DEVICES
+============================================================ */
+
+@media (hover: none) and (pointer: coarse) {
+
+  .nav-item,
+  .btn,
+  .icon-btn,
+  .profile-trigger,
+  .settings-nav button,
+  .editor-toolbar button,
+  .mobile-menu,
+  .sidebar-close {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+
+  /* ----------------------------------------------------------
+     TOUCH TARGETS
+  ---------------------------------------------------------- */
+
+  .btn,
+  .nav-item,
+  .settings-nav button {
+    min-height: 40px;
+  }
+
+  .icon-btn,
+  .mobile-menu,
+  .sidebar-close {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  .editor-toolbar button {
+    min-width: 36px;
+    min-height: 36px;
+    height: 36px;
+  }
+
+
+  /* ----------------------------------------------------------
+     REMOVE HOVER-ONLY TRANSITIONS
+  ---------------------------------------------------------- */
+
+  .nav-item:hover,
+  .btn:hover,
+  .icon-btn:hover {
+    transition: none;
+  }
+}
+
+
+/* ============================================================
+   17. KEYBOARD ACCESSIBILITY
+============================================================ */
+
+.nav-item:focus-visible,
+.btn:focus-visible,
+.icon-btn:focus-visible,
+.mobile-menu:focus-visible,
+.sidebar-close:focus-visible,
+.settings-nav button:focus-visible,
+.editor-toolbar button:focus-visible,
+.profile-trigger:focus-visible {
+  outline: none;
+
+  box-shadow: var(--sd-focus-ring);
+}
+
+
+/* ============================================================
+   18. REDUCED MOTION
+============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .sidebar,
+  .mobile-bottom-menu,
+  .app-main {
+    transition: none !important;
+  }
+}
+
+
+/* ============================================================
+   19. HIGH CONTRAST / FORCED COLORS
+============================================================ */
+
+@media (forced-colors: active) {
+
+  .sidebar,
+  .topbar,
+  .card,
+  .mobile-bottom-menu {
+    border: 1px solid CanvasText;
+  }
+
+  .btn,
+  .icon-btn,
+  .nav-item {
+    forced-color-adjust: auto;
+  }
+}
+
+
+/* ============================================================
+   20. PRINT
+============================================================ */
+
+@media print {
+
+  @page {
+    margin: 12mm;
+  }
+
+
+  /* ----------------------------------------------------------
+     HIDE APPLICATION CHROME
+  ---------------------------------------------------------- */
+
+  .sidebar,
+  .topbar,
+  .mobile-menu,
+  .mobile-bottom-menu,
+  .sidebar-overlay,
+  .notification-panel,
+  .profile-dropdown,
+  .comments-panel,
+  .editor-toolbar,
+  .editor-statusbar {
+    display: none !important;
+  }
+
+
+  /* ----------------------------------------------------------
+     RESTORE FULL WIDTH
+  ---------------------------------------------------------- */
+
+  .app-main,
+  .sidebar.sidebar-collapsed ~ .app-main {
+    width: 100% !important;
+    margin-left: 0 !important;
+  }
+
+  .app-content,
+  .page-container {
+    width: 100% !important;
+    max-width: none !important;
+
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+
+  /* ----------------------------------------------------------
+     EDITOR
+  ---------------------------------------------------------- */
+
+  .editor-page {
+    width: 100% !important;
+    min-height: auto !important;
+
+    margin: 0 !important;
+  }
+
+  .editor-workspace {
+    display: block !important;
+
+    width: 100% !important;
+
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .editor-main {
+    width: 100% !important;
+
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .editor-content {
+    width: 100% !important;
+
+    min-height: auto !important;
+
+    padding: 0 !important;
+
+    overflow: visible !important;
+  }
+
+
+  /* ----------------------------------------------------------
+     CARDS
+  ---------------------------------------------------------- */
+
+  .card {
+    box-shadow: none !important;
+    border: 1px solid #d1d5db;
+  }
+
+
+  /* ----------------------------------------------------------
+     LINKS
+  ---------------------------------------------------------- */
+
+  a {
+    color: inherit !important;
+    text-decoration: none !important;
+  }
+
+
+  /* ----------------------------------------------------------
+     TABLES
+  ---------------------------------------------------------- */
+
+  .table-wrap {
+    overflow: visible !important;
+  }
+
+  .data-table {
+    min-width: 0 !important;
+  }
+}
+
+
+/* ============================================================
+   21. SAFE AREA SUPPORT
+   iPhone / Notched Devices
+============================================================ */
+
+@supports (padding: env(safe-area-inset-top)) {
+
+  .topbar {
+    padding-inline-start:
+      max(
+        12px,
+        env(safe-area-inset-left)
+      );
+
+    padding-inline-end:
+      max(
+        12px,
+        env(safe-area-inset-right)
+      );
+  }
+
+  .mobile-bottom-menu {
+    margin-bottom:
+      env(safe-area-inset-bottom);
+  }
+
+  .sidebar {
+    padding-bottom:
+      env(safe-area-inset-bottom);
+  }
+}
+
+
+/* ============================================================
+   22. MOBILE INTERACTION POLISH
+============================================================ */
+
+@media (max-width: 640px) {
+
+  /* Prevent accidental text selection on controls */
+
+  .mobile-menu,
+  .sidebar-close,
+  .icon-btn,
+  .btn,
+  .nav-item,
+  .settings-nav button,
+  .editor-toolbar button,
+  .mobile-bottom-menu {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+
+  /* Better scrolling */
+
+  .document-filters,
+  .settings-nav,
+  .editor-toolbar,
+  .table-wrap {
+    scrollbar-width: none;
+  }
+
+  .document-filters::-webkit-scrollbar,
+  .settings-nav::-webkit-scrollbar,
+  .editor-toolbar::-webkit-scrollbar,
+  .table-wrap::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+
+/* ============================================================
+   23. ULTRA-WIDE DISPLAY PROTECTION
+============================================================ */
+
+@media (min-width: 1920px) {
+
+  .page-container {
+    max-width: 1700px;
+    margin-inline: auto;
+  }
+
+  .editor-workspace {
+    max-width: 1600px;
+    margin-inline: auto;
+  }
+}
+
+
+/* ============================================================
+   24. FALLBACK FOR BROWSERS WITHOUT :has()
+============================================================ */
+
+@supports not selector(body:has(.sidebar.mobile-open)) {
+
+  body.sidebar-open {
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+}
+
+
+/* ============================================================
+   END — SYNCDOC RESPONSIVE SYSTEM
+============================================================ */
+

@@ -1,0 +1,629 @@
+
+/* ============================================================
+   SYNCDOC — APPLICATION LAYOUT
+   High-Level Production Layout System
+============================================================ */
+
+/* ============================================================
+   APP SHELL
+============================================================ */
+
+.app-shell {
+  position: relative;
+
+  width: 100%;
+  min-height: 100vh;
+
+  background: var(--surface-2, #f8fafc);
+
+  overflow-x: hidden;
+}
+
+/* ============================================================
+   MAIN APPLICATION AREA
+============================================================ */
+
+.app-main {
+  position: relative;
+
+  width: calc(100% - var(--sidebar-width, 260px));
+  min-width: 0;
+  min-height: 100vh;
+
+  margin-left: var(--sidebar-width, 260px);
+
+  display: flex;
+  flex-direction: column;
+
+  background: var(--surface-2, #f8fafc);
+
+  transition:
+    width 220ms cubic-bezier(0.4, 0, 0.2, 1),
+    margin-left 220ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  isolation: isolate;
+}
+
+/* ============================================================
+   COLLAPSED SIDEBAR
+============================================================ */
+
+/*
+   Supports:
+
+   .app-shell.sidebar-collapsed
+
+   AND:
+
+   .app-shell-sidebar-collapsed
+*/
+
+.app-shell.sidebar-collapsed .app-main,
+.app-shell.app-shell-sidebar-collapsed .app-main {
+  width: calc(100% - var(--sidebar-collapsed-width, 78px));
+
+  margin-left: var(--sidebar-collapsed-width, 78px);
+}
+
+/* Compatibility with older class name */
+.app-shell-sidebar-collapsed .app-main {
+  width: calc(100% - var(--sidebar-collapsed-width, 78px));
+
+  margin-left: var(--sidebar-collapsed-width, 78px);
+}
+
+/* ============================================================
+   APP CONTENT
+============================================================ */
+
+.app-content {
+  position: relative;
+
+  width: 100%;
+  min-width: 0;
+
+  flex: 1;
+
+  min-height: calc(100vh - var(--topbar-height, 72px));
+
+  padding: 0;
+
+  background: var(--surface-2, #f8fafc);
+
+  overflow-x: hidden;
+}
+
+/* Prevent content from creating horizontal overflow */
+.app-content > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* ============================================================
+   TOPBAR
+============================================================ */
+
+.topbar {
+  position: sticky;
+
+  top: 0;
+
+  z-index: 900;
+
+  width: 100%;
+
+  height: var(--topbar-height, 72px);
+  min-height: var(--topbar-height, 72px);
+
+  display: flex;
+  align-items: center;
+
+  gap: 16px;
+
+  padding: 0 28px;
+
+  background:
+    rgba(255, 255, 255, 0.94);
+
+  border-bottom: 1px solid
+    var(--border, #e5e9f0);
+
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+
+  box-shadow:
+    0 1px 0 rgba(17, 24, 39, 0.02);
+
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+/* ============================================================
+   TOPBAR INNER
+============================================================ */
+
+.topbar-inner {
+  width: 100%;
+  min-width: 0;
+
+  display: flex;
+  align-items: center;
+
+  gap: 16px;
+}
+
+/* ============================================================
+   TOPBAR LEFT
+============================================================ */
+
+.topbar-left {
+  min-width: 0;
+
+  display: flex;
+  align-items: center;
+
+  gap: 12px;
+}
+
+/* ============================================================
+   TOPBAR CENTER
+============================================================ */
+
+.topbar-center {
+  min-width: 0;
+
+  flex: 1;
+
+  display: flex;
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 12px;
+}
+
+/* ============================================================
+   TOPBAR RIGHT
+============================================================ */
+
+.topbar-right,
+.topbar-actions {
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+
+  margin-left: auto;
+}
+
+/* ============================================================
+   MOBILE MENU
+============================================================ */
+
+.mobile-menu {
+  width: 36px;
+  height: 36px;
+
+  flex: 0 0 36px;
+
+  display: none;
+
+  place-items: center;
+
+  border: 1px solid var(--border, #e5e9f0);
+
+  border-radius: 9px;
+
+  background: var(--surface, #ffffff);
+
+  color: var(--text-secondary, #475467);
+
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.mobile-menu:hover {
+  background: var(--surface-3, #f4f6f9);
+
+  border-color: #d9dee7;
+
+  color: var(--text, #172033);
+}
+
+.mobile-menu:active {
+  transform: scale(0.95);
+}
+
+/* ============================================================
+   MOBILE SIDEBAR OVERLAY
+============================================================ */
+
+.sidebar-overlay {
+  display: none;
+
+  position: fixed;
+
+  inset: 0;
+
+  z-index: 950;
+
+  background:
+    rgba(15, 23, 42, 0.42);
+
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+/* Active mobile overlay */
+.sidebar-overlay.active {
+  display: block;
+}
+
+/* ============================================================
+   PAGE CONTENT CONTAINER
+============================================================ */
+
+.app-page {
+  width: 100%;
+  min-width: 0;
+
+  padding: 30px;
+
+  margin: 0 auto;
+}
+
+/* Optional constrained page */
+.app-page-container {
+  width: 100%;
+
+  max-width: 1600px;
+
+  margin: 0 auto;
+
+  padding: 30px;
+}
+
+/* ============================================================
+   FULL WIDTH PAGE
+============================================================ */
+
+.app-page-full {
+  width: 100%;
+
+  min-width: 0;
+
+  padding: 0;
+}
+
+/* ============================================================
+   CONTENT TRANSITION
+============================================================ */
+
+.app-main-content {
+  width: 100%;
+  min-width: 0;
+
+  flex: 1;
+
+  animation: appContentEnter 180ms ease both;
+}
+
+@keyframes appContentEnter {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================================
+   STICKY CONTENT HELPERS
+============================================================ */
+
+.sticky-content {
+  position: sticky;
+
+  top: calc(
+    var(--topbar-height, 72px) + 16px
+  );
+
+  z-index: 100;
+}
+
+/* ============================================================
+   FULL HEIGHT APPLICATION PAGES
+============================================================ */
+
+.app-full-height {
+  min-height: calc(
+    100vh - var(--topbar-height, 72px)
+  );
+}
+
+/* ============================================================
+   SCROLL CONTAINER
+============================================================ */
+
+.app-scroll {
+  min-width: 0;
+
+  overflow-x: hidden;
+  overflow-y: auto;
+
+  scrollbar-width: thin;
+
+  scrollbar-color:
+    #cbd1da
+    transparent;
+}
+
+.app-scroll::-webkit-scrollbar {
+  width: 7px;
+}
+
+.app-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.app-scroll::-webkit-scrollbar-thumb {
+  background: #cbd1da;
+
+  border-radius: 20px;
+}
+
+.app-scroll::-webkit-scrollbar-thumb:hover {
+  background: #aeb7c5;
+}
+
+/* ============================================================
+   RESPONSIVE — LARGE DESKTOP
+============================================================ */
+
+@media (max-width: 1400px) {
+  .topbar {
+    padding: 0 24px;
+  }
+
+  .app-page,
+  .app-page-container {
+    padding: 26px;
+  }
+}
+
+/* ============================================================
+   RESPONSIVE — TABLET
+============================================================ */
+
+@media (max-width: 1100px) {
+  .topbar {
+    padding: 0 20px;
+
+    gap: 12px;
+  }
+
+  .topbar-center {
+    justify-content: flex-start;
+  }
+
+  .app-page,
+  .app-page-container {
+    padding: 24px;
+  }
+}
+
+/* ============================================================
+   RESPONSIVE — MOBILE
+============================================================ */
+
+@media (max-width: 768px) {
+  .app-main,
+  .app-shell.sidebar-collapsed .app-main,
+  .app-shell.app-shell-sidebar-collapsed .app-main,
+  .app-shell-sidebar-collapsed .app-main {
+    width: 100%;
+
+    margin-left: 0;
+  }
+
+  .app-content {
+    width: 100%;
+
+    min-height: calc(
+      100vh - var(--topbar-height, 64px)
+    );
+  }
+
+  /* ==========================================================
+     TOPBAR
+  ========================================================== */
+
+  .topbar {
+    height: var(--topbar-height, 64px);
+
+    min-height: var(--topbar-height, 64px);
+
+    padding: 0 16px;
+
+    gap: 10px;
+  }
+
+  .topbar-inner {
+    gap: 10px;
+  }
+
+  .mobile-menu {
+    display: grid;
+  }
+
+  .topbar-left {
+    gap: 8px;
+  }
+
+  .topbar-center {
+    flex: 1;
+
+    min-width: 0;
+  }
+
+  .topbar-right,
+  .topbar-actions {
+    gap: 6px;
+  }
+
+  /* ==========================================================
+     PAGE
+  ========================================================== */
+
+  .app-page,
+  .app-page-container {
+    padding: 20px 16px;
+  }
+
+  /* ==========================================================
+     MOBILE OVERLAY
+  ========================================================== */
+
+  .sidebar-overlay {
+    display: block;
+
+    visibility: hidden;
+
+    opacity: 0;
+
+    pointer-events: none;
+
+    transition:
+      opacity 200ms ease,
+      visibility 200ms ease;
+  }
+
+  .sidebar-overlay.active {
+    visibility: visible;
+
+    opacity: 1;
+
+    pointer-events: auto;
+  }
+}
+
+/* ============================================================
+   RESPONSIVE — SMALL MOBILE
+============================================================ */
+
+@media (max-width: 480px) {
+  .topbar {
+    padding: 0 10px;
+
+    gap: 7px;
+  }
+
+  .topbar-inner {
+    gap: 7px;
+  }
+
+  .mobile-menu {
+    width: 34px;
+    height: 34px;
+
+    flex-basis: 34px;
+  }
+
+  .topbar-actions {
+    gap: 4px;
+  }
+
+  .app-page,
+  .app-page-container {
+    padding: 16px 12px;
+  }
+}
+
+/* ============================================================
+   SAFE AREA — MOBILE DEVICES
+============================================================ */
+
+@supports (padding: env(safe-area-inset-top)) {
+  .topbar {
+    padding-left:
+      max(16px, env(safe-area-inset-left));
+
+    padding-right:
+      max(16px, env(safe-area-inset-right));
+  }
+
+  @media (max-width: 480px) {
+    .topbar {
+      padding-left:
+        max(10px, env(safe-area-inset-left));
+
+      padding-right:
+        max(10px, env(safe-area-inset-right));
+    }
+  }
+}
+
+/* ============================================================
+   ACCESSIBILITY
+============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .app-main,
+  .topbar,
+  .mobile-menu,
+  .sidebar-overlay,
+  .app-main-content {
+    transition: none !important;
+
+    animation: none !important;
+  }
+}
+
+/* ============================================================
+   PRINT
+============================================================ */
+
+@media print {
+  .topbar {
+    position: static;
+
+    height: auto;
+
+    min-height: 0;
+
+    background: #ffffff;
+
+    box-shadow: none;
+
+    backdrop-filter: none;
+  }
+
+  .app-main,
+  .app-shell.sidebar-collapsed .app-main,
+  .app-shell-sidebar-collapsed .app-main {
+    width: 100%;
+
+    margin-left: 0;
+  }
+
+  .mobile-menu,
+  .sidebar-overlay {
+    display: none !important;
+  }
+
+  .app-page,
+  .app-page-container {
+    padding: 0;
+  }
+}
+

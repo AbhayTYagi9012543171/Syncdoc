@@ -1,0 +1,31 @@
+{
+  "name": "SyncDoc Professional",
+  "short_name": "SyncDoc",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f7fb",
+  "theme_color": "#4f46e5",
+  "description": "Professional real-time collaborative document workspace",
+  "categories": [
+    "productivity",
+    "business",
+    "collaboration"
+  ],
+  "shortcuts": [
+    {
+      "name": "New document",
+      "short_name": "New document",
+      "url": "/documents"
+    },
+    {
+      "name": "Analytics",
+      "short_name": "Analytics",
+      "url": "/analytics"
+    },
+    {
+      "name": "Workspace",
+      "short_name": "Workspace",
+      "url": "/workspace"
+    }
+  ]
+}

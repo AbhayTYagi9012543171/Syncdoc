@@ -1,0 +1,2515 @@
+/* ============================================================
+SYNCDOC — PROFESSIONAL EDITOR DESIGN SYSTEM
+High-Level Production UI
+------------------------
+
+Designed for:
+
+* Rich document editing
+* Real-time collaboration
+* Comments / presence
+* Version history
+* Responsive workspace
+* Light / Dark theme compatibility
+* Accessibility
+* Print support
+
+Global tokens/components:
+
+* index.css
+  Editor-specific:
+* this file
+  ============================================================ */
+
+/* ============================================================
+01. EDITOR DESIGN TOKENS
+============================================================ */
+
+.editor-page {
+--editor-bg: var(--background, #f5f7fb);
+--editor-surface: var(--surface, #ffffff);
+--editor-surface-soft: #f8fafc;
+--editor-surface-hover: #f5f7fa;
+
+--editor-border: var(--border, #e4e8ef);
+--editor-border-strong: #d6dbe5;
+
+--editor-text: var(--text, #172033);
+--editor-text-secondary: #475569;
+--editor-muted: var(--muted, #687386);
+--editor-placeholder: #98a2b3;
+
+--editor-primary: var(--primary, #4f46e5);
+--editor-primary-dark: #4338ca;
+--editor-primary-soft: var(
+--primary-soft,
+#eef2ff
+);
+
+--editor-success: var(--success, #15946a);
+--editor-warning: #d97706;
+--editor-danger: #dc2626;
+
+--editor-radius-xs: 6px;
+--editor-radius-sm: 9px;
+--editor-radius-md: 12px;
+--editor-radius-lg: 16px;
+--editor-radius-xl: 20px;
+
+--editor-shadow-xs:
+0 1px 2px rgba(15, 23, 42, 0.04);
+
+--editor-shadow-sm:
+0 4px 14px rgba(15, 23, 42, 0.045);
+
+--editor-shadow-md:
+0 10px 30px rgba(15, 23, 42, 0.07);
+
+--editor-shadow-lg:
+0 18px 50px rgba(15, 23, 42, 0.11);
+
+--editor-transition-fast:
+120ms cubic-bezier(.2,.8,.2,1);
+
+--editor-transition:
+180ms cubic-bezier(.2,.8,.2,1);
+
+--editor-transition-slow:
+280ms cubic-bezier(.2,.8,.2,1);
+
+--editor-header-height: 68px;
+--editor-toolbar-height: 50px;
+
+position: relative;
+
+width: 100%;
+min-height: calc(100vh - var(--topbar-height));
+
+margin: 0;
+
+background:
+radial-gradient(
+circle at 80% -10%,
+rgba(99, 102, 241, 0.035),
+transparent 35%
+),
+var(--editor-bg);
+
+color: var(--editor-text);
+
+overflow-x: hidden;
+
+isolation: isolate;
+}
+
+/* ============================================================
+02. GLOBAL EDITOR BOX MODEL
+============================================================ */
+
+.editor-page *,
+.editor-page *::before,
+.editor-page *::after {
+box-sizing: border-box;
+min-width: 0;
+}
+
+.editor-page button,
+.editor-page input,
+.editor-page textarea,
+.editor-page select {
+font: inherit;
+}
+
+.editor-page button {
+-webkit-tap-highlight-color: transparent;
+}
+
+.editor-page ::selection {
+background: rgba(79, 70, 229, 0.18);
+color: inherit;
+}
+
+/* ============================================================
+03. EDITOR HEADER
+============================================================ */
+
+.editor-header {
+position: sticky;
+top: 0;
+
+z-index: 70;
+
+width: 100%;
+min-height: var(--editor-header-height);
+
+display: flex;
+align-items: center;
+justify-content: space-between;
+
+gap: 20px;
+
+padding:
+10px
+clamp(14px, 2vw, 26px);
+
+background:
+color-mix(
+in srgb,
+var(--editor-surface) 94%,
+transparent
+);
+
+border-bottom: 1px solid var(--editor-border);
+
+box-shadow:
+0 1px 0 rgba(15, 23, 42, 0.02),
+0 6px 20px rgba(15, 23, 42, 0.025);
+
+backdrop-filter: blur(18px) saturate(140%);
+-webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+
+/* ============================================================
+HEADER LEFT
+============================================================ */
+
+.editor-title-group {
+min-width: 0;
+flex: 1;
+
+display: flex;
+align-items: center;
+
+gap: 11px;
+}
+
+.editor-title-group > div {
+min-width: 0;
+}
+
+/* ============================================================
+EDITOR TITLE
+============================================================ */
+
+.editor-title-group h1 {
+max-width: min(560px, 45vw);
+
+margin: 0;
+
+color: var(--editor-text);
+
+font-size: 16px;
+line-height: 1.25;
+
+font-weight: 800;
+
+letter-spacing: -0.035em;
+
+white-space: nowrap;
+
+overflow: hidden;
+text-overflow: ellipsis;
+}
+
+.editor-title-group .save-state {
+display: inline-flex;
+
+margin-top: 4px;
+
+color: var(--editor-muted);
+
+font-size: 9px;
+line-height: 1.3;
+}
+
+/* ============================================================
+BACK BUTTON
+============================================================ */
+
+.editor-page .back-link {
+width: 36px;
+height: 36px;
+
+flex: 0 0 36px;
+
+display: grid;
+place-items: center;
+
+border: 1px solid var(--editor-border);
+
+border-radius: var(--editor-radius-sm);
+
+background: var(--editor-surface);
+
+color: var(--editor-muted);
+
+box-shadow: var(--editor-shadow-xs);
+
+cursor: pointer;
+
+transition:
+background var(--editor-transition),
+border-color var(--editor-transition),
+color var(--editor-transition),
+transform var(--editor-transition),
+box-shadow var(--editor-transition);
+}
+
+.editor-page .back-link:hover {
+background: var(--editor-primary-soft);
+
+border-color: rgba(79, 70, 229, 0.18);
+
+color: var(--editor-primary);
+
+box-shadow: var(--editor-shadow-sm);
+
+transform: translateX(-1px);
+}
+
+.editor-page .back-link:active {
+transform: scale(0.94);
+}
+
+/* ============================================================
+SAVE STATE
+============================================================ */
+
+.editor-page .save-state {
+display: inline-flex;
+align-items: center;
+
+gap: 6px;
+
+white-space: nowrap;
+}
+
+.editor-page .save-state::before {
+content: "";
+
+width: 6px;
+height: 6px;
+
+flex: 0 0 6px;
+
+border-radius: 50%;
+
+background: #aab2bf;
+
+box-shadow:
+0 0 0 3px rgba(148, 163, 184, 0.08);
+
+transition:
+background var(--editor-transition),
+box-shadow var(--editor-transition);
+}
+
+.editor-page .save-state.saved::before {
+background: var(--editor-success);
+
+box-shadow:
+0 0 0 3px rgba(21, 148, 106, 0.09);
+}
+
+.editor-page .save-state.saving::before {
+background: var(--editor-warning);
+
+animation: editor-save-pulse 1.2s ease-in-out infinite;
+}
+
+.editor-page .save-state.error::before {
+background: var(--editor-danger);
+}
+
+/* ============================================================
+HEADER ACTIONS
+============================================================ */
+
+.editor-actions {
+flex-shrink: 0;
+
+display: flex;
+align-items: center;
+
+gap: 7px;
+}
+
+.editor-actions .btn {
+min-height: 36px;
+
+display: inline-flex;
+align-items: center;
+justify-content: center;
+
+gap: 7px;
+
+white-space: nowrap;
+
+border-radius: var(--editor-radius-sm);
+
+transition:
+transform var(--editor-transition-fast),
+box-shadow var(--editor-transition),
+background var(--editor-transition),
+border-color var(--editor-transition);
+}
+
+.editor-actions .btn:hover:not(:disabled) {
+transform: translateY(-1px);
+}
+
+.editor-actions .btn:active:not(:disabled) {
+transform: translateY(0) scale(0.98);
+}
+
+/* ============================================================
+04. EDITOR TOOLBAR
+============================================================ */
+
+.editor-toolbar {
+position: sticky;
+
+top: var(--editor-header-height);
+
+z-index: 60;
+
+width: 100%;
+min-height: var(--editor-toolbar-height);
+
+display: flex;
+align-items: center;
+
+gap: 3px;
+
+padding:
+7px
+clamp(9px, 1.5vw, 16px);
+
+background:
+color-mix(
+in srgb,
+var(--editor-surface) 96%,
+transparent
+);
+
+border-bottom: 1px solid var(--editor-border);
+
+box-shadow:
+0 3px 12px rgba(15, 23, 42, 0.025);
+
+backdrop-filter: blur(16px) saturate(140%);
+-webkit-backdrop-filter: blur(16px) saturate(140%);
+
+overflow-x: auto;
+overflow-y: hidden;
+
+scrollbar-width: none;
+
+-webkit-overflow-scrolling: touch;
+}
+
+.editor-toolbar::-webkit-scrollbar {
+display: none;
+}
+
+/* ============================================================
+TOOLBAR GROUP
+============================================================ */
+
+.editor-toolbar-group {
+display: flex;
+align-items: center;
+
+gap: 2px;
+
+flex-shrink: 0;
+}
+
+/* ============================================================
+TOOLBAR BUTTON
+============================================================ */
+
+.editor-toolbar button {
+position: relative;
+
+width: 32px;
+height: 32px;
+
+min-width: 32px;
+
+display: grid;
+place-items: center;
+
+flex: 0 0 32px;
+
+padding: 0;
+
+border: 1px solid transparent;
+
+border-radius: var(--editor-radius-xs);
+
+background: transparent;
+
+color: var(--editor-muted);
+
+font-size: 11px;
+font-weight: 700;
+
+cursor: pointer;
+
+transition:
+background var(--editor-transition-fast),
+border-color var(--editor-transition-fast),
+color var(--editor-transition-fast),
+transform var(--editor-transition-fast);
+}
+
+.editor-toolbar button:hover {
+background: var(--editor-surface-hover);
+
+border-color: var(--editor-border);
+
+color: var(--editor-text);
+}
+
+.editor-toolbar button:active {
+transform: scale(0.93);
+}
+
+.editor-toolbar button.active,
+.editor-toolbar button[aria-pressed="true"] {
+background: var(--editor-primary-soft);
+
+border-color: rgba(79, 70, 229, 0.12);
+
+color: var(--editor-primary);
+
+box-shadow:
+inset 0 0 0 1px rgba(79, 70, 229, 0.025);
+}
+
+.editor-toolbar button:disabled {
+opacity: 0.4;
+
+cursor: not-allowed;
+}
+
+/* ============================================================
+TOOLBAR SELECT
+============================================================ */
+
+.editor-toolbar select {
+height: 32px;
+
+min-width: 92px;
+
+padding:
+0
+28px
+0
+9px;
+
+border: 1px solid transparent;
+
+border-radius: var(--editor-radius-xs);
+
+background-color: transparent;
+
+color: var(--editor-muted);
+
+font-size: 11px;
+font-weight: 600;
+
+outline: none;
+
+cursor: pointer;
+
+transition:
+background var(--editor-transition-fast),
+border-color var(--editor-transition-fast),
+color var(--editor-transition-fast);
+}
+
+.editor-toolbar select:hover {
+background: var(--editor-surface-hover);
+
+color: var(--editor-text);
+}
+
+.editor-toolbar select:focus {
+border-color: rgba(79, 70, 229, 0.25);
+
+background: var(--editor-surface);
+
+color: var(--editor-text);
+
+box-shadow:
+0 0 0 3px rgba(79, 70, 229, 0.08);
+}
+
+/* ============================================================
+TOOLBAR SEPARATOR
+============================================================ */
+
+.editor-toolbar .toolbar-separator {
+width: 1px;
+height: 22px;
+
+flex: 0 0 1px;
+
+margin: 0 6px;
+
+background: var(--editor-border);
+}
+
+/* ============================================================
+05. EDITOR WORKSPACE
+============================================================ */
+
+.editor-workspace {
+width: 100%;
+max-width: 1560px;
+
+margin: 0 auto;
+
+padding:
+clamp(16px, 2.2vw, 28px);
+
+display: grid;
+
+grid-template-columns:
+minmax(0, 1fr)
+minmax(280px, 320px);
+
+align-items: start;
+
+gap: 20px;
+}
+
+/* ============================================================
+MAIN DOCUMENT SHELL
+============================================================ */
+
+.editor-main {
+position: relative;
+
+min-width: 0;
+
+background: var(--editor-surface);
+
+border: 1px solid var(--editor-border);
+
+border-radius: var(--editor-radius-lg);
+
+box-shadow: var(--editor-shadow-md);
+
+overflow: hidden;
+
+transition:
+border-color var(--editor-transition),
+box-shadow var(--editor-transition),
+transform var(--editor-transition);
+}
+
+.editor-main:hover {
+border-color: var(--editor-border-strong);
+}
+
+.editor-main:focus-within {
+border-color: rgba(79, 70, 229, 0.22);
+
+box-shadow:
+0 18px 45px rgba(15, 23, 42, 0.075),
+0 0 0 3px rgba(79, 70, 229, 0.035);
+}
+
+/* ============================================================
+06. DOCUMENT CANVAS
+============================================================ */
+
+.editor-content {
+position: relative;
+
+width: 100%;
+
+min-height: calc(100vh - 250px);
+
+padding:
+clamp(48px, 5vw, 82px)
+clamp(36px, 8vw, 120px);
+
+outline: none;
+
+color: var(--editor-text-secondary);
+
+background: var(--editor-surface);
+
+font-size: 14px;
+
+line-height: 1.82;
+
+caret-color: var(--editor-primary);
+
+word-break: break-word;
+
+overflow-wrap: anywhere;
+
+transition:
+background var(--editor-transition),
+color var(--editor-transition);
+}
+
+/* ============================================================
+EDITOR PLACEHOLDER
+============================================================ */
+
+.editor-content:empty::before,
+.editor-content [data-placeholder]::before {
+color: var(--editor-placeholder);
+
+opacity: 0.75;
+}
+
+/* ============================================================
+07. DOCUMENT TYPOGRAPHY
+============================================================ */
+
+.editor-content h1,
+.editor-content h2,
+.editor-content h3,
+.editor-content h4,
+.editor-content h5,
+.editor-content h6 {
+color: var(--editor-text);
+
+font-weight: 800;
+
+letter-spacing: -0.04em;
+
+text-wrap: balance;
+}
+
+.editor-content h1 {
+margin: 0 0 26px;
+
+font-size: clamp(29px, 3vw, 40px);
+
+line-height: 1.14;
+}
+
+.editor-content h2 {
+margin: 40px 0 15px;
+
+font-size: 23px;
+
+line-height: 1.28;
+}
+
+.editor-content h3 {
+margin: 30px 0 11px;
+
+font-size: 18px;
+
+line-height: 1.35;
+}
+
+.editor-content h4 {
+margin: 24px 0 9px;
+
+font-size: 15px;
+
+line-height: 1.4;
+}
+
+.editor-content h5,
+.editor-content h6 {
+margin: 20px 0 8px;
+
+font-size: 13px;
+
+line-height: 1.45;
+}
+
+.editor-content p {
+margin: 0 0 16px;
+
+color: var(--editor-text-secondary);
+
+font-size: 14px;
+
+line-height: 1.85;
+}
+
+.editor-content strong,
+.editor-content b {
+color: var(--editor-text);
+
+font-weight: 750;
+}
+
+.editor-content em,
+.editor-content i {
+color: inherit;
+}
+
+.editor-content mark {
+padding: 1px 3px;
+
+border-radius: 3px;
+
+background: #fef08a;
+
+color: inherit;
+}
+
+.editor-content a {
+color: var(--editor-primary);
+
+font-weight: 600;
+
+text-decoration: underline;
+
+text-decoration-thickness: 1px;
+
+text-underline-offset: 3px;
+
+transition:
+color var(--editor-transition-fast);
+}
+
+.editor-content a:hover {
+color: var(--editor-primary-dark);
+}
+
+/* ============================================================
+LISTS
+============================================================ */
+
+.editor-content ul,
+.editor-content ol {
+margin:
+14px 0 20px;
+
+padding-left: 30px;
+
+color: var(--editor-text-secondary);
+}
+
+.editor-content li {
+margin: 7px 0;
+
+padding-left: 4px;
+
+line-height: 1.75;
+}
+
+.editor-content li::marker {
+color: var(--editor-primary);
+}
+
+/* ============================================================
+BLOCKQUOTE
+============================================================ */
+
+.editor-content blockquote {
+position: relative;
+
+margin:
+26px 0;
+
+padding:
+17px
+20px
+17px
+22px;
+
+border:
+1px solid rgba(79, 70, 229, 0.10);
+
+border-left:
+4px solid var(--editor-primary);
+
+border-radius:
+0
+var(--editor-radius-sm)
+var(--editor-radius-sm)
+0;
+
+background:
+linear-gradient(
+135deg,
+var(--editor-primary-soft),
+rgba(255,255,255,.65)
+);
+
+color: var(--editor-muted);
+
+font-style: italic;
+
+box-shadow:
+var(--editor-shadow-xs);
+}
+
+/* ============================================================
+INLINE CODE
+============================================================ */
+
+.editor-content code {
+padding:
+2px
+6px;
+
+border:
+1px solid var(--editor-border);
+
+border-radius: 5px;
+
+background: var(--editor-surface-soft);
+
+color: #4338ca;
+
+font-family:
+"SFMono-Regular",
+Consolas,
+"Liberation Mono",
+Menlo,
+monospace;
+
+font-size: 0.88em;
+
+white-space: break-spaces;
+}
+
+/* ============================================================
+CODE BLOCK
+============================================================ */
+
+.editor-content pre {
+position: relative;
+
+margin: 22px 0;
+
+padding: 19px 20px;
+
+border:
+1px solid var(--editor-border);
+
+border-radius: var(--editor-radius-md);
+
+background:
+linear-gradient(
+145deg,
+#f8fafc,
+#f1f5f9
+);
+
+color: #334155;
+
+overflow-x: auto;
+
+box-shadow:
+inset 0 1px 0 rgba(255,255,255,.75),
+var(--editor-shadow-xs);
+
+line-height: 1.65;
+}
+
+.editor-content pre code {
+padding: 0;
+
+border: 0;
+
+background: transparent;
+
+color: inherit;
+
+white-space: pre;
+}
+
+/* ============================================================
+HORIZONTAL RULE
+============================================================ */
+
+.editor-content hr {
+height: 1px;
+
+margin: 34px 0;
+
+border: 0;
+
+background:
+linear-gradient(
+90deg,
+transparent,
+var(--editor-border),
+transparent
+);
+}
+
+/* ============================================================
+IMAGES
+============================================================ */
+
+.editor-content img {
+display: block;
+
+max-width: 100%;
+height: auto;
+
+margin: 24px auto;
+
+border:
+1px solid var(--editor-border);
+
+border-radius: var(--editor-radius-md);
+
+box-shadow: var(--editor-shadow-sm);
+
+object-fit: contain;
+
+transition:
+transform var(--editor-transition),
+box-shadow var(--editor-transition);
+}
+
+.editor-content img:hover {
+box-shadow: var(--editor-shadow-md);
+}
+
+/* ============================================================
+TABLES
+============================================================ */
+
+.editor-content table {
+width: 100%;
+
+margin: 24px 0;
+
+border-collapse: separate;
+
+border-spacing: 0;
+
+border:
+1px solid var(--editor-border);
+
+border-radius: var(--editor-radius-md);
+
+overflow: hidden;
+
+font-size: 12px;
+
+box-shadow: var(--editor-shadow-xs);
+}
+
+.editor-content th,
+.editor-content td {
+padding:
+11px
+13px;
+
+border-right:
+1px solid var(--editor-border);
+
+border-bottom:
+1px solid var(--editor-border);
+
+text-align: left;
+
+vertical-align: top;
+}
+
+.editor-content th:last-child,
+.editor-content td:last-child {
+border-right: 0;
+}
+
+.editor-content tr:last-child td {
+border-bottom: 0;
+}
+
+.editor-content th {
+background: var(--editor-surface-soft);
+
+color: var(--editor-text);
+
+font-weight: 750;
+}
+
+.editor-content td {
+background: var(--editor-surface);
+
+color: var(--editor-text-secondary);
+}
+
+.editor-content tbody tr:hover td {
+background: var(--editor-surface-hover);
+}
+
+/* ============================================================
+08. DOCUMENT ELEMENTS
+============================================================ */
+
+.editor-content figure {
+margin:
+26px 0;
+}
+
+.editor-content figcaption {
+margin-top: 8px;
+
+color: var(--editor-muted);
+
+font-size: 10px;
+
+text-align: center;
+}
+
+.editor-content video,
+.editor-content iframe {
+display: block;
+
+width: 100%;
+max-width: 100%;
+
+margin: 24px auto;
+
+border:
+1px solid var(--editor-border);
+
+border-radius: var(--editor-radius-md);
+
+background: #000;
+}
+
+.editor-content sup,
+.editor-content sub {
+line-height: 0;
+}
+
+/* ============================================================
+09. EDITOR SELECTION / CARET
+============================================================ */
+
+.editor-content ::selection {
+background: rgba(79, 70, 229, 0.20);
+
+color: inherit;
+}
+
+.editor-content:focus {
+outline: none;
+}
+
+/* ============================================================
+10. COLLABORATION / PRESENCE
+============================================================ */
+
+.editor-presence {
+min-width: 0;
+
+display: flex;
+align-items: center;
+
+gap: 10px;
+}
+
+.presence-indicator {
+display: inline-flex;
+align-items: center;
+
+gap: 6px;
+
+white-space: nowrap;
+
+color: var(--editor-muted);
+
+font-size: 10px;
+font-weight: 600;
+}
+
+.presence-dot {
+width: 7px;
+height: 7px;
+
+flex: 0 0 7px;
+
+border-radius: 50%;
+
+background: var(--editor-success);
+
+box-shadow:
+0 0 0 3px rgba(21, 148, 106, 0.09);
+
+animation:
+editor-presence-pulse 2.2s ease-in-out infinite;
+}
+
+/* ============================================================
+COLLABORATOR STACK
+============================================================ */
+
+.collaborator-stack {
+display: flex;
+align-items: center;
+
+padding-right: 7px;
+}
+
+.collaborator-stack .avatar {
+position: relative;
+
+margin-left: -8px;
+
+border:
+2px solid var(--editor-surface);
+
+box-shadow:
+0 0 0 1px var(--editor-border),
+var(--editor-shadow-xs);
+
+transition:
+transform var(--editor-transition),
+z-index var(--editor-transition);
+}
+
+.collaborator-stack .avatar:first-child {
+margin-left: 0;
+}
+
+.collaborator-stack .avatar:hover {
+z-index: 5;
+
+transform:
+translateY(-3px)
+scale(1.06);
+}
+
+/* ============================================================
+11. COMMENTS PANEL
+============================================================ */
+
+.comments-panel {
+position: sticky;
+
+top:
+calc(
+var(--editor-header-height)
++ var(--editor-toolbar-height)
++ 20px
+);
+
+min-width: 0;
+
+max-height:
+calc(100vh - 165px);
+
+display: flex;
+flex-direction: column;
+
+background: var(--editor-surface);
+
+border:
+1px solid var(--editor-border);
+
+border-radius: var(--editor-radius-lg);
+
+box-shadow: var(--editor-shadow-md);
+
+overflow: hidden;
+}
+
+/* ============================================================
+COMMENTS HEADER
+============================================================ */
+
+.comments-panel-header {
+min-height: 56px;
+
+display: flex;
+align-items: center;
+justify-content: space-between;
+
+gap: 10px;
+
+padding:
+0
+15px;
+
+flex-shrink: 0;
+
+border-bottom:
+1px solid var(--editor-border);
+
+background: var(--editor-surface);
+}
+
+.comments-panel-header strong {
+color: var(--editor-text);
+
+font-size: 12px;
+font-weight: 800;
+}
+
+.comments-panel-header span {
+color: var(--editor-muted);
+
+font-size: 10px;
+}
+
+/* ============================================================
+COMMENTS BODY
+============================================================ */
+
+.comments-panel-body {
+min-height: 0;
+
+flex: 1;
+
+padding: 10px;
+
+overflow-y: auto;
+
+scrollbar-width: thin;
+
+scrollbar-color:
+#cbd5e1
+transparent;
+}
+
+.comments-panel-body::-webkit-scrollbar {
+width: 5px;
+}
+
+.comments-panel-body::-webkit-scrollbar-track {
+background: transparent;
+}
+
+.comments-panel-body::-webkit-scrollbar-thumb {
+background: #cbd5e1;
+
+border-radius: 999px;
+}
+
+/* ============================================================
+COMMENT ITEM
+============================================================ */
+
+.comment-item {
+position: relative;
+
+padding: 12px;
+
+border:
+1px solid transparent;
+
+border-radius: var(--editor-radius-sm);
+
+transition:
+background var(--editor-transition),
+border-color var(--editor-transition),
+transform var(--editor-transition);
+}
+
+.comment-item:hover {
+background: var(--editor-surface-hover);
+
+border-color: var(--editor-border);
+}
+
+.comment-item + .comment-item {
+margin-top: 5px;
+}
+
+.comment-item-header {
+display: flex;
+align-items: center;
+
+gap: 8px;
+
+margin-bottom: 7px;
+}
+
+.comment-item-header > div {
+min-width: 0;
+
+flex: 1;
+}
+
+.comment-item strong {
+display: block;
+
+color: var(--editor-text);
+
+font-size: 10px;
+
+font-weight: 750;
+
+white-space: nowrap;
+
+overflow: hidden;
+
+text-overflow: ellipsis;
+}
+
+.comment-item small {
+display: block;
+
+margin-top: 3px;
+
+color: var(--editor-muted);
+
+font-size: 8px;
+}
+
+.comment-item p {
+margin: 0;
+
+color: var(--editor-text-secondary);
+
+font-size: 10px;
+
+line-height: 1.6;
+}
+
+/* ============================================================
+COMMENT INPUT
+============================================================ */
+
+.comment-input {
+flex-shrink: 0;
+
+padding: 12px;
+
+border-top:
+1px solid var(--editor-border);
+
+background: var(--editor-surface);
+}
+
+.comment-input textarea {
+width: 100%;
+
+min-height: 78px;
+
+resize: vertical;
+
+padding:
+10px
+11px;
+
+border:
+1px solid var(--editor-border);
+
+border-radius: var(--editor-radius-sm);
+
+background: var(--editor-surface-soft);
+
+color: var(--editor-text);
+
+font-size: 10px;
+
+line-height: 1.55;
+
+outline: none;
+
+transition:
+background var(--editor-transition),
+border-color var(--editor-transition),
+box-shadow var(--editor-transition);
+}
+
+.comment-input textarea::placeholder {
+color: var(--editor-placeholder);
+}
+
+.comment-input textarea:hover {
+border-color: var(--editor-border-strong);
+}
+
+.comment-input textarea:focus {
+background: var(--editor-surface);
+
+border-color:
+rgba(79, 70, 229, 0.35);
+
+box-shadow:
+0 0 0 3px rgba(79, 70, 229, 0.08);
+}
+
+/* ============================================================
+12. FLOATING EDITOR MENU
+============================================================ */
+
+.editor-floating-menu {
+position: absolute;
+
+z-index: 500;
+
+display: flex;
+align-items: center;
+
+gap: 3px;
+
+padding: 5px;
+
+background:
+rgba(15, 23, 42, 0.97);
+
+border:
+1px solid rgba(255,255,255,.08);
+
+border-radius: var(--editor-radius-sm);
+
+box-shadow:
+0 15px 40px rgba(15, 23, 42, 0.25);
+
+backdrop-filter: blur(12px);
+
+animation:
+editor-menu-in 150ms cubic-bezier(.2,.8,.2,1);
+}
+
+.editor-floating-menu button {
+width: 30px;
+height: 30px;
+
+display: grid;
+place-items: center;
+
+padding: 0;
+
+border: 0;
+
+border-radius: 6px;
+
+background: transparent;
+
+color: #fff;
+
+font-size: 11px;
+
+cursor: pointer;
+
+transition:
+background var(--editor-transition-fast),
+transform var(--editor-transition-fast);
+}
+
+.editor-floating-menu button:hover {
+background:
+rgba(255,255,255,.12);
+}
+
+.editor-floating-menu button:active {
+transform: scale(.92);
+}
+
+/* ============================================================
+13. SLASH COMMAND MENU
+============================================================ */
+
+.slash-command-menu {
+position: absolute;
+
+z-index: 700;
+
+width: 300px;
+
+max-height: 380px;
+
+padding: 7px;
+
+background: var(--editor-surface);
+
+border:
+1px solid var(--editor-border);
+
+border-radius: var(--editor-radius-md);
+
+box-shadow: var(--editor-shadow-lg);
+
+overflow-y: auto;
+
+scrollbar-width: thin;
+
+animation:
+editor-menu-in 150ms cubic-bezier(.2,.8,.2,1);
+}
+
+.slash-command-item {
+width: 100%;
+
+display: flex;
+align-items: center;
+
+gap: 10px;
+
+padding: 9px;
+
+border: 1px solid transparent;
+
+border-radius: var(--editor-radius-sm);
+
+background: transparent;
+
+text-align: left;
+
+color: var(--editor-text);
+
+cursor: pointer;
+
+transition:
+background var(--editor-transition-fast),
+border-color var(--editor-transition-fast),
+color var(--editor-transition-fast);
+}
+
+.slash-command-item:hover,
+.slash-command-item.active {
+background: var(--editor-primary-soft);
+
+border-color:
+rgba(79, 70, 229, 0.08);
+
+color: var(--editor-primary);
+}
+
+.slash-command-item-icon {
+width: 31px;
+height: 31px;
+
+display: grid;
+place-items: center;
+
+flex: 0 0 31px;
+
+border-radius: var(--editor-radius-xs);
+
+background: var(--editor-surface-soft);
+
+color: var(--editor-muted);
+
+transition:
+background var(--editor-transition),
+color var(--editor-transition);
+}
+
+.slash-command-item:hover .slash-command-item-icon,
+.slash-command-item.active .slash-command-item-icon {
+background: var(--editor-surface);
+
+color: var(--editor-primary);
+}
+
+.slash-command-item-content {
+min-width: 0;
+
+flex: 1;
+}
+
+.slash-command-item-content strong {
+display: block;
+
+font-size: 10px;
+
+font-weight: 750;
+}
+
+.slash-command-item-content small {
+display: block;
+
+margin-top: 3px;
+
+color: var(--editor-muted);
+
+font-size: 8px;
+}
+
+/* ============================================================
+14. DOCUMENT STATUS BAR
+============================================================ */
+
+.editor-status-bar {
+min-height: 36px;
+
+display: flex;
+align-items: center;
+justify-content: space-between;
+
+gap: 12px;
+
+padding:
+0
+14px;
+
+background: var(--editor-surface-soft);
+
+border-top:
+1px solid var(--editor-border);
+
+color: var(--editor-muted);
+
+font-size: 9px;
+}
+
+.editor-status-bar-left,
+.editor-status-bar-right {
+min-width: 0;
+
+display: flex;
+align-items: center;
+
+gap: 10px;
+}
+
+.editor-status-bar span {
+white-space: nowrap;
+
+overflow: hidden;
+
+text-overflow: ellipsis;
+}
+
+/* ============================================================
+15. VERSION HISTORY
+============================================================ */
+
+.editor-version-panel {
+min-width: 0;
+
+background: var(--editor-surface);
+
+border:
+1px solid var(--editor-border);
+
+border-radius: var(--editor-radius-md);
+
+box-shadow: var(--editor-shadow-sm);
+
+overflow: hidden;
+}
+
+.editor-version-panel-header {
+min-height: 54px;
+
+display: flex;
+align-items: center;
+justify-content: space-between;
+
+padding:
+0
+14px;
+
+border-bottom:
+1px solid var(--editor-border);
+
+background: var(--editor-surface);
+}
+
+.editor-version-panel-header strong {
+color: var(--editor-text);
+
+font-size: 12px;
+
+font-weight: 800;
+}
+
+.editor-version-list {
+max-height: 420px;
+
+padding: 9px;
+
+overflow-y: auto;
+
+scrollbar-width: thin;
+}
+
+.editor-version-item {
+display: flex;
+align-items: center;
+
+gap: 9px;
+
+padding: 10px;
+
+border:
+1px solid transparent;
+
+border-radius: var(--editor-radius-sm);
+
+cursor: pointer;
+
+transition:
+background var(--editor-transition-fast),
+border-color var(--editor-transition-fast),
+transform var(--editor-transition-fast);
+}
+
+.editor-version-item:hover {
+background: var(--editor-surface-hover);
+
+border-color: var(--editor-border);
+}
+
+.editor-version-item.active {
+background: var(--editor-primary-soft);
+
+border-color:
+rgba(79, 70, 229, 0.10);
+}
+
+.editor-version-item:active {
+transform: scale(.99);
+}
+
+.editor-version-item-content {
+min-width: 0;
+
+flex: 1;
+}
+
+.editor-version-item-content strong,
+.editor-version-item-content small {
+display: block;
+
+overflow: hidden;
+
+text-overflow: ellipsis;
+
+white-space: nowrap;
+}
+
+.editor-version-item-content strong {
+color: var(--editor-text);
+
+font-size: 10px;
+
+font-weight: 750;
+}
+
+.editor-version-item-content small {
+margin-top: 3px;
+
+color: var(--editor-muted);
+
+font-size: 8px;
+}
+
+/* ============================================================
+16. LOADING STATE
+============================================================ */
+
+.editor-loading {
+min-height: 500px;
+
+display: flex;
+
+align-items: center;
+justify-content: center;
+
+flex-direction: column;
+
+gap: 12px;
+
+padding: 30px;
+
+color: var(--editor-muted);
+
+font-size: 11px;
+}
+
+.editor-loading::before {
+content: "";
+
+width: 28px;
+height: 28px;
+
+border:
+2px solid var(--editor-border);
+
+border-top-color:
+var(--editor-primary);
+
+border-radius: 50%;
+
+animation:
+editor-spin .7s linear infinite;
+}
+
+/* ============================================================
+17. EMPTY STATE
+============================================================ */
+
+.editor-empty {
+min-height: 500px;
+
+display: flex;
+
+align-items: center;
+justify-content: center;
+
+flex-direction: column;
+
+gap: 9px;
+
+padding: 40px;
+
+text-align: center;
+
+color: var(--editor-muted);
+}
+
+.editor-empty::before {
+content: "";
+
+width: 48px;
+height: 48px;
+
+border-radius: 15px;
+
+background:
+linear-gradient(
+135deg,
+var(--editor-primary-soft),
+#f8fafc
+);
+
+box-shadow:
+inset 0 0 0 1px
+rgba(79,70,229,.08);
+}
+
+.editor-empty strong {
+color: var(--editor-text);
+
+font-size: 15px;
+
+font-weight: 800;
+}
+
+.editor-empty p {
+max-width: 420px;
+
+margin: 0;
+
+color: var(--editor-muted);
+
+font-size: 11px;
+
+line-height: 1.7;
+}
+
+/* ============================================================
+18. EDITOR DIVIDER / UTILITY
+============================================================ */
+
+.editor-divider {
+width: 100%;
+height: 1px;
+
+background: var(--editor-border);
+}
+
+.editor-muted {
+color: var(--editor-muted);
+}
+
+.editor-primary {
+color: var(--editor-primary);
+}
+
+/* ============================================================
+19. ACCESSIBILITY
+============================================================ */
+
+.editor-page button:focus-visible,
+.editor-page select:focus-visible,
+.editor-page textarea:focus-visible,
+.editor-page input:focus-visible,
+.editor-page a:focus-visible {
+outline:
+3px solid rgba(79, 70, 229, 0.22);
+
+outline-offset: 2px;
+}
+
+.editor-page button:disabled {
+cursor: not-allowed;
+}
+
+/* ============================================================
+20. LARGE DESKTOP
+============================================================ */
+
+@media (max-width: 1280px) {
+.editor-workspace {
+grid-template-columns:
+minmax(0, 1fr)
+290px;
+
+
+gap: 17px;
+
+
+}
+
+.editor-content {
+padding-left:
+clamp(34px, 6vw, 85px);
+
+
+padding-right:
+  clamp(34px, 6vw, 85px);
+
+
+}
+
+.editor-title-group h1 {
+max-width: 420px;
+}
+}
+
+/* ============================================================
+21. TABLET
+============================================================ */
+
+@media (max-width: 1050px) {
+.editor-header {
+padding:
+10px
+18px;
+}
+
+.editor-workspace {
+grid-template-columns: 1fr;
+
+
+padding: 17px;
+
+
+}
+
+.comments-panel {
+position: static;
+
+
+width: 100%;
+
+max-height: 450px;
+
+
+}
+
+.editor-content {
+min-height: 620px;
+
+
+padding:
+  48px
+  clamp(32px, 8vw, 85px);
+
+
+}
+}
+
+/* ============================================================
+22. MOBILE
+============================================================ */
+
+@media (max-width: 768px) {
+.editor-page {
+min-height:
+calc(100vh - var(--topbar-height));
+}
+
+.editor-header {
+min-height: 62px;
+
+
+padding:
+  9px
+  13px;
+
+gap: 10px;
+
+
+}
+
+.editor-title-group {
+gap: 8px;
+}
+
+.editor-title-group h1 {
+max-width: 42vw;
+
+
+font-size: 14px;
+
+
+}
+
+.editor-title-group .save-state {
+font-size: 8px;
+}
+
+.editor-page .back-link {
+width: 32px;
+height: 32px;
+
+
+flex-basis: 32px;
+
+
+}
+
+.editor-actions {
+gap: 5px;
+}
+
+.editor-actions .btn {
+min-height: 34px;
+
+
+padding:
+  7px
+  9px;
+
+font-size: 10px;
+
+
+}
+
+.editor-toolbar {
+top: 62px;
+
+
+min-height: 46px;
+
+padding:
+  6px
+  8px;
+
+
+}
+
+.editor-toolbar button {
+width: 30px;
+height: 30px;
+
+
+min-width: 30px;
+
+flex-basis: 30px;
+
+
+}
+
+.editor-workspace {
+padding: 11px;
+
+
+gap: 12px;
+
+
+}
+
+.editor-main {
+border-radius: var(--editor-radius-md);
+}
+
+.editor-content {
+min-height: 580px;
+
+
+padding:
+  38px
+  25px;
+
+font-size: 13px;
+
+line-height: 1.78;
+
+
+}
+
+.editor-content h1 {
+font-size: 28px;
+}
+
+.editor-content h2 {
+margin-top: 31px;
+
+
+font-size: 20px;
+
+}
+
+.editor-content h3 {
+font-size: 17px;
+}
+
+.editor-content p {
+font-size: 13px;
+}
+
+.comments-panel {
+border-radius: var(--editor-radius-md);
+}
+
+.editor-status-bar {
+min-height: 34px;
+}
+}
+
+/* ============================================================
+23. SMALL MOBILE
+============================================================ */
+
+@media (max-width: 480px) {
+.editor-header {
+padding:
+8px
+10px;
+}
+
+.editor-title-group {
+gap: 6px;
+}
+
+.editor-title-group h1 {
+max-width: 37vw;
+
+
+font-size: 13px;
+
+
+}
+
+.editor-title-group .save-state {
+max-width: 37vw;
+
+
+overflow: hidden;
+
+text-overflow: ellipsis;
+
+white-space: nowrap;
+
+
+}
+
+.editor-actions {
+gap: 4px;
+}
+
+.editor-actions .btn {
+padding:
+7px
+8px;
+
+
+font-size: 9px;
+
+
+}
+
+.editor-actions .btn:first-child {
+display: none;
+}
+
+.editor-toolbar {
+gap: 1px;
+}
+
+.editor-toolbar .toolbar-separator {
+margin:
+0
+3px;
+}
+
+.editor-workspace {
+padding: 7px;
+}
+
+.editor-content {
+min-height: 540px;
+
+
+padding:
+  30px
+  18px;
+
+
+}
+
+.editor-content h1 {
+margin-bottom: 20px;
+
+
+font-size: 25px;
+
+
+}
+
+.editor-content h2 {
+font-size: 18px;
+}
+
+.editor-content h3 {
+font-size: 16px;
+}
+
+.editor-content p {
+font-size: 12.5px;
+}
+
+.editor-content table {
+display: block;
+
+
+overflow-x: auto;
+
+white-space: nowrap;
+
+
+}
+
+.editor-status-bar {
+padding:
+0
+10px;
+
+
+font-size: 8px;
+
+
+}
+
+.editor-status-bar-right {
+display: none;
+}
+
+.slash-command-menu {
+left: 8px !important;
+right: 8px;
+
+
+width: auto;
+
+max-width: none;
+
+
+}
+
+.editor-floating-menu {
+max-width:
+calc(100vw - 20px);
+
+
+overflow-x: auto;
+
+
+}
+}
+
+/* ============================================================
+24. VERY SMALL DEVICES
+============================================================ */
+
+@media (max-width: 360px) {
+.editor-title-group h1 {
+max-width: 32vw;
+
+
+font-size: 12px;
+
+
+}
+
+.editor-content {
+padding:
+25px
+15px;
+}
+
+.editor-content h1 {
+font-size: 23px;
+}
+
+.editor-content p {
+font-size: 12px;
+}
+
+.editor-toolbar button {
+width: 28px;
+height: 28px;
+
+
+min-width: 28px;
+
+flex-basis: 28px;
+
+
+}
+}
+
+/* ============================================================
+25. PRINT
+============================================================ */
+
+@media print {
+.editor-page {
+min-height: auto;
+
+
+background: #fff;
+
+
+}
+
+.editor-header,
+.editor-toolbar,
+.comments-panel,
+.editor-status-bar {
+display: none !important;
+}
+
+.editor-workspace {
+display: block;
+
+
+max-width: none;
+
+padding: 0;
+
+
+}
+
+.editor-main {
+border: 0;
+
+
+border-radius: 0;
+
+box-shadow: none;
+
+overflow: visible;
+
+
+}
+
+.editor-content {
+min-height: auto;
+
+
+padding: 0;
+
+color: #000;
+
+background: #fff;
+
+
+}
+
+.editor-content a {
+color: #000;
+
+
+text-decoration: underline;
+
+
+}
+
+.editor-content img {
+box-shadow: none;
+}
+}
+
+/* ============================================================
+26. REDUCED MOTION
+============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+.editor-page *,
+.editor-page *::before,
+.editor-page *::after {
+animation-duration: 0.01ms !important;
+
+
+animation-iteration-count: 1 !important;
+
+transition-duration: 0.01ms !important;
+
+scroll-behavior: auto !important;
+
+
+}
+}
+
+/* ============================================================
+27. ANIMATIONS
+============================================================ */
+
+@keyframes editor-menu-in {
+from {
+opacity: 0;
+
+
+transform:
+  translateY(-5px)
+  scale(0.985);
+
+
+}
+
+to {
+opacity: 1;
+
+
+transform:
+  translateY(0)
+  scale(1);
+
+
+}
+}
+
+@keyframes editor-spin {
+to {
+transform: rotate(360deg);
+}
+}
+
+@keyframes editor-save-pulse {
+0%,
+100% {
+opacity: 1;
+
+
+transform: scale(1);
+
+
+}
+
+50% {
+opacity: 0.45;
+
+
+transform: scale(0.8);
+
+
+}
+}
+
+@keyframes editor-presence-pulse {
+0%,
+100% {
+box-shadow:
+0 0 0 3px rgba(21, 148, 106, 0.08);
+}
+
+50% {
+box-shadow:
+0 0 0 5px rgba(21, 148, 106, 0.035);
+}
+}
