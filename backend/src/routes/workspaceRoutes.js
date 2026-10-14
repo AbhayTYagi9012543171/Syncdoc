@@ -6,6 +6,22 @@ const { auth, authorize, checkWorkspaceMembership } = require('../middleware/aut
 const { workspaceValidation, commonValidation } = require('../middleware/validation');
 const { validate } = require('../middleware/validation');
 
+// Ensure the workspace listing is freshly evaluated for each request.
+// This is scoped to GET /workspaces and does not alter caching for other routes.
+const preventWorkspaceCaching = (req, res, next) => {
+  res.set({
+    'Cache-Control': 'no-store',
+    Pragma: 'no-cache',
+    Expires: '0',
+  });
+
+  // Ignore conditional request headers on this endpoint so it won't return 304.
+  delete req.headers['if-none-match'];
+  delete req.headers['if-modified-since'];
+
+  return next();
+};
+
 router.post(
   '/',
   auth,
@@ -17,6 +33,7 @@ router.post(
 router.get(
   '/',
   auth,
+  preventWorkspaceCaching,
   commonValidation.pagination,
   commonValidation.search,
   validate,

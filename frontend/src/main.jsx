@@ -1,3 +1,4 @@
+
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
@@ -8,7 +9,7 @@ import App from "./App";
 import { AuthProvider } from "./context/AuthContext";
 import { WorkspaceProvider } from "./context/WorkspaceContext";
 
-// Global styles
+// Global Styles
 import "./styles/index.css";
 import "./styles/layout.css";
 import "./styles/sidebar.css";
@@ -21,9 +22,9 @@ import "./styles/premium.css";
 import "./styles/editor.css";
 import "./styles/responsive.css";
 
-/* ============================================================
-   SYNCDOC — MAIN ENTRY POINT
-============================================================ */
+/**
+ * SyncDoc — Main Entry Point
+ */
 
 const rootElement = document.getElementById("root");
 
@@ -33,32 +34,36 @@ if (!rootElement) {
   );
 }
 
-/* ============================================================
-   APPLICATION PROVIDERS
-============================================================ */
-
+/**
+ * Application Providers
+ *
+ * Keep providers mounted in a consistent order.
+ */
 function AppProviders({ children }) {
   return (
-    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <BrowserRouter
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
       <AuthProvider>
-        <WorkspaceProvider>
-          {children}
-        </WorkspaceProvider>
+        <WorkspaceProvider>{children}</WorkspaceProvider>
       </AuthProvider>
     </BrowserRouter>
   );
 }
 
-/* ============================================================
-   REACT ROOT
-============================================================ */
-
+/**
+ * React Root
+ */
 const root = ReactDOM.createRoot(rootElement);
 
-/* ============================================================
-   APPLICATION RENDER
-============================================================ */
-
+/**
+ * Render Application
+ *
+ * StrictMode helps identify unsafe side effects during development.
+ */
 root.render(
   <React.StrictMode>
     <AppProviders>

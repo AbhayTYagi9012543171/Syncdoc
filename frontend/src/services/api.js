@@ -106,6 +106,36 @@ api.interceptors.request.use(
     }
 
     /*
+     * Multipart uploads must not inherit the instance-wide JSON header.
+     * Let the browser/Axios set Content-Type with the correct boundary.
+     * Without this, Multer may receive a JSON request instead of a file
+     * and respond with "No file uploaded" or a 400 error.
+     */
+    const isFormData =
+      typeof FormData !== "undefined" &&
+      config.data instanceof FormData;
+
+    if (isFormData) {
+      if (typeof config.headers.delete === "function") {
+        config.headers.delete("Content-Type");
+      } else {
+        delete config.headers["Content-Type"];
+        delete config.headers["content-type"];
+      }
+    } else if (
+      config.data &&
+      typeof config.data === "object" &&
+      !(config.data instanceof URLSearchParams) &&
+      typeof config.data !== "string"
+    ) {
+      if (typeof config.headers.set === "function") {
+        config.headers.set("Content-Type", "application/json");
+      } else if (!config.headers["Content-Type"] && !config.headers["content-type"]) {
+        config.headers["Content-Type"] = "application/json";
+      }
+    }
+
+    /*
      * Attach JWT and a traceable request ID.
      */
     if (token) {

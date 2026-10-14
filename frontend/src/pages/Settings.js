@@ -1,30 +1,8 @@
 import "./pages-premium.css";
-
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-
-import {
-  Bell,
-  Check,
-  ChevronRight,
-  Eye,
-  EyeOff,
-  Lock,
-  LogOut,
-  Monitor,
-  Moon,
-  Palette,
-  ShieldCheck,
-  Sun,
-  User,
-  UserRound,
-  X,
-} from "lucide-react";
-
+import "./settings-premium.css";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { Bell, Check, ChevronRight, Eye, EyeOff, Lock, LogOut, Monitor, Moon, Palette, ShieldCheck, Sun, User, X, Mail, FileText, Users, Save, Sparkles, LoaderCircle, AlertTriangle } from "lucide-react";
 import Button from "../components/common/Button";
 import Card from "../components/common/Card";
 import Avatar from "../components/common/Avatar";
@@ -32,1691 +10,190 @@ import { useAuth } from "../context/AuthContext";
 import authService from "../services/authService";
 import settingsService from "../services/settingsService";
 
-/* ============================================================
-   CONSTANTS
-============================================================ */
-
 const TABS = [
-  {
-    id: "profile",
-    label: "Profile",
-    description: "Personal information",
-    icon: User,
-  },
-  {
-    id: "appearance",
-    label: "Appearance",
-    description: "Customize your interface",
-    icon: Palette,
-  },
-  {
-    id: "notifications",
-    label: "Notifications",
-    description: "Manage alerts",
-    icon: Bell,
-  },
-  {
-    id: "security",
-    label: "Security",
-    description: "Protect your account",
-    icon: ShieldCheck,
-  },
+  { id: "profile", label: "Profile", description: "Personal information", icon: User },
+  { id: "appearance", label: "Appearance", description: "Make SyncDoc yours", icon: Palette },
+  { id: "notifications", label: "Notifications", description: "Choose what reaches you", icon: Bell },
+  { id: "security", label: "Security", description: "Keep your account safe", icon: ShieldCheck },
 ];
+const DEFAULT_APPEARANCE = { theme: "system", compactMode: false, reducedMotion: false };
+const DEFAULT_NOTIFICATIONS = { email: true, mentions: true, documentUpdates: true, workspaceActivity: true };
+const EMPTY_PASSWORD = { currentPassword: "", newPassword: "", confirmPassword: "" };
+const errorText = (e) => e?.response?.data?.message || e?.response?.data?.error || e?.message || "Please try again.";
+const userName = (user) => user?.displayName || user?.name || user?.username || "Your account";
 
-const INITIAL_APPEARANCE = {
-  theme: "system",
-  compactMode: false,
-  reducedMotion: false,
-};
-
-const INITIAL_NOTIFICATIONS = {
-  email: true,
-  mentions: true,
-  documentUpdates: true,
-  workspaceActivity: true,
-};
-
-const INITIAL_SECURITY = {
-  currentPassword: "",
-  newPassword: "",
-  confirmPassword: "",
-};
-
-/* ============================================================
-   HELPERS
-============================================================ */
-
-function getUserName(user) {
-  return (
-    user?.displayName ||
-    user?.name ||
-    user?.username ||
-    user?.fullName ||
-    "User"
-  );
-}
-
-function getUserEmail(user) {
-  return user?.email || "you@example.com";
-}
-
-function getUserRole(user) {
-  const role =
-    user?.role ||
-    user?.userRole ||
-    user?.workspaceRole ||
-    "Member";
-
-  return String(role)
-    .replace(/[_-]/g, " ")
-    .replace(/\b\w/g, (letter) =>
-      letter.toUpperCase()
-    );
-}
-
-function getPasswordStrength(password) {
-  if (!password) {
-    return {
-      score: 0,
-      label: "",
-    };
-  }
-
+function strengthOf(value) {
   let score = 0;
-
-  if (password.length >= 8) score += 1;
-  if (password.length >= 12) score += 1;
-  if (/[a-z]/.test(password)) score += 1;
-  if (/[A-Z]/.test(password)) score += 1;
-  if (/[0-9]/.test(password)) score += 1;
-  if (/[^A-Za-z0-9]/.test(password)) score += 1;
-
-  if (score <= 2) {
-    return {
-      score,
-      label: "Weak",
-    };
-  }
-
-  if (score <= 4) {
-    return {
-      score,
-      label: "Medium",
-    };
-  }
-
-  return {
-    score,
-    label: "Strong",
-  };
+  if (value.length >= 8) score++;
+  if (value.length >= 12) score++;
+  if (/[a-z]/.test(value)) score++;
+  if (/[A-Z]/.test(value)) score++;
+  if (/[0-9]/.test(value)) score++;
+  if (/[^A-Za-z0-9]/.test(value)) score++;
+  return { score, label: !value ? "Not entered" : score < 3 ? "Weak" : score < 5 ? "Good" : "Strong" };
 }
-
-/* ============================================================
-   SETTINGS
-============================================================ */
 
 export default function Settings() {
-  const { user, logout } = useAuth();
-
-  /* ==========================================================
-     USER
-  ========================================================== */
-
-  const userName = useMemo(
-    () => getUserName(user),
-    [user]
-  );
-
-  const userEmail = useMemo(
-    () => getUserEmail(user),
-    [user]
-  );
-
-  const userRole = useMemo(
-    () => getUserRole(user),
-    [user]
-  );
-
-  /* ==========================================================
-     TAB
-  ========================================================== */
-
-  const [activeTab, setActiveTab] =
-    useState("profile");
-
-  /* ==========================================================
-     PROFILE
-  ========================================================== */
-
-  const [profile, setProfile] = useState({
-    name: userName,
-    email: userEmail,
-    username: user?.username || "",
-  });
-
-  /* ==========================================================
-     APPEARANCE
-  ========================================================== */
-
-  const [appearance, setAppearance] =
-    useState(INITIAL_APPEARANCE);
-
-  /* ==========================================================
-     NOTIFICATIONS
-  ========================================================== */
-
-  const [notifications, setNotifications] =
-    useState(INITIAL_NOTIFICATIONS);
-
-  /* ==========================================================
-     SECURITY
-  ========================================================== */
-
-  const [security, setSecurity] =
-    useState(INITIAL_SECURITY);
-
-  const [passwordVisibility, setPasswordVisibility] =
-    useState({
-      currentPassword: false,
-      newPassword: false,
-      confirmPassword: false,
-    });
-
-  /* ==========================================================
-     UI STATE
-  ========================================================== */
-
+  const { user, logout, updateUser } = useAuth();
+  const reduceMotion = useReducedMotion();
+  const [activeTab, setActiveTab] = useState("profile");
+  const [profile, setProfile] = useState({ name: "", username: "", email: "" });
+  const [appearance, setAppearance] = useState(DEFAULT_APPEARANCE);
+  const [notifications, setNotifications] = useState(DEFAULT_NOTIFICATIONS);
+  const [password, setPassword] = useState(EMPTY_PASSWORD);
+  const [shown, setShown] = useState({});
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [feedback, setFeedback] = useState(null);
 
-  /* ==========================================================
-     USER SYNC
-  ========================================================== */
+  const name = userName(user);
+  const tab = useMemo(() => TABS.find((item) => item.id === activeTab) || TABS[0], [activeTab]);
+  const strength = useMemo(() => strengthOf(password.newPassword), [password.newPassword]);
+  const clearFeedback = useCallback(() => setFeedback(null), []);
 
-  useEffect(() => {
-    setProfile({
-      name: userName,
-      email: userEmail,
-      username: user?.username || "",
-    });
-  }, [user, userName, userEmail]);
-
-  /* ==========================================================
-     LOAD PERSISTED SETTINGS
-  ========================================================== */
+  useEffect(() => setProfile({ name: name === "Your account" ? "" : name, username: user?.username || "", email: user?.email || "" }), [user, name]);
 
   useEffect(() => {
-    let mounted = true;
-
-    const loadSettings = async () => {
+    let live = true;
+    (async () => {
       try {
-        const saved = await settingsService.get();
-        if (!mounted || !saved) return;
+        const result = await settingsService.get();
+        const data = result?.data ?? result;
+        if (!live || !data) return;
+        setAppearance((p) => ({ ...p, ...(data.preferences || {}) }));
+        setNotifications((p) => ({ ...p, ...(data.notifications || {}) }));
+      } catch (error) {
+        if (live) setFeedback({ type: "error", text: `Couldn't load saved settings. ${errorText(error)}` });
+      } finally { if (live) setLoading(false); }
+    })();
+    return () => { live = false; };
+  }, []);
 
-        if (saved.preferences) {
-          setAppearance((previous) => ({
-            ...previous,
-            ...saved.preferences,
-          }));
-        }
-
-        if (saved.notifications) {
-          setNotifications((previous) => ({
-            ...previous,
-            ...saved.notifications,
-          }));
-        }
-      } catch (loadError) {
-        console.warn("SyncDoc: unable to load settings.", loadError);
-      }
+  useEffect(() => {
+    const root = document.documentElement;
+    const applyTheme = () => {
+      const systemDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
+      root.dataset.theme = appearance.theme === "system" ? (systemDark ? "dark" : "light") : appearance.theme;
     };
-
-    loadSettings();
-
+    applyTheme();
+    root.classList.toggle("compact-mode", !!appearance.compactMode);
+    root.classList.toggle("reduced-motion", !!appearance.reducedMotion);
+    const media = window.matchMedia?.("(prefers-color-scheme: dark)");
+    media?.addEventListener?.("change", applyTheme);
     return () => {
-      mounted = false;
+      media?.removeEventListener?.("change", applyTheme);
+      root.classList.remove("compact-mode", "reduced-motion");
     };
-  }, []);
+  }, [appearance]);
 
-  /* ==========================================================
-     PASSWORD STRENGTH
-  ========================================================== */
-
-  const passwordStrength = useMemo(
-    () =>
-      getPasswordStrength(
-        security.newPassword
-      ),
-    [security.newPassword]
-  );
-
-  /* ==========================================================
-     CURRENT TAB
-  ========================================================== */
-
-  const currentTab = useMemo(
-    () =>
-      TABS.find(
-        (tab) => tab.id === activeTab
-      ) || TABS[0],
-    [activeTab]
-  );
-
-  /* ==========================================================
-     FEEDBACK
-  ========================================================== */
-
-  const clearFeedback = useCallback(() => {
-    setMessage("");
-    setError("");
-  }, []);
-
-  /* ==========================================================
-     PROFILE HANDLER
-  ========================================================== */
-
-  const handleProfileChange = useCallback(
-    (event) => {
-      const { name, value } = event.target;
-
-      setProfile((previous) => ({
-        ...previous,
-        [name]: value,
-      }));
-
-      clearFeedback();
-    },
-    [clearFeedback]
-  );
-
-  /* ==========================================================
-     APPEARANCE HANDLER
-  ========================================================== */
-
-  const handleAppearanceChange =
-    useCallback(
-      (event) => {
-        const {
-          name,
-          value,
-          type,
-          checked,
-        } = event.target;
-
-        setAppearance((previous) => ({
-          ...previous,
-          [name]:
-            type === "checkbox"
-              ? checked
-              : value,
-        }));
-
-        clearFeedback();
-      },
-      [clearFeedback]
-    );
-
-  /* ==========================================================
-     NOTIFICATION HANDLER
-  ========================================================== */
-
-  const handleNotificationChange =
-    useCallback(
-      (event) => {
-        const {
-          name,
-          checked,
-        } = event.target;
-
-        setNotifications(
-          (previous) => ({
-            ...previous,
-            [name]: checked,
-          })
-        );
-
-        clearFeedback();
-      },
-      [clearFeedback]
-    );
-
-  /* ==========================================================
-     SECURITY HANDLER
-  ========================================================== */
-
-  const handleSecurityChange =
-    useCallback(
-      (event) => {
-        const {
-          name,
-          value,
-        } = event.target;
-
-        setSecurity((previous) => ({
-          ...previous,
-          [name]: value,
-        }));
-
-        clearFeedback();
-      },
-      [clearFeedback]
-    );
-
-  /* ==========================================================
-     PASSWORD VISIBILITY
-  ========================================================== */
-
-  const togglePasswordVisibility =
-    useCallback((field) => {
-      setPasswordVisibility(
-        (previous) => ({
-          ...previous,
-          [field]:
-            !previous[field],
-        })
-      );
-    }, []);
-
-  /* ==========================================================
-     TAB CHANGE
-  ========================================================== */
-
-  const handleTabChange = useCallback(
-    (tabId) => {
-      if (saving) return;
-
-      clearFeedback();
-      setActiveTab(tabId);
-    },
-    [saving, clearFeedback]
-  );
-
-  /* ==========================================================
-     SECURITY VALIDATION
-  ========================================================== */
-
-  const validateSecurity =
-    useCallback(() => {
-      const {
-        currentPassword,
-        newPassword,
-        confirmPassword,
-      } = security;
-
-      if (!currentPassword) {
-        return "Please enter your current password.";
-      }
-
-      if (!newPassword) {
-        return "Please enter a new password.";
-      }
-
-      if (newPassword.length < 8) {
-        return "Your new password must contain at least 8 characters.";
-      }
-
-      if (newPassword === currentPassword) {
-        return "Your new password must be different from your current password.";
-      }
-
-      if (!confirmPassword) {
-        return "Please confirm your new password.";
-      }
-
-      if (newPassword !== confirmPassword) {
-        return "New passwords do not match.";
-      }
-
-      return "";
-    }, [security]);
-
-  /* ==========================================================
-     SAVE
-  ========================================================== */
-
-  const handleSave = useCallback(
-    async (event) => {
-      event?.preventDefault();
-
-      if (saving) return;
-
-      clearFeedback();
-
-      /* ------------------------------------------------------
-         PROFILE
-      ------------------------------------------------------ */
-
-      if (activeTab === "profile") {
-        const name = profile.name.trim();
-
-        if (!name) {
-          setError(
-            "Please enter your display name."
-          );
-          return;
-        }
-
-        if (name.length < 2) {
-          setError(
-            "Your display name must contain at least 2 characters."
-          );
-          return;
-        }
-      }
-
-      /* ------------------------------------------------------
-         SECURITY
-      ------------------------------------------------------ */
-
-      if (activeTab === "security") {
-        const securityError =
-          validateSecurity();
-
-        if (securityError) {
-          setError(securityError);
-          return;
-        }
-      }
-
-      setSaving(true);
-
-      try {
-        /*
-         * ====================================================
-         * API INTEGRATION
-         * ====================================================
-         *
-         * Replace these placeholders with your services.
-         *
-         * Profile:
-         * await userService.updateProfile({
-         *   name: profile.name.trim(),
-         *   username: profile.username.trim(),
-         * });
-         *
-         * Appearance:
-         * await userService.updatePreferences(appearance);
-         *
-         * Notifications:
-         * await userService.updateNotifications(
-         *   notifications
-         * );
-         *
-         * Security:
-         * await userService.changePassword({
-         *   currentPassword:
-         *     security.currentPassword,
-         *   newPassword:
-         *     security.newPassword,
-         * });
-         */
-
-        if (activeTab === "profile") {
-          const updated = await authService.updateProfile({
-            displayName: profile.name.trim(),
-            username: profile.username.trim(),
-          });
-
-          if (updated?.user) {
-            // AuthContext owns session state; the page remains
-            // immediately responsive even when the API returns
-            // a wrapped response.
-          }
-        } else if (activeTab === "security") {
-          await authService.updatePassword({
-            currentPassword: security.currentPassword,
-            newPassword: security.newPassword,
-          });
-
-          setSecurity(INITIAL_SECURITY);
-          setPasswordVisibility({
-            currentPassword: false,
-            newPassword: false,
-            confirmPassword: false,
-          });
-        } else {
-          await settingsService.update({
-            preferences: appearance,
-            notifications,
-          });
-        }
-
-        setMessage(
-          `${currentTab.label} settings saved successfully.`
-        );
-      } catch (err) {
-        console.error(
-          "SyncDoc settings update failed:",
-          err
-        );
-
-        setError(
-          err?.response?.data?.message ||
-          err?.response?.data?.error ||
-          err?.message ||
-          "Unable to save your settings. Please try again."
-        );
-      } finally {
-        setSaving(false);
-      }
-    },
-    [
-      activeTab,
-      profile,
-      security,
-      currentTab,
-      notifications,
-      appearance,
-      saving,
-      validateSecurity,
-      clearFeedback,
-    ]
-  );
-
-  /* ==========================================================
-     LOGOUT
-  ========================================================== */
-
-  const handleLogout = useCallback(() => {
+  const handleSave = useCallback(async (event) => {
+    event?.preventDefault();
     if (saving) return;
-
-    const confirmed = window.confirm(
-      "Are you sure you want to sign out of SyncDoc?"
-    );
-
-    if (!confirmed) return;
-
-    if (typeof logout === "function") {
-      logout();
-    }
-  }, [logout, saving]);
-
-  /* ==========================================================
-     THEME PREVIEW / APPLICATION
-  ========================================================== */
-
-  useEffect(() => {
-    const root =
-      document.documentElement;
-
-    root.dataset.theme =
-      appearance.theme;
-
-    root.classList.toggle(
-      "compact-mode",
-      appearance.compactMode
-    );
-
-    root.classList.toggle(
-      "reduced-motion",
-      appearance.reducedMotion
-    );
-
-    return () => {
-      root.classList.remove(
-        "compact-mode"
-      );
-
-      root.classList.remove(
-        "reduced-motion"
-      );
-    };
-  }, [
-    appearance.theme,
-    appearance.compactMode,
-    appearance.reducedMotion,
-  ]);
-
-  /* ==========================================================
-     RENDER
-  ========================================================== */
-
-  return (
-    <main className="page settings-page">
-
-      {/* ======================================================
-          HEADER
-      ====================================================== */}
-
-      <header className="page-heading settings-page-heading">
-        <div className="page-heading-content">
-          <div className="eyebrow-row">
-            <span className="eyebrow">
-              ACCOUNT
-            </span>
-
-            <span className="settings-live-status">
-              <span
-                className="settings-live-dot"
-                aria-hidden="true"
-              />
-
-              Settings
-            </span>
-          </div>
-
-          <h1>Settings</h1>
-
-          <p>
-            Manage your account, workspace
-            preferences, notifications and
-            security.
-          </p>
-        </div>
-      </header>
-
-      {/* ======================================================
-          FEEDBACK
-      ====================================================== */}
-
-      {(message || error) && (
-        <div
-          className={
-            error
-              ? "settings-alert settings-alert-error"
-              : "settings-alert settings-alert-success"
-          }
-          role="status"
-          aria-live="polite"
-        >
-          <span
-            className="settings-alert-icon"
-            aria-hidden="true"
-          >
-            {error ? (
-              <X size={17} />
-            ) : (
-              <Check size={17} />
-            )}
-          </span>
-
-          <div>
-            <strong>
-              {error
-                ? "Something went wrong"
-                : "Changes saved"}
-            </strong>
-
-            <p>
-              {error || message}
-            </p>
-          </div>
-
-          <button
-            type="button"
-            className="settings-alert-close"
-            onClick={clearFeedback}
-            aria-label="Dismiss notification"
-          >
-            <X size={15} />
-          </button>
-        </div>
-      )}
-
-      {/* ======================================================
-          SETTINGS LAYOUT
-      ====================================================== */}
-
-      <div className="settings-layout">
-
-        {/* ====================================================
-            NAVIGATION
-        ==================================================== */}
-
-        <aside className="settings-sidebar">
-
-          {/* User summary */}
-
-          <div className="settings-user-card">
-            <Avatar
-              user={user}
-              name={userName}
-              size="lg"
-            />
-
-            <div className="settings-user-info">
-              <strong>
-                {userName}
-              </strong>
-
-              <span>
-                {userEmail}
-              </span>
-
-              <small>
-                {userRole}
-              </small>
-            </div>
-          </div>
-
-          <div className="settings-nav-divider" />
-
-          <nav
-            className="settings-nav"
-            aria-label="Settings navigation"
-          >
-            {TABS.map((tab) => {
-              const active =
-                activeTab === tab.id;
-
-              const Icon = tab.icon;
-
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  className={
-                    active
-                      ? "settings-nav-item active"
-                      : "settings-nav-item"
-                  }
-                  onClick={() =>
-                    handleTabChange(
-                      tab.id
-                    )
-                  }
-                  aria-current={
-                    active
-                      ? "page"
-                      : undefined
-                  }
-                  disabled={saving}
-                >
-                  <span className="settings-nav-icon">
-                    <Icon size={17} />
-                  </span>
-
-                  <span className="settings-nav-copy">
-                    <strong>
-                      {tab.label}
-                    </strong>
-
-                    <small>
-                      {tab.description}
-                    </small>
-                  </span>
-
-                  <ChevronRight
-                    size={15}
-                    className="settings-nav-arrow"
-                    aria-hidden="true"
-                  />
-                </button>
-              );
-            })}
-          </nav>
-
-          <div className="settings-sidebar-footer">
-            <div className="settings-security-mini">
-              <ShieldCheck
-                size={17}
-              />
-
-              <div>
-                <strong>
-                  Account protected
-                </strong>
-
-                <small>
-                  Secure authenticated session
-                </small>
-              </div>
-            </div>
-          </div>
-        </aside>
-
-        {/* ====================================================
-            CONTENT
-        ==================================================== */}
-
-        <section
-          className="settings-main"
-          aria-labelledby="settings-section-title"
-        >
-          <Card
-            className="settings-card"
-          >
-            <div className="settings-card-header">
-              <div>
-                <span className="settings-card-eyebrow">
-                  {currentTab.label.toUpperCase()}
-                </span>
-
-                <h2 id="settings-section-title">
-                  {currentTab.label}
-                </h2>
-
-                <p>
-                  {currentTab.description}
-                </p>
-              </div>
-
-              <div className="settings-card-icon">
-                {React.createElement(
-                  currentTab.icon,
-                  { size: 20 }
-                )}
-              </div>
-            </div>
-
-            <div className="settings-content">
-
-              {/* ==================================================
-                  PROFILE
-              ================================================== */}
-
-              {activeTab ===
-                "profile" && (
-                  <form
-                    className="settings-section"
-                    onSubmit={handleSave}
-                  >
-                    <div className="settings-section-intro">
-                      <h3>
-                        Personal information
-                      </h3>
-
-                      <p>
-                        Update the information
-                        associated with your
-                        SyncDoc identity.
-                      </p>
-                    </div>
-
-                    <div className="settings-profile-preview">
-                      <Avatar
-                        user={user}
-                        name={userName}
-                        size="xl"
-                      />
-
-                      <div>
-                        <strong>
-                          {userName}
-                        </strong>
-
-                        <span>
-                          {userEmail}
-                        </span>
-
-                        <small>
-                          {userRole}
-                        </small>
-                      </div>
-                    </div>
-
-                    <div className="settings-divider" />
-
-                    <div className="form-grid">
-
-                      <label>
-                        <span>
-                          Display name
-                        </span>
-
-                        <input
-                          name="name"
-                          type="text"
-                          value={profile.name}
-                          onChange={
-                            handleProfileChange
-                          }
-                          placeholder="Your name"
-                          autoComplete="name"
-                          maxLength={80}
-                          required
-                          disabled={saving}
-                        />
-
-                        <small className="field-help">
-                          This name will be
-                          visible to your
-                          collaborators.
-                        </small>
-                      </label>
-
-                      <label>
-                        <span>
-                          Username
-                        </span>
-
-                        <input
-                          name="username"
-                          type="text"
-                          value={
-                            profile.username
-                          }
-                          onChange={
-                            handleProfileChange
-                          }
-                          placeholder="username"
-                          autoComplete="username"
-                          maxLength={40}
-                          disabled={saving}
-                        />
-
-                        <small className="field-help">
-                          Your unique SyncDoc
-                          username.
-                        </small>
-                      </label>
-
-                      <label className="form-field-full">
-                        <span>
-                          Email address
-                        </span>
-
-                        <input
-                          name="email"
-                          type="email"
-                          value={
-                            profile.email
-                          }
-                          readOnly
-                          disabled
-                        />
-
-                        <small className="field-help">
-                          Your email address
-                          cannot be edited
-                          from this screen.
-                        </small>
-                      </label>
-                    </div>
-
-                    <div className="settings-actions">
-                      <Button
-                        type="submit"
-                        variant="primary"
-                        loading={saving}
-                        disabled={saving}
-                      >
-                        {saving
-                          ? "Saving..."
-                          : "Save changes"}
-                      </Button>
-                    </div>
-                  </form>
-                )}
-
-              {/* ==================================================
-                  APPEARANCE
-              ================================================== */}
-
-              {activeTab ===
-                "appearance" && (
-                  <form
-                    className="settings-section"
-                    onSubmit={handleSave}
-                  >
-                    <div className="settings-section-intro">
-                      <h3>
-                        Interface appearance
-                      </h3>
-
-                      <p>
-                        Personalize how SyncDoc
-                        looks and behaves.
-                      </p>
-                    </div>
-
-                    {/* Theme */}
-
-                    <div className="appearance-theme-section">
-                      <div className="setting-heading">
-                        <div>
-                          <strong>
-                            Interface theme
-                          </strong>
-
-                          <small>
-                            Select the appearance
-                            that works best for
-                            you.
-                          </small>
-                        </div>
-                      </div>
-
-                      <div
-                        className="theme-options"
-                        role="radiogroup"
-                        aria-label="Interface theme"
-                      >
-                        <ThemeOption
-                          value="system"
-                          label="System"
-                          icon={Monitor}
-                          selected={
-                            appearance.theme ===
-                            "system"
-                          }
-                          onClick={() =>
-                            setAppearance(
-                              (previous) => ({
-                                ...previous,
-                                theme: "system",
-                              })
-                            )
-                          }
-                        />
-
-                        <ThemeOption
-                          value="light"
-                          label="Light"
-                          icon={Sun}
-                          selected={
-                            appearance.theme ===
-                            "light"
-                          }
-                          onClick={() =>
-                            setAppearance(
-                              (previous) => ({
-                                ...previous,
-                                theme: "light",
-                              })
-                            )
-                          }
-                        />
-
-                        <ThemeOption
-                          value="dark"
-                          label="Dark"
-                          icon={Moon}
-                          selected={
-                            appearance.theme ===
-                            "dark"
-                          }
-                          onClick={() =>
-                            setAppearance(
-                              (previous) => ({
-                                ...previous,
-                                theme: "dark",
-                              })
-                            )
-                          }
-                        />
-                      </div>
-                    </div>
-
-                    <div className="settings-divider" />
-
-                    <div className="settings-options">
-
-                      <SettingToggle
-                        name="compactMode"
-                        checked={
-                          appearance.compactMode
-                        }
-                        onChange={
-                          handleAppearanceChange
-                        }
-                        title="Compact mode"
-                        description="Reduce spacing so more documents and workspace content fit on screen."
-                      />
-
-                      <SettingToggle
-                        name="reducedMotion"
-                        checked={
-                          appearance.reducedMotion
-                        }
-                        onChange={
-                          handleAppearanceChange
-                        }
-                        title="Reduced motion"
-                        description="Minimize animations and transitions throughout the interface."
-                      />
-                    </div>
-
-                    <div className="settings-actions">
-                      <Button
-                        type="submit"
-                        variant="primary"
-                        loading={saving}
-                        disabled={saving}
-                      >
-                        {saving
-                          ? "Saving..."
-                          : "Save preferences"}
-                      </Button>
-                    </div>
-                  </form>
-                )}
-
-              {/* ==================================================
-                  NOTIFICATIONS
-              ================================================== */}
-
-              {activeTab ===
-                "notifications" && (
-                  <form
-                    className="settings-section"
-                    onSubmit={handleSave}
-                  >
-                    <div className="settings-section-intro">
-                      <h3>
-                        Notification preferences
-                      </h3>
-
-                      <p>
-                        Choose which events should
-                        generate notifications.
-                      </p>
-                    </div>
-
-                    <div className="settings-options">
-
-                      <SettingToggle
-                        name="email"
-                        checked={
-                          notifications.email
-                        }
-                        onChange={
-                          handleNotificationChange
-                        }
-                        title="Email notifications"
-                        description="Receive important SyncDoc updates by email."
-                      />
-
-                      <SettingToggle
-                        name="mentions"
-                        checked={
-                          notifications.mentions
-                        }
-                        onChange={
-                          handleNotificationChange
-                        }
-                        title="Mentions"
-                        description="Get notified when another collaborator mentions you."
-                      />
-
-                      <SettingToggle
-                        name="documentUpdates"
-                        checked={
-                          notifications.documentUpdates
-                        }
-                        onChange={
-                          handleNotificationChange
-                        }
-                        title="Document updates"
-                        description="Receive notifications when shared documents are changed."
-                      />
-
-                      <SettingToggle
-                        name="workspaceActivity"
-                        checked={
-                          notifications.workspaceActivity
-                        }
-                        onChange={
-                          handleNotificationChange
-                        }
-                        title="Workspace activity"
-                        description="Stay informed about important workspace activity."
-                      />
-                    </div>
-
-                    <div className="settings-actions">
-                      <Button
-                        type="submit"
-                        variant="primary"
-                        loading={saving}
-                        disabled={saving}
-                      >
-                        {saving
-                          ? "Saving..."
-                          : "Save notifications"}
-                      </Button>
-                    </div>
-                  </form>
-                )}
-
-              {/* ==================================================
-                  SECURITY
-              ================================================== */}
-
-              {activeTab ===
-                "security" && (
-                  <form
-                    className="settings-section"
-                    onSubmit={handleSave}
-                  >
-                    <div className="settings-section-intro">
-                      <h3>
-                        Password & security
-                      </h3>
-
-                      <p>
-                        Manage your password and
-                        protect your authenticated
-                        session.
-                      </p>
-                    </div>
-
-                    {/* Security status */}
-
-                    <div className="security-status">
-                      <div className="security-status-icon">
-                        <ShieldCheck
-                          size={21}
-                        />
-                      </div>
-
-                      <div>
-                        <strong>
-                          Account security is active
-                        </strong>
-
-                        <small>
-                          Your SyncDoc account
-                          requires authenticated
-                          access.
-                        </small>
-                      </div>
-
-                      <span className="security-status-badge">
-                        Protected
-                      </span>
-                    </div>
-
-                    <div className="settings-divider" />
-
-                    {/* Password */}
-
-                    <div className="security-form">
-
-                      <PasswordInput
-                        label="Current password"
-                        name="currentPassword"
-                        value={
-                          security.currentPassword
-                        }
-                        onChange={
-                          handleSecurityChange
-                        }
-                        visible={
-                          passwordVisibility.currentPassword
-                        }
-                        onToggle={() =>
-                          togglePasswordVisibility(
-                            "currentPassword"
-                          )
-                        }
-                        placeholder="Enter current password"
-                        autoComplete="current-password"
-                        disabled={saving}
-                      />
-
-                      <PasswordInput
-                        label="New password"
-                        name="newPassword"
-                        value={
-                          security.newPassword
-                        }
-                        onChange={
-                          handleSecurityChange
-                        }
-                        visible={
-                          passwordVisibility.newPassword
-                        }
-                        onToggle={() =>
-                          togglePasswordVisibility(
-                            "newPassword"
-                          )
-                        }
-                        placeholder="Create a new password"
-                        autoComplete="new-password"
-                        disabled={saving}
-                      />
-
-                      {/* Strength */}
-
-                      {security.newPassword && (
-                        <div className="password-strength">
-                          <div className="password-strength-header">
-                            <span>
-                              Password strength
-                            </span>
-
-                            <strong>
-                              {
-                                passwordStrength.label
-                              }
-                            </strong>
-                          </div>
-
-                          <div
-                            className="password-strength-bars"
-                            aria-hidden="true"
-                          >
-                            {[
-                              1,
-                              2,
-                              3,
-                              4,
-                              5,
-                              6,
-                            ].map(
-                              (level) => (
-                                <span
-                                  key={level}
-                                  className={
-                                    level <=
-                                      passwordStrength.score
-                                      ? "active"
-                                      : ""
-                                  }
-                                />
-                              )
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      <PasswordInput
-                        label="Confirm new password"
-                        name="confirmPassword"
-                        value={
-                          security.confirmPassword
-                        }
-                        onChange={
-                          handleSecurityChange
-                        }
-                        visible={
-                          passwordVisibility.confirmPassword
-                        }
-                        onToggle={() =>
-                          togglePasswordVisibility(
-                            "confirmPassword"
-                          )
-                        }
-                        placeholder="Repeat new password"
-                        autoComplete="new-password"
-                        disabled={saving}
-                      />
-
-                      {security.confirmPassword &&
-                        security.newPassword ===
-                        security.confirmPassword && (
-                          <div className="password-match">
-                            <Check size={15} />
-                            Passwords match
-                          </div>
-                        )}
-                    </div>
-
-                    <div className="password-requirements">
-                      <strong>
-                        Password requirements
-                      </strong>
-
-                      <ul>
-                        <li
-                          className={
-                            security.newPassword.length >=
-                              8
-                              ? "complete"
-                              : ""
-                          }
-                        >
-                          <Check size={13} />
-                          At least 8 characters
-                        </li>
-
-                        <li
-                          className={
-                            /[A-Z]/.test(
-                              security.newPassword
-                            )
-                              ? "complete"
-                              : ""
-                          }
-                        >
-                          <Check size={13} />
-                          One uppercase letter
-                        </li>
-
-                        <li
-                          className={
-                            /[0-9]/.test(
-                              security.newPassword
-                            )
-                              ? "complete"
-                              : ""
-                          }
-                        >
-                          <Check size={13} />
-                          One number
-                        </li>
-
-                        <li
-                          className={
-                            /[^A-Za-z0-9]/.test(
-                              security.newPassword
-                            )
-                              ? "complete"
-                              : ""
-                          }
-                        >
-                          <Check size={13} />
-                          One special character
-                        </li>
-                      </ul>
-                    </div>
-
-                    <div className="settings-actions">
-                      <Button
-                        type="submit"
-                        variant="primary"
-                        loading={saving}
-                        disabled={saving}
-                      >
-                        {saving
-                          ? "Updating..."
-                          : "Update password"}
-                      </Button>
-                    </div>
-
-                    {/* ==================================================
-                      DANGER ZONE
-                  ================================================== */}
-
-                    <div className="danger-zone">
-                      <div className="danger-zone-icon">
-                        <LogOut size={19} />
-                      </div>
-
-                      <div className="danger-zone-content">
-                        <span className="eyebrow">
-                          SESSION
-                        </span>
-
-                        <h3>
-                          Sign out of SyncDoc
-                        </h3>
-
-                        <p>
-                          End your current
-                          authenticated session on
-                          this device.
-                        </p>
-                      </div>
-
-                      <Button
-                        type="button"
-                        variant="danger"
-                        onClick={
-                          handleLogout
-                        }
-                        disabled={saving}
-                      >
-                        <LogOut size={15} />
-                        Sign out
-                      </Button>
-                    </div>
-                  </form>
-                )}
-            </div>
-          </Card>
-        </section>
-      </div>
-    </main>
-  );
-}
-
-/* ============================================================
-   THEME OPTION
-============================================================ */
-
-function ThemeOption({
-  value,
-  label,
-  icon: Icon,
-  selected,
-  onClick,
-}) {
-  return (
-    <button
-      type="button"
-      className={
-        selected
-          ? "theme-option active"
-          : "theme-option"
+    setFeedback(null);
+    if (activeTab === "profile") {
+      if (profile.name.trim().length < 2 || profile.name.trim().length > 50) {
+        setFeedback({ type: "error", text: "Display name must be between 2 and 50 characters." }); return;
       }
-      onClick={onClick}
-      role="radio"
-      aria-checked={selected}
-    >
-      <span className="theme-option-icon">
-        <Icon size={19} />
-      </span>
+      if (profile.username && !/^[a-zA-Z0-9_]{3,30}$/.test(profile.username.trim())) {
+        setFeedback({ type: "error", text: "Username must be 3–30 characters using letters, numbers or underscores." }); return;
+      }
+    }
+    if (activeTab === "security") {
+      if (!password.currentPassword || !password.newPassword || !password.confirmPassword) {
+        setFeedback({ type: "error", text: "Complete all password fields." }); return;
+      }
+      if (password.newPassword.length < 8) {
+        setFeedback({ type: "error", text: "New password must contain at least 8 characters." }); return;
+      }
+      if (password.newPassword === password.currentPassword) {
+        setFeedback({ type: "error", text: "New password must differ from the current password." }); return;
+      }
+      if (password.newPassword !== password.confirmPassword) {
+        setFeedback({ type: "error", text: "The new passwords do not match." }); return;
+      }
+    }
+    setSaving(true);
+    try {
+      if (activeTab === "profile") {
+        const result = await authService.updateProfile({ displayName: profile.name.trim(), username: profile.username.trim() });
+        const updated = result?.user || result?.data?.user || result?.data || result;
+        if (updated && typeof updateUser === "function") updateUser(updated);
+      } else if (activeTab === "security") {
+        await authService.updatePassword({ currentPassword: password.currentPassword, newPassword: password.newPassword });
+        setPassword(EMPTY_PASSWORD); setShown({});
+      } else {
+        await settingsService.update(activeTab === "appearance" ? { preferences: appearance } : { notifications });
+      }
+      setFeedback({ type: "success", text: `${tab.label} settings saved successfully.` });
+    } catch (error) { setFeedback({ type: "error", text: errorText(error) }); }
+    finally { setSaving(false); }
+  }, [saving, activeTab, profile, password, appearance, notifications, tab.label, updateUser]);
 
-      <span>
-        {label}
-      </span>
+  const changeProfile = (e) => { setProfile((p) => ({ ...p, [e.target.name]: e.target.value })); clearFeedback(); };
+  const changeAppearance = (e) => { const { name: key, checked, value, type } = e.target; setAppearance((p) => ({ ...p, [key]: type === "checkbox" ? checked : value })); clearFeedback(); };
+  const changeNotifications = (e) => { setNotifications((p) => ({ ...p, [e.target.name]: e.target.checked })); clearFeedback(); };
+  const changePassword = (e) => { setPassword((p) => ({ ...p, [e.target.name]: e.target.value })); clearFeedback(); };
+  const logoutNow = () => { if (!saving && window.confirm("Sign out of SyncDoc on this device?")) logout?.(); };
+  const pageMotion = reduceMotion ? {} : { initial: { opacity: 0, y: 7 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: -4 } };
 
-      {selected && (
-        <span
-          className="theme-option-check"
-          aria-hidden="true"
-        >
-          <Check size={13} />
-        </span>
-      )}
-    </button>
-  );
+  return <main className="page settings-page settings-premium" aria-labelledby="settings-title">
+    <motion.header className="page-heading settings-page-heading settings-hero" initial={reduceMotion ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .32 }}>
+      <div className="page-heading-content"><div className="eyebrow-row"><span className="eyebrow">WORKSPACE CONTROL</span><span className="settings-live-status"><span className="settings-live-dot" /> Account preferences</span></div><h1 id="settings-title">Settings<span className="settings-title-dot">.</span></h1><p>Your space, your workflow. Fine-tune your SyncDoc experience in one place.</p></div>
+      <div className="settings-hero-art" aria-hidden="true"><div className="settings-orbit" /><div className="settings-orbit settings-orbit-two" /><div className="settings-hero-glyph"><Sparkles size={28} /></div></div>
+    </motion.header>
+
+    <AnimatePresence mode="wait">{feedback && <motion.div key={feedback.text} className={`settings-alert settings-alert-${feedback.type}`} role="status" aria-live="polite" initial={reduceMotion ? false : { opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}><span>{feedback.type === "error" ? <X size={17} /> : <Check size={17} />}</span><p>{feedback.text}</p><button type="button" className="settings-alert-close" onClick={clearFeedback} aria-label="Dismiss"><X size={15} /></button></motion.div>}</AnimatePresence>
+
+    <div className="settings-layout settings-premium-layout">
+      <aside className="settings-sidebar settings-premium-sidebar">
+        <div className="settings-user-card"><Avatar user={user} name={name} size="lg" /><div className="settings-user-info"><strong>{name}</strong><span>{user?.email || "Email not provided"}</span><small>{user?.role || "Member"}</small></div></div>
+        <div className="settings-nav-divider" />
+        <nav className="settings-nav" aria-label="Settings navigation">{TABS.map((item) => { const Icon = item.icon; const active = activeTab === item.id; return <button key={item.id} type="button" className={`settings-nav-item ${active ? "active" : ""}`} onClick={() => { if (!saving) { setActiveTab(item.id); clearFeedback(); } }} disabled={saving} aria-current={active ? "page" : undefined}><span className="settings-nav-icon"><Icon size={17} /></span><span className="settings-nav-copy"><strong>{item.label}</strong><small>{item.description}</small></span><ChevronRight size={15} className="settings-nav-arrow" /></button>; })}</nav>
+        <div className="settings-sidebar-footer"><div className="settings-security-mini"><ShieldCheck size={18} /><div><strong>Security matters</strong><small>Keep your account up to date</small></div></div></div>
+      </aside>
+
+      <section className="settings-main" aria-labelledby="settings-section-title"><Card className="settings-card settings-premium-card">
+        <div className="settings-card-header"><div><span className="settings-card-eyebrow">{tab.label.toUpperCase()} SETTINGS</span><h2 id="settings-section-title">{tab.label}</h2><p>{tab.description}</p></div><div className="settings-card-icon"><tab.icon size={21} /></div></div>
+        {loading && <div className="settings-loading" role="status"><LoaderCircle className="is-spinning" size={16} /> Loading saved preferences…</div>}
+        <AnimatePresence mode="wait"><motion.div key={activeTab} className="settings-content" {...pageMotion} transition={{ duration: reduceMotion ? 0 : .2 }}>
+          {activeTab === "profile" && <form className="settings-section" onSubmit={handleSave}>
+            <div className="settings-section-intro"><h3>Personal information</h3><p>These details help collaborators recognize you across SyncDoc.</p></div>
+            <div className="settings-profile-preview"><Avatar user={user} name={profile.name || name} size="xl" /><div><strong>{profile.name || name}</strong><span>{profile.email}</span><small>Profile identity</small></div><span className="settings-profile-chip"><ShieldCheck size={13} /> Account</span></div><div className="settings-divider" />
+            <div className="form-grid"><label><span>Display name</span><input name="name" value={profile.name} onChange={changeProfile} autoComplete="name" minLength={2} maxLength={50} required disabled={saving} placeholder="Your name" /><small className="field-help">2–50 characters. Visible to collaborators.</small></label><label><span>Username</span><input name="username" value={profile.username} onChange={changeProfile} autoComplete="username" minLength={3} maxLength={30} pattern="[a-zA-Z0-9_]+" disabled={saving} placeholder="your_username" /><small className="field-help">Letters, numbers and underscores.</small></label><label className="form-field-full"><span>Email address</span><div className="settings-readonly-field"><Mail size={15} /><input type="email" value={profile.email} readOnly disabled /><span>Read only</span></div><small className="field-help">Contact support if you need to change your email.</small></label></div>
+            <div className="settings-actions"><Button type="submit" variant="primary" loading={saving} disabled={saving}><Save size={15} />{saving ? "Saving…" : "Save profile"}</Button></div>
+          </form>}
+
+          {activeTab === "appearance" && <form className="settings-section" onSubmit={handleSave}>
+            <div className="settings-section-intro"><h3>Make it feel like yours</h3><p>Choose the visual style and motion level that fits your workflow.</p></div><div className="setting-heading"><div><strong>Color theme</strong><small>System follows your device preference.</small></div></div>
+            <div className="theme-options" role="radiogroup" aria-label="Color theme">{[{ value: "system", label: "System", icon: Monitor }, { value: "light", label: "Light", icon: Sun }, { value: "dark", label: "Dark", icon: Moon }].map((item) => { const Icon = item.icon; const active = appearance.theme === item.value; return <button key={item.value} type="button" role="radio" aria-checked={active} className={`theme-option ${active ? "active" : ""}`} onClick={() => setAppearance((p) => ({ ...p, theme: item.value }))}><span className="theme-option-icon"><Icon size={20} /></span><span>{item.label}</span>{active && <Check size={14} className="theme-option-check" />}</button>; })}</div><div className="settings-divider" />
+            <div className="settings-options"><SettingToggle name="compactMode" checked={appearance.compactMode} onChange={changeAppearance} title="Compact layout" description="Reduce spacing to fit more content on screen." icon={LaptopIcon} /><SettingToggle name="reducedMotion" checked={appearance.reducedMotion} onChange={changeAppearance} title="Reduced motion" description="Reduce interface transitions and decorative movement." icon={Sparkles} /></div><div className="settings-actions"><Button type="submit" variant="primary" loading={saving} disabled={saving}><Save size={15} />{saving ? "Saving…" : "Save appearance"}</Button></div>
+          </form>}
+
+          {activeTab === "notifications" && <form className="settings-section" onSubmit={handleSave}>
+            <div className="settings-section-intro"><h3>Your notification signal</h3><p>Stay informed about what matters and quiet what doesn't.</p></div><div className="settings-options"><SettingToggle name="email" checked={notifications.email} onChange={changeNotifications} title="Email updates" description="Important account and product updates delivered to your inbox." icon={Mail} /><SettingToggle name="mentions" checked={notifications.mentions} onChange={changeNotifications} title="Mentions" description="When a collaborator mentions you in a discussion." icon={User} /><SettingToggle name="documentUpdates" checked={notifications.documentUpdates} onChange={changeNotifications} title="Document updates" description="Changes to documents you follow or collaborate on." icon={FileText} /><SettingToggle name="workspaceActivity" checked={notifications.workspaceActivity} onChange={changeNotifications} title="Workspace activity" description="Relevant changes across shared workspaces." icon={Users} /></div><div className="settings-actions"><Button type="submit" variant="primary" loading={saving} disabled={saving}><Save size={15} />{saving ? "Saving…" : "Save notifications"}</Button></div>
+          </form>}
+
+          {activeTab === "security" && <form className="settings-section" onSubmit={handleSave}>
+            <div className="settings-section-intro"><h3>Password & account access</h3><p>Use a unique password and never share it with anyone.</p></div><div className="security-status"><span className="security-status-icon"><ShieldCheck size={21} /></span><div><strong>Account security</strong><small>Password changes are verified by the server.</small></div><span className="security-status-badge">Protected</span></div><div className="settings-divider" />
+            <div className="security-form">{[["currentPassword","Current password","current-password"],["newPassword","New password","new-password"],["confirmPassword","Confirm new password","new-password"]].map(([field,label,autocomplete]) => <PasswordField key={field} name={field} label={label} value={password[field]} onChange={changePassword} visible={!!shown[field]} onToggle={() => setShown((p) => ({ ...p, [field]: !p[field] }))} autoComplete={autocomplete} disabled={saving} />)}
+              {password.newPassword && <div className="password-strength"><div className="password-strength-header"><span>Password strength</span><strong>{strength.label}</strong></div><div className="password-strength-bars">{[1,2,3,4,5,6].map((n) => <span key={n} className={n <= strength.score ? `active strength-${strength.score}` : ""} />)}</div></div>}
+              {password.confirmPassword && <p className={`password-match ${password.confirmPassword === password.newPassword ? "is-match" : "is-mismatch"}`}>{password.confirmPassword === password.newPassword ? <Check size={14} /> : <X size={14} />}{password.confirmPassword === password.newPassword ? "Passwords match" : "Passwords do not match"}</p>}
+            </div><div className="password-requirements"><strong>For a stronger password</strong><ul><li className={password.newPassword.length >= 8 ? "complete" : ""}><Check size={13} />At least 8 characters</li><li className={/[A-Z]/.test(password.newPassword) ? "complete" : ""}><Check size={13} />One uppercase letter</li><li className={/[0-9]/.test(password.newPassword) ? "complete" : ""}><Check size={13} />One number</li><li className={/[^A-Za-z0-9]/.test(password.newPassword) ? "complete" : ""}><Check size={13} />One special character</li></ul></div><div className="settings-actions"><Button type="submit" variant="primary" loading={saving} disabled={saving}><Lock size={15} />{saving ? "Updating…" : "Update password"}</Button></div>
+            <div className="danger-zone"><div className="danger-zone-icon"><LogOut size={18} /></div><div className="danger-zone-content"><span className="eyebrow">CURRENT SESSION</span><h3>Sign out</h3><p>End your authenticated session on this device.</p></div><Button type="button" variant="danger" onClick={() => { if (!saving && window.confirm("Sign out of SyncDoc on this device?")) logout?.(); }} disabled={saving}><LogOut size={14} />Sign out</Button></div>
+          </form>}
+        </motion.div></AnimatePresence>
+      </Card></section>
+    </div>
+    <p className="settings-footnote"><ShieldCheck size={14} /> Your settings are saved to your SyncDoc account when you select Save.</p>
+  </main>;
 }
 
-/* ============================================================
-   SETTING TOGGLE
-============================================================ */
+function LaptopIcon(props) { return <Monitor {...props} />; }
 
-function SettingToggle({
-  name,
-  checked,
-  onChange,
-  title,
-  description,
-}) {
-  return (
-    <label className="setting-row setting-toggle">
-      <span className="setting-row-icon">
-        <Check size={16} />
-      </span>
-
-      <span className="setting-row-content">
-        <strong>
-          {title}
-        </strong>
-
-        <small>
-          {description}
-        </small>
-      </span>
-
-      <span className="toggle-control">
-        <input
-          type="checkbox"
-          name={name}
-          checked={checked}
-          onChange={onChange}
-        />
-
-        <span
-          className="toggle-slider"
-          aria-hidden="true"
-        />
-      </span>
-    </label>
-  );
+function SettingToggle({ name, checked, onChange, title, description, icon: Icon }) {
+  return <label className="setting-row setting-toggle"><span className="setting-row-icon"><Icon size={17} /></span><span className="setting-row-content"><strong>{title}</strong><small>{description}</small></span><span className="toggle-control"><input type="checkbox" name={name} checked={!!checked} onChange={onChange} /><span className="toggle-slider" /></span></label>;
 }
 
-/* ============================================================
-   PASSWORD INPUT
-============================================================ */
-
-function PasswordInput({
-  label,
-  name,
-  value,
-  onChange,
-  visible,
-  onToggle,
-  placeholder,
-  autoComplete,
-  disabled,
-}) {
-  return (
-    <label className="password-input-group">
-      <span>
-        {label}
-      </span>
-
-      <div className="password-field">
-        <Lock
-          size={16}
-          className="password-field-icon"
-          aria-hidden="true"
-        />
-
-        <input
-          name={name}
-          type={
-            visible
-              ? "text"
-              : "password"
-          }
-          value={value}
-          onChange={onChange}
-          placeholder={placeholder}
-          autoComplete={autoComplete}
-          disabled={disabled}
-          minLength={8}
-        />
-
-        <button
-          type="button"
-          className="password-visibility-button"
-          onClick={onToggle}
-          disabled={disabled}
-          aria-label={
-            visible
-              ? `Hide ${label.toLowerCase()}`
-              : `Show ${label.toLowerCase()}`
-          }
-          title={
-            visible
-              ? "Hide password"
-              : "Show password"
-          }
-        >
-          {visible ? (
-            <EyeOff size={16} />
-          ) : (
-            <Eye size={16} />
-          )}
-        </button>
-      </div>
-    </label>
-  );
+function PasswordField({ name, label, value, onChange, visible, onToggle, autoComplete, disabled }) {
+  return <label className="password-input-group"><span>{label}</span><div className="password-field"><Lock size={16} className="password-field-icon" /><input name={name} type={visible ? "text" : "password"} value={value} onChange={onChange} placeholder={`Enter ${label.toLowerCase()}`} autoComplete={autoComplete} disabled={disabled} minLength={8} required /><button type="button" className="password-visibility-button" onClick={onToggle} disabled={disabled} aria-label={`${visible ? "Hide" : "Show"} ${label.toLowerCase()}`}>{visible ? <EyeOff size={16} /> : <Eye size={16} />}</button></div></label>;
 }
-

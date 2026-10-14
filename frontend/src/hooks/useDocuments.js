@@ -1,3 +1,4 @@
+
 import {
   useCallback,
   useEffect,
@@ -12,59 +13,21 @@ import documentService from "../services/documentService";
    HELPERS
    ============================================================ */
 
-/**
- * Safely extract a document ID.
- */
 function getDocumentId(document) {
   if (!document || typeof document !== "object") {
     return "";
   }
 
-  return String(
-    document.id ||
-    document._id ||
-    document.documentId ||
-    ""
-  );
+  const id = document.id ?? document._id ?? document.documentId;
+  return id == null ? "" : String(id);
 }
 
-/**
- * Extract documents from different backend
- * response structures.
- *
- * Supported:
- *
- * {
- *   documents: []
- * }
- *
- * {
- *   data: {
- *     documents: []
- *   }
- * }
- *
- * {
- *   data: []
- * }
- *
- * []
- */
 function extractDocuments(response) {
   const data = response?.data ?? response;
 
-  if (Array.isArray(data)) {
-    return data;
-  }
-
-  if (Array.isArray(data?.documents)) {
-    return data.documents;
-  }
-
-  if (Array.isArray(data?.data)) {
-    return data.data;
-  }
-
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.documents)) return data.documents;
+  if (Array.isArray(data?.data)) return data.data;
   if (Array.isArray(data?.data?.documents)) {
     return data.data.documents;
   }
@@ -72,9 +35,6 @@ function extractDocuments(response) {
   return [];
 }
 
-/**
- * Extract a single created document.
- */
 function extractDocument(response) {
   const data = response?.data ?? response;
 
@@ -82,36 +42,22 @@ function extractDocument(response) {
     return null;
   }
 
-  if (
-    data.document &&
-    typeof data.document === "object"
-  ) {
+  if (data.document && typeof data.document === "object") {
     return data.document;
   }
 
-  if (
-    data.data?.document &&
-    typeof data.data.document === "object"
-  ) {
+  if (data.data?.document && typeof data.data.document === "object") {
     return data.data.document;
   }
 
-  if (
-    data.data?.data &&
-    typeof data.data.data === "object"
-  ) {
+  if (data.data?.data && typeof data.data.data === "object") {
     return data.data.data;
   }
 
-  /*
-   * Avoid accidentally treating response metadata
-   * as a document.
-   */
   if (
-    data.id ||
-    data._id ||
-    data.documentId ||
-    data.title
+    data.id != null ||
+    data._id != null ||
+    data.documentId != null
   ) {
     return data;
   }
@@ -119,15 +65,12 @@ function extractDocument(response) {
   return null;
 }
 
-/**
- * Generate a browser-safe temporary ID.
- */
 function createTemporaryId() {
   if (
     typeof crypto !== "undefined" &&
     typeof crypto.randomUUID === "function"
   ) {
-    return crypto.randomUUID();
+    return `temp-${crypto.randomUUID()}`;
   }
 
   return `temp-${Date.now()}-${Math.random()
@@ -135,58 +78,47 @@ function createTemporaryId() {
     .slice(2, 10)}`;
 }
 
-/**
- * Normalize a document before putting it into state.
- */
-function normalizeDocument(document) {
+function normalizeDocument(document, allowTemporaryId = false) {
   if (!document || typeof document !== "object") {
+    return null;
+  }
+
+  const originalId = getDocumentId(document);
+  const id =
+    originalId || (allowTemporaryId ? createTemporaryId() : "");
+
+  if (!id) {
     return null;
   }
 
   return {
     ...document,
-
-    id:
-      document.id ||
-      document._id ||
-      document.documentId ||
-      createTemporaryId(),
-
+    id,
     title:
       typeof document.title === "string" &&
-        document.title.trim()
+      document.title.trim()
         ? document.title
         : "Untitled Document",
-
     description:
       typeof document.description === "string"
         ? document.description
         : "",
-
     favorite: Boolean(
-      document.favorite ??
-      document.isFavorite ??
-      false
+      document.favorite ?? document.isFavorite ?? false
     ),
   };
 }
 
-/**
- * Normalize document arrays.
- */
 function normalizeDocuments(documents) {
   if (!Array.isArray(documents)) {
     return [];
   }
 
   return documents
-    .map(normalizeDocument)
+    .map((document) => normalizeDocument(document))
     .filter(Boolean);
 }
 
-/**
- * Check whether an error was caused by cancellation.
- */
 function isCanceledError(error) {
   return (
     error?.code === "ERR_CANCELED" ||
@@ -195,22 +127,45 @@ function isCanceledError(error) {
   );
 }
 
-/**
- * Check authentication state before calling
- * protected document APIs.
- */
-function hasAuthToken() {
+function getAuthToken() {
   try {
-    return Boolean(
-      localStorage.getItem("syncdoc_token")
-    );
+    return localStorage.getItem("syncdoc_token") || "";
   } catch {
-    return false;
+    return "";
   }
 }
 
 /* ============================================================
-   HOOK
+   REQUEST DEDUPLICATION
+   ============================================================ */
+
+// Reuse an in-flight request for the same authenticated session.
+const inFlightListRequests = new Map();
+
+function listDocumentsOnce(token) {
+  const existingRequest = inFlightListRequests.get(token);
+
+  if (existingRequest) {
+    return existingRequest;
+  }
+
+  let request;
+
+  request = Promise.resolve()
+    .then(() => documentService.list())
+    .finally(() => {
+      if (inFlightListRequests.get(token) === request) {
+        inFlightListRequests.delete(token);
+      }
+    });
+
+  inFlightListRequests.set(token, request);
+
+  return request;
+}
+
+/* ============================================================
+   MAIN HOOK
    ============================================================ */
 
 export default function useDocuments({
@@ -218,25 +173,33 @@ export default function useDocuments({
   autoLoad = true,
 } = {}) {
   const [documents, setDocuments] = useState([]);
+  const [loading, setLoading] = useState(Boolean(autoLoad));
+  const [creating, setCreating] = useState(false);
+  const [removingId, setRemovingId] = useState(null);
+  const [updatingId, setUpdatingId] = useState(null);
+  const [error, setError] = useState(null);
 
-  const [loading, setLoading] =
-    useState(Boolean(autoLoad));
-
-  const [creating, setCreating] =
-    useState(false);
-
-  const [removingId, setRemovingId] =
-    useState(null);
-
-  const [updatingId, setUpdatingId] =
-    useState(null);
-
-  const [error, setError] =
-    useState(null);
-
-  const mountedRef = useRef(true);
-
+  const mountedRef = useRef(false);
   const requestIdRef = useRef(0);
+  const documentsRef = useRef([]);
+  const creatingRef = useRef(false);
+  const removingIdsRef = useRef(new Set());
+  const updatingIdsRef = useRef(new Set());
+
+  // Keep the latest document list available for safe rollback operations.
+  const commitDocuments = useCallback((updater) => {
+    const previous = documentsRef.current;
+
+    const next =
+      typeof updater === "function"
+        ? updater(previous)
+        : updater;
+
+    documentsRef.current = next;
+    setDocuments(next);
+
+    return next;
+  }, []);
 
   /* ==========================================================
      MOUNT / UNMOUNT
@@ -247,6 +210,7 @@ export default function useDocuments({
 
     return () => {
       mountedRef.current = false;
+      requestIdRef.current += 1;
     };
   }, []);
 
@@ -255,26 +219,14 @@ export default function useDocuments({
      ========================================================== */
 
   const load = useCallback(
-    async ({
-      showLoading = true,
-      useFallback = fallbackToDemo,
-    } = {}) => {
-      const requestId =
-        ++requestIdRef.current;
+    async ({ showLoading = true } = {}) => {
+      const requestId = ++requestIdRef.current;
+      const token = getAuthToken();
 
-      /*
-       * Prevent unnecessary protected API calls
-       * when the user is not authenticated.
-       */
-      if (!hasAuthToken()) {
-        if (!mountedRef.current) {
-          return [];
-        }
+      if (!token) {
+        if (!mountedRef.current) return [];
 
-        setDocuments(
-          []
-        );
-
+        commitDocuments([]);
         setError(null);
 
         if (showLoading) {
@@ -284,58 +236,53 @@ export default function useDocuments({
         return [];
       }
 
-      if (showLoading) {
+      if (showLoading && mountedRef.current) {
         setLoading(true);
       }
 
-      setError(null);
+      if (mountedRef.current) {
+        setError(null);
+      }
 
       try {
-        const response =
-          await documentService.list();
+        const response = await listDocumentsOnce(token);
+        const list = normalizeDocuments(
+          extractDocuments(response)
+        );
 
-        const list =
-          normalizeDocuments(
-            extractDocuments(response)
-          );
-
-        /*
-         * Ignore stale responses if multiple
-         * load requests were triggered.
-         */
+        // Ignore stale responses and responses from a previous session.
         if (
           !mountedRef.current ||
-          requestId !== requestIdRef.current
+          requestId !== requestIdRef.current ||
+          getAuthToken() !== token
         ) {
           return list;
         }
 
-        setDocuments(
-          list
-        );
-
+        commitDocuments(list);
         setError(null);
 
         return list;
-      } catch (err) {
+      } catch (requestError) {
         if (
           !mountedRef.current ||
-          isCanceledError(err)
+          requestId !== requestIdRef.current ||
+          isCanceledError(requestError)
         ) {
           return [];
         }
 
         console.error(
           "SyncDoc: failed to load documents:",
-          err
+          requestError
         );
 
-        setError(err);
+        setError(requestError);
 
-        /*
-         * Only use demo data when explicitly enabled.
-         */
-        setDocuments([]);
+        // Do not silently replace server data with demo data.
+        if (!fallbackToDemo) {
+          commitDocuments([]);
+        }
 
         return [];
       } finally {
@@ -347,7 +294,7 @@ export default function useDocuments({
         }
       }
     },
-    [fallbackToDemo]
+    [commitDocuments, fallbackToDemo]
   );
 
   /* ==========================================================
@@ -360,7 +307,7 @@ export default function useDocuments({
       return undefined;
     }
 
-    load();
+    void load();
 
     return undefined;
   }, [autoLoad, load]);
@@ -373,129 +320,126 @@ export default function useDocuments({
     async (payload = {}) => {
       if (
         !payload ||
-        typeof payload !== "object"
+        typeof payload !== "object" ||
+        Array.isArray(payload)
       ) {
-        throw new Error(
-          "Document payload must be an object."
-        );
+        throw new Error("Document payload must be an object.");
       }
 
-      setCreating(true);
-      setError(null);
+      // Prevent accidental duplicate submissions.
+      if (creatingRef.current) {
+        return null;
+      }
 
-      /*
-       * Temporary optimistic document.
-       */
-      const temporaryDocument =
-        normalizeDocument({
+      creatingRef.current = true;
+
+      if (mountedRef.current) {
+        setCreating(true);
+        setError(null);
+      }
+
+      const temporaryDocument = normalizeDocument(
+        {
           ...payload,
           id: createTemporaryId(),
-          title:
-            payload.title ||
-            "Untitled Document",
-          owner:
-            payload.owner ||
-            "You",
-          updatedAt:
-            payload.updatedAt ||
-            "just now",
-          collaborators:
-            payload.collaborators ?? 1,
-          favorite:
-            payload.favorite ?? false,
+          title: payload.title || "Untitled Document",
+          updatedAt: payload.updatedAt || "just now",
+          favorite: payload.favorite ?? false,
           __optimistic: true,
-        });
+          __unsaved: true,
+        },
+        true
+      );
+
+      // Show the temporary item while the server request is running.
+      if (mountedRef.current && temporaryDocument) {
+        commitDocuments((previous) => [
+          temporaryDocument,
+          ...previous,
+        ]);
+      }
 
       try {
-        const response =
-          await documentService.create(
-            payload
+        const response = await documentService.create(payload);
+        const created = normalizeDocument(
+          extractDocument(response)
+        );
+
+        if (!created) {
+          throw new Error(
+            "The server did not return a document with a valid ID."
           );
+        }
 
-        const created =
-          normalizeDocument(
-            extractDocument(response)
-          );
+        if (mountedRef.current) {
+          commitDocuments((previous) => {
+            const temporaryId =
+              getDocumentId(temporaryDocument);
+            const realId = getDocumentId(created);
 
-        /*
-         * If backend returned a document,
-         * replace optimistic state with the real one.
-         */
-        if (
-          mountedRef.current &&
-          created
-        ) {
-          setDocuments((previous) => {
-            const optimisticExists =
-              previous.some(
-                (item) =>
-                  getDocumentId(item) ===
-                  getDocumentId(
-                    temporaryDocument
-                  )
-              );
+            const withoutTemporary = previous.filter(
+              (item) => getDocumentId(item) !== temporaryId
+            );
 
-            if (optimisticExists) {
-              return previous.map((item) =>
-                getDocumentId(item) ===
-                  getDocumentId(
-                    temporaryDocument
-                  )
-                  ? created
+            const existingIndex = withoutTemporary.findIndex(
+              (item) => getDocumentId(item) === realId
+            );
+
+            if (existingIndex !== -1) {
+              return withoutTemporary.map((item, index) =>
+                index === existingIndex
+                  ? {
+                      ...item,
+                      ...created,
+                      __optimistic: false,
+                      __unsaved: false,
+                    }
                   : item
               );
             }
 
-            /*
-             * Prevent duplicates if the backend
-             * response already exists in state.
-             */
-            const alreadyExists =
-              previous.some(
-                (item) =>
-                  getDocumentId(item) ===
-                  getDocumentId(created)
-              );
-
-            return alreadyExists
-              ? previous
-              : [created, ...previous];
+            return [
+              {
+                ...created,
+                __optimistic: false,
+                __unsaved: false,
+              },
+              ...withoutTemporary,
+            ];
           });
-
-          return created;
         }
 
-        /*
-         * Backend returned no usable document.
-         * Keep the optimistic local version.
-         */
-        if (mountedRef.current) {
-          setError(new Error('The server did not return the created document.'));
-        }
-
-        return null;
-      } catch (err) {
+        return created;
+      } catch (requestError) {
         console.error(
           "SyncDoc: failed to create document:",
-          err
+          requestError
         );
 
-        /*
-         * Keep local optimistic document so
-         * the UI remains usable.
-         */
+        // Remove the temporary item because the save failed.
         if (mountedRef.current) {
-          setError(err);
+          const temporaryId =
+            getDocumentId(temporaryDocument);
+
+          commitDocuments((previous) =>
+            previous.filter(
+              (item) => getDocumentId(item) !== temporaryId
+            )
+          );
+
+          setError(requestError);
         }
 
         return null;
       } finally {
+        creatingRef.current = false;
+
         if (mountedRef.current) {
           setCreating(false);
         }
       }
     },
-    []
+    [commitDocuments]
   );
 
   /* ==========================================================
@@ -503,57 +447,70 @@ export default function useDocuments({
      ========================================================== */
 
   const removeDocument = useCallback(
-    async (document) => {
-      const id = getDocumentId(document);
+    async (documentOrId) => {
+      const id =
+        typeof documentOrId === "string" ||
+        typeof documentOrId === "number"
+          ? String(documentOrId)
+          : getDocumentId(documentOrId);
 
-      if (!id) {
+      if (!id || removingIdsRef.current.has(id)) {
         return false;
       }
 
-      /*
-       * Save the current document so we can restore
-       * it if the API request fails.
-       */
-      let previousDocuments = [];
+      const previousDocument = documentsRef.current.find(
+        (item) => getDocumentId(item) === id
+      );
 
-      setRemovingId(id);
-      setError(null);
+      removingIdsRef.current.add(id);
 
-      setDocuments((previous) => {
-        previousDocuments = previous;
+      if (mountedRef.current) {
+        setRemovingId(id);
+        setError(null);
 
-        return previous.filter(
-          (item) =>
-            getDocumentId(item) !== id
+        commitDocuments((previous) =>
+          previous.filter((item) => getDocumentId(item) !== id)
         );
-      });
+      }
 
       try {
         await documentService.remove(id);
-
         return true;
-      } catch (err) {
+      } catch (requestError) {
         console.error(
           "SyncDoc: failed to remove document:",
-          err
+          requestError
         );
 
-        /*
-         * Roll back optimistic removal.
-         */
-        if (mountedRef.current) {
-          setDocuments(previousDocuments);
-          setError(err);
+        // Restore only this document, preserving other changes.
+        if (mountedRef.current && previousDocument) {
+          commitDocuments((previous) => {
+            const alreadyExists = previous.some(
+              (item) => getDocumentId(item) === id
+            );
+
+            return alreadyExists
+              ? previous
+              : [previousDocument, ...previous];
+          });
+
+          setError(requestError);
         }
 
         return false;
       } finally {
+        removingIdsRef.current.delete(id);
+
         if (mountedRef.current) {
-          setRemovingId(null);
+          setRemovingId(
+            removingIdsRef.current.size
+              ? Array.from(removingIdsRef.current).at(-1)
+              : null
+          );
         }
       }
     },
-    []
+    [commitDocuments]
   );
 
   /* ==========================================================
@@ -564,51 +521,47 @@ export default function useDocuments({
     async (document) => {
       const id = getDocumentId(document);
 
-      if (!id) {
+      if (!id || updatingIdsRef.current.has(id)) {
         return null;
       }
 
-      const previousFavorite =
-        Boolean(
-          document?.favorite ??
-          document?.isFavorite ??
+      const currentDocument =
+        documentsRef.current.find(
+          (item) => getDocumentId(item) === id
+        ) || document;
+
+      const previousFavorite = Boolean(
+        currentDocument?.favorite ??
+          currentDocument?.isFavorite ??
           false
-        );
-
-      const nextFavorite =
-        !previousFavorite;
-
-      setUpdatingId(id);
-      setError(null);
-
-      /*
-       * Optimistic update.
-       */
-      setDocuments((previous) =>
-        previous.map((item) =>
-          getDocumentId(item) === id
-            ? {
-              ...item,
-              favorite: nextFavorite,
-              isFavorite: nextFavorite,
-            }
-            : item
-        )
       );
 
+      const nextFavorite = !previousFavorite;
+
+      updatingIdsRef.current.add(id);
+
+      if (mountedRef.current) {
+        setUpdatingId(id);
+        setError(null);
+
+        commitDocuments((previous) =>
+          previous.map((item) =>
+            getDocumentId(item) === id
+              ? {
+                  ...item,
+                  favorite: nextFavorite,
+                  isFavorite: nextFavorite,
+                }
+              : item
+          )
+        );
+      }
+
       try {
-        /*
-         * Support different service implementations.
-         *
-         * If your service does not currently expose
-         * toggleFavorite/updateFavorite, the local
-         * state still works.
-         */
-        let response = null;
+        let response;
 
         if (
-          typeof documentService.toggleFavorite ===
-          "function"
+          typeof documentService.toggleFavorite === "function"
         ) {
           response =
             await documentService.toggleFavorite(
@@ -616,75 +569,75 @@ export default function useDocuments({
               nextFavorite
             );
         } else if (
-          typeof documentService.update ===
-          "function"
+          typeof documentService.update === "function"
         ) {
-          response =
-            await documentService.update(id, {
-              favorite: nextFavorite,
-            });
-        }
-
-        const updated =
-          normalizeDocument(
-            extractDocument(response)
-          );
-
-        if (
-          mountedRef.current &&
-          updated
-        ) {
-          setDocuments((previous) =>
-            previous.map((item) =>
-              getDocumentId(item) === id
-                ? {
-                  ...item,
-                  ...updated,
-                }
-                : item
-            )
+          response = await documentService.update(id, {
+            favorite: nextFavorite,
+            isFavorite: nextFavorite,
+          });
+        } else {
+          throw new Error(
+            "documentService does not provide a favorite update method."
           );
         }
 
-        return updated || {
-          ...document,
-          favorite: nextFavorite,
-        };
-      } catch (err) {
-        console.error(
-          "SyncDoc: failed to update favorite:",
-          err
+        const updated = normalizeDocument(
+          extractDocument(response)
         );
 
-        /*
-         * Roll back optimistic update.
-         */
+        if (mountedRef.current && updated) {
+          commitDocuments((previous) =>
+            previous.map((item) =>
+              getDocumentId(item) === id
+                ? { ...item, ...updated }
+                : item
+            )
+          );
+        }
+
+        return (
+          updated || {
+            ...currentDocument,
+            favorite: nextFavorite,
+            isFavorite: nextFavorite,
+          }
+        );
+      } catch (requestError) {
+        console.error(
+          "SyncDoc: failed to update favorite:",
+          requestError
+        );
+
         if (mountedRef.current) {
-          setDocuments((previous) =>
+          commitDocuments((previous) =>
             previous.map((item) =>
               getDocumentId(item) === id
                 ? {
-                  ...item,
-                  favorite:
-                    previousFavorite,
-                  isFavorite:
-                    previousFavorite,
-                }
+                    ...item,
+                    favorite: previousFavorite,
+                    isFavorite: previousFavorite,
+                  }
                 : item
             )
           );
 
-          setError(err);
+          setError(requestError);
         }
 
         return null;
       } finally {
+        updatingIdsRef.current.delete(id);
+
         if (mountedRef.current) {
-          setUpdatingId(null);
+          setUpdatingId(
+            updatingIdsRef.current.size
+              ? Array.from(updatingIdsRef.current).at(-1)
+              : null
+          );
         }
       }
     },
-    []
+    [commitDocuments]
   );
 
   /* ==========================================================
@@ -693,30 +646,26 @@ export default function useDocuments({
 
   const updateDocument = useCallback(
     (documentId, updates) => {
-      if (!documentId) {
-        return;
-      }
+      const id = String(documentId ?? "");
 
       if (
+        !id ||
         !updates ||
-        typeof updates !== "object"
+        typeof updates !== "object" ||
+        Array.isArray(updates)
       ) {
         return;
       }
 
-      setDocuments((previous) =>
+      commitDocuments((previous) =>
         previous.map((document) =>
-          getDocumentId(document) ===
-            String(documentId)
-            ? {
-              ...document,
-              ...updates,
-            }
+          getDocumentId(document) === id
+            ? { ...document, ...updates }
             : document
         )
       );
     },
-    []
+    [commitDocuments]
   );
 
   /* ==========================================================
@@ -725,33 +674,31 @@ export default function useDocuments({
 
   const addDocument = useCallback(
     (document) => {
-      const normalized =
-        normalizeDocument(document);
+      const normalized = normalizeDocument(document, true);
 
       if (!normalized) {
         return;
       }
 
-      const id =
-        getDocumentId(normalized);
+      const id = getDocumentId(normalized);
 
-      setDocuments((previous) => {
-        const exists = previous.some(
-          (item) =>
-            getDocumentId(item) === id
+      commitDocuments((previous) => {
+        const existingIndex = previous.findIndex(
+          (item) => getDocumentId(item) === id
         );
 
-        if (exists) {
-          return previous;
+        if (existingIndex !== -1) {
+          return previous.map((item, index) =>
+            index === existingIndex
+              ? { ...item, ...normalized }
+              : item
+          );
         }
 
-        return [
-          normalized,
-          ...previous,
-        ];
+        return [normalized, ...previous];
       });
     },
-    []
+    [commitDocuments]
   );
 
   /* ==========================================================
@@ -759,9 +706,9 @@ export default function useDocuments({
      ========================================================== */
 
   const clearDocuments = useCallback(() => {
-    setDocuments([]);
+    commitDocuments([]);
     setError(null);
-  }, []);
+  }, [commitDocuments]);
 
   /* ==========================================================
      DERIVED STATE
@@ -769,87 +716,49 @@ export default function useDocuments({
 
   const favoriteDocuments = useMemo(
     () =>
-      documents.filter(
-        (document) =>
-          Boolean(
-            document.favorite ??
-            document.isFavorite
-          )
+      documents.filter((document) =>
+        Boolean(
+          document.favorite ??
+            document.isFavorite ??
+            false
+        )
       ),
     [documents]
   );
 
-  const documentCount =
-    documents.length;
-
-  const favoriteCount =
-    favoriteDocuments.length;
-
-  const hasDocuments =
-    documentCount > 0;
+  const documentCount = documents.length;
+  const favoriteCount = favoriteDocuments.length;
+  const hasDocuments = documentCount > 0;
 
   /* ==========================================================
-     CONTEXT-STYLE API
+     RETURN API
      ========================================================== */
 
   return useMemo(
     () => ({
-      /* ----------------------------------------------
-         Data
-      ---------------------------------------------- */
-
       documents,
-
       favoriteDocuments,
-
       documentCount,
-
       favoriteCount,
-
       hasDocuments,
 
-      /* ----------------------------------------------
-         Loading states
-      ---------------------------------------------- */
-
       loading,
-
       creating,
-
       removingId,
-
       updatingId,
 
-      isRemoving:
-        Boolean(removingId),
-
-      isUpdating:
-        Boolean(updatingId),
-
-      /* ----------------------------------------------
-         Error
-      ---------------------------------------------- */
+      isRemoving: Boolean(removingId),
+      isUpdating: Boolean(updatingId),
 
       error,
 
-      /* ----------------------------------------------
-         Actions
-      ---------------------------------------------- */
-
       load,
-
       reload: load,
-
       createDocument,
-
       removeDocument,
-
       toggleFavorite,
-
       updateDocument,
-
       addDocument,
-
       clearDocuments,
     }),
     [

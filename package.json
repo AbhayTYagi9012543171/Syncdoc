@@ -1,8 +1,8 @@
 {
   "name": "syncdoc-premium",
-  "version": "6.1.0",
+  "version": "6.2.0",
   "private": true,
-  "description": "SyncDoc premium collaborative workspace",
+  "description": "SyncDoc premium collaborative workspace \u2014 full-stack application",
   "scripts": {
     "dev": "concurrently -k -n BACKEND,FRONTEND -c blue,green \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "npm --prefix backend run dev",

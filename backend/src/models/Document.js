@@ -117,6 +117,9 @@ const DocumentSchema = new mongoose.Schema(
     ],
 
     // ============================================================
+    // Plain-text editor content is persisted alongside the structured AST.
+    content: { type: String, default: '', maxlength: 2000000 },
+
     // AST STORAGE
     // ============================================================
 
@@ -153,6 +156,20 @@ const DocumentSchema = new mongoose.Schema(
         ast: {
           type: [ASTNodeSchema],
           required: true,
+        },
+
+        // Keep HTML content snapshots alongside the structured AST so the
+        // contenteditable editor can restore versions without data loss.
+        content: {
+          type: String,
+          default: '',
+          maxlength: 2000000,
+        },
+
+        title: {
+          type: String,
+          default: 'Untitled document',
+          maxlength: 200,
         },
 
         createdAt: {
@@ -881,19 +898,23 @@ DocumentSchema.methods.createVersion = function (
   comment = ''
 ) {
   const astString = JSON.stringify(this.ast || []);
+  const contentString = String(this.content || '');
+  const titleString = String(this.title || 'Untitled document');
 
   const hash = crypto
     .createHash('md5')
-    .update(astString + this.id)
+    .update(astString + contentString + titleString + this.id)
     .digest('hex');
 
   this.versions.push({
     version: this.currentVersion,
     ast: JSON.parse(astString),
+    content: contentString,
+    title: titleString,
     createdBy: userId,
     comment,
     createdAt: new Date(),
-    size: Buffer.byteLength(astString),
+    size: Buffer.byteLength(astString) + Buffer.byteLength(contentString),
     hash,
   });
 
@@ -926,6 +947,8 @@ DocumentSchema.methods.restoreVersion =
     this.ast = JSON.parse(
       JSON.stringify(version.ast)
     );
+    if (typeof version.content === 'string') this.content = version.content;
+    if (typeof version.title === 'string') this.title = version.title;
 
     this.currentVersion =
       versionNumber + 1;

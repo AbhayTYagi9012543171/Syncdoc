@@ -16,7 +16,7 @@ class DocumentService {
    */
   static async createDocument(userId, data) {
     try {
-      const { title, workspaceId, description, ast } = data;
+      const { title, workspaceId, description, ast, content = '' } = data;
 
       // Check workspace exists and user has access
       const workspace = await Workspace.findById(workspaceId);
@@ -35,12 +35,14 @@ class DocumentService {
         owner: userId,
         description: description || '',
         ast: ast || [],
+        content,
         collaborators: [{
           user: userId,
           role: 'admin',
         }],
       });
 
+      document.operations.push({ operation: { type: 'update', action: 'created', title: document.title }, userId, version: Math.max(1, document.currentVersion || 0), type: 'update', timestamp: new Date() });
       await document.save();
 
       // Update workspace document count
@@ -145,7 +147,7 @@ class DocumentService {
    */
   static async updateDocument(documentId, userId, updateData) {
     try {
-      const { title, description, ast, version, settings, status, tags } = updateData;
+      const { title, description, ast, content, version, settings, status, tags, favorite } = updateData;
 
       const document = await Document.findById(documentId);
       if (!document) {
@@ -166,6 +168,8 @@ class DocumentService {
       // Update fields
       if (title) document.title = title;
       if (description !== undefined) document.description = description;
+      if (content !== undefined) document.content = String(content);
+      if (favorite !== undefined) document.favorite = Boolean(favorite);
       if (settings) document.settings = { ...document.settings, ...settings };
       if (status) document.status = status;
       if (tags) document.tags = tags;
@@ -177,6 +181,9 @@ class DocumentService {
         document.currentVersion = version + 1;
       }
 
+      document.operations.push({ operation: { type: 'update', action: 'edited', title: document.title }, userId, version: Math.max(1, document.currentVersion || 0), type: 'update', timestamp: new Date() });
+      document.stats.totalEdits = (document.stats.totalEdits || 0) + 1;
+      document.stats.lastEditedAt = new Date();
       document.updatedAt = new Date();
       await document.save();
 

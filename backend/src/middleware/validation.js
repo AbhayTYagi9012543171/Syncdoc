@@ -18,16 +18,18 @@ const validate = (req, res, next) => {
     return next();
   }
 
+  // Do not log or return submitted values: they may contain passwords,
+  // tokens, or other sensitive user-provided information.
   const extractedErrors = errors.array().map((err) => ({
     field: err.path || err.param || 'unknown',
     message: err.msg,
-    value: err.value,
   }));
 
-  console.error(
-    '❌ VALIDATION FAILED:',
-    extractedErrors
-  );
+  console.error('VALIDATION FAILED:', {
+    method: req.method,
+    path: req.path,
+    errors: extractedErrors,
+  });
 
   const error = new APIError(
     'Validation failed',
@@ -36,10 +38,6 @@ const validate = (req, res, next) => {
     extractedErrors
   );
 
-  /*
-   * Keep the validation details available to
-   * different versions of the global error handler.
-   */
   error.errors = extractedErrors;
   error.details = extractedErrors;
 

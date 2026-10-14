@@ -34,53 +34,76 @@ const WorkspaceController = {
     }
   },
 
-  // Get all workspaces for user
+  // Get all workspaces accessible to the authenticated user.
+  // Access conditions and search conditions are kept separate to prevent
+  // search results from exposing workspaces the user cannot access.
   async getAll(req, res, next) {
     try {
       const userId = req.user.id;
-      const { search, limit = 20, page = 1 } = req.query;
+      const search =
+        typeof req.query.search === 'string'
+          ? req.query.search.trim()
+          : '';
 
-      const query = {
-        deletedAt: null,
-        $or: [
-          { owner: userId },
-          { 'members.user': userId },
-        ],
-      };
+      const page = Math.max(
+        1,
+        Number.parseInt(req.query.page, 10) || 1
+      );
+      const limit = Math.min(
+        100,
+        Math.max(1, Number.parseInt(req.query.limit, 10) || 20)
+      );
 
-      if (search) {
-        query.$or.push(
-          { name: { $regex: search, $options: 'i' } },
-          { description: { $regex: search, $options: 'i' } }
-        );
+      // Escape regex metacharacters so search text is treated literally.
+      const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+      const conditions = [
+        { deletedAt: null },
+        {
+          $or: [
+            { owner: userId },
+            { 'members.user': userId },
+          ],
+        },
+      ];
+
+      if (escapedSearch) {
+        conditions.push({
+          $or: [
+            { name: { $regex: escapedSearch, $options: 'i' } },
+            { description: { $regex: escapedSearch, $options: 'i' } },
+          ],
+        });
       }
 
-      const skip = (parseInt(page) - 1) * parseInt(limit);
+      const query = { $and: conditions };
+      const skip = (page - 1) * limit;
 
-      const workspaces = await Workspace.find(query)
-        .populate('owner', 'username displayName avatar')
-        .populate('members.user', 'username displayName avatar')
-        .sort({ updatedAt: -1 })
-        .skip(skip)
-        .limit(parseInt(limit));
+      const [workspaces, total] = await Promise.all([
+        Workspace.find(query)
+          .populate('owner', 'username displayName avatar')
+          .populate('members.user', 'username displayName avatar')
+          .sort({ updatedAt: -1 })
+          .skip(skip)
+          .limit(limit),
+        Workspace.countDocuments(query),
+      ]);
 
-      const total = await Workspace.countDocuments(query);
-
-      res.json({
+      return res.json({
         success: true,
         data: {
           workspaces,
           pagination: {
-            page: parseInt(page),
-            limit: parseInt(limit),
+            page,
+            limit,
             total,
-            pages: Math.ceil(total / parseInt(limit)),
+            pages: Math.ceil(total / limit),
           },
         },
       });
     } catch (error) {
       logger.error('Get all workspaces error:', error);
-      next(error);
+      return next(error);
     }
   },
 

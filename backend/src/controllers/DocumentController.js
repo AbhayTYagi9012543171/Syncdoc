@@ -39,6 +39,14 @@ const DocumentController = {
         }],
       });
 
+      // Persist an initial activity event so the dashboard has a real creation record.
+      document.operations.push({
+        operation: { type: 'update', action: 'created', title: document.title },
+        userId,
+        version: Math.max(1, document.currentVersion || 0),
+        type: 'update',
+        timestamp: new Date(),
+      });
       await document.save();
 
       // Update workspace document count
@@ -84,24 +92,39 @@ const DocumentController = {
 
       const skip = (parseInt(page) - 1) * parseInt(limit);
 
+      const safeLimit = Math.min(100, Math.max(1, Number.parseInt(limit, 10) || 20));
+      const safePage = Math.max(1, Number.parseInt(page, 10) || 1);
+      const safeSkip = (safePage - 1) * safeLimit;
+
       const documents = await Document.find(query)
-        .populate('owner', 'username displayName avatar')
-        .populate('collaborators.user', 'username displayName avatar')
+        .populate('owner', 'username displayName avatar email')
+        .populate('collaborators.user', 'username displayName avatar email')
         .sort({ updatedAt: -1 })
-        .skip(skip)
-        .limit(parseInt(limit));
+        .skip(safeSkip)
+        .limit(safeLimit);
+
+      // Add user-scoped display flags without storing user-specific values in MongoDB.
+      const serializedDocuments = documents.map((document) => {
+        const item = document.toObject();
+        const ownerId = item.owner?._id || item.owner;
+        item.isOwner = String(ownerId) === String(userId);
+        item.isFavorite = Array.isArray(item.starredBy) && item.starredBy.some((id) => String(id?._id || id) === String(userId));
+        item.favorite = item.isFavorite; // Compatibility with the current frontend.
+        item.collaboratorsCount = Array.isArray(item.collaborators) ? item.collaborators.length : 0;
+        return item;
+      });
 
       const total = await Document.countDocuments(query);
 
       res.json({
         success: true,
         data: {
-          documents,
+          documents: serializedDocuments,
           pagination: {
-            page: parseInt(page),
-            limit: parseInt(limit),
+            page: safePage,
+            limit: safeLimit,
             total,
-            pages: Math.ceil(total / parseInt(limit)),
+            pages: Math.ceil(total / safeLimit),
           },
         },
       });
@@ -139,9 +162,13 @@ const DocumentController = {
         });
       }
 
+      const serialized = document.toObject();
+      serialized.isOwner = String(serialized.owner?._id || serialized.owner) === String(userId);
+      serialized.isFavorite = Array.isArray(serialized.starredBy) && serialized.starredBy.some((id) => String(id?._id || id) === String(userId));
+      serialized.favorite = serialized.isFavorite;
       res.json({
         success: true,
-        data: document,
+        data: serialized,
       });
     } catch (error) {
       logger.error('Get document error:', error);
@@ -153,7 +180,7 @@ const DocumentController = {
   async update(req, res, next) {
     try {
       const { documentId } = req.params;
-      const { title, description, ast, version, settings, status, tags, favorite } = req.body;
+      const { title, description, ast, content, version, settings, status, tags, favorite } = req.body;
       const userId = req.user.id;
 
       const document = await Document.findById(documentId);
@@ -178,33 +205,57 @@ const DocumentController = {
         });
       }
 
-      // Update fields
-      if (title) document.title = title;
-      if (description !== undefined) document.description = description;
-      if (settings) document.settings = { ...document.settings, ...settings };
+      // Update fields. `content` is used by the plain-text editor; `ast` by the rich editor.
+      const changedFields = [];
+      if (typeof title === 'string' && title.trim() && title.trim() !== document.title) { document.title = title.trim(); changedFields.push('renamed'); }
+      if (description !== undefined) document.description = String(description).slice(0, 500);
+      if (content !== undefined && String(content) !== String(document.content || '')) { document.content = String(content); if (!(ast !== undefined && Array.isArray(ast))) document.currentVersion = Math.max(0, Number(document.currentVersion) || 0) + 1; changedFields.push('edited'); }
+      if (settings && typeof settings === 'object' && !Array.isArray(settings)) document.settings = { ...document.settings?.toObject?.() || document.settings || {}, ...settings };
       if (status) document.status = status;
-      if (tags) document.tags = tags;
+      if (Array.isArray(tags)) document.tags = tags.slice(0, 50).map((tag) => String(tag).trim().slice(0, 50)).filter(Boolean);
+      if (favorite !== undefined) {
+        const starredBy = Array.isArray(document.starredBy) ? document.starredBy : [];
+        const alreadyFavorite = starredBy.some((id) => String(id) === String(userId));
+        if (Boolean(favorite) && !alreadyFavorite) document.starredBy.push(userId);
+        if (!Boolean(favorite) && alreadyFavorite) {
+          document.starredBy = starredBy.filter((id) => String(id) !== String(userId));
+        }
+      }
 
-      // Update AST with OT
-      if (ast && version !== undefined) {
-        const transformer = new OperationTransformer(document);
+      if (ast !== undefined && Array.isArray(ast)) {
         document.ast = ast;
-        document.currentVersion = version + 1;
+        document.currentVersion = Math.max(document.currentVersion || 0, Number(version) || 0) + 1;
+        changedFields.push('edited');
+      }
+
+      // Every meaningful save creates a durable event consumed by Recent activity.
+      if (changedFields.length) {
+        const action = changedFields.includes('renamed') && changedFields.length === 1 ? 'renamed' : 'edited';
+        document.operations.push({
+          operation: { type: 'update', action, fields: changedFields, title: document.title },
+          userId,
+          version: Math.max(1, document.currentVersion || 0),
+          type: 'update',
+          timestamp: new Date(),
+        });
+        document.stats = document.stats || {};
+        document.stats.totalEdits = (document.stats.totalEdits || 0) + 1;
+        document.stats.lastEditedAt = new Date();
       }
 
       document.updatedAt = new Date();
       await document.save();
 
-      // Create version history
-      if (ast && version !== undefined) {
-        document.createVersion(userId, 'Updated document content');
+      // Snapshot after saving the new content so versions restore the latest data.
+      if ((ast !== undefined && Array.isArray(ast)) || changedFields.includes('edited') || changedFields.includes('renamed')) {
+        document.createVersion(userId, changedFields.includes('renamed') && !changedFields.includes('edited') ? 'Renamed document' : 'Updated document content');
         await document.save();
       }
 
       res.json({
         success: true,
         message: 'Document updated successfully',
-        data: document,
+        data: { ...document.toObject(), saveMetadata: { version: document.currentVersion, savedAt: document.updatedAt } },
       });
     } catch (error) {
       logger.error('Update document error:', error);

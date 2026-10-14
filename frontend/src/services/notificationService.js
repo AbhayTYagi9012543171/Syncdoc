@@ -1,42 +1,72 @@
-import api, { getResponseData } from './api';
+
+import api, { getResponseData } from "./api";
 
 /* ============================================================
    SYNCDOC — NOTIFICATION SERVICE
    Centralized API operations for notifications.
 ============================================================ */
 
-const BASE_PATH = '/notifications';
+const BASE_PATH = "/notifications";
+
+// Share identical GET requests while they are in flight.
+// Completed requests are not cached by this Map.
+const inFlightRequests = new Map();
 
 /* ============================================================
    HELPERS
 ============================================================ */
 
-/**
- * Validate notification ID before making a request.
- */
 function requireNotificationId(id) {
   if (
     id === undefined ||
     id === null ||
-    String(id).trim() === ''
+    String(id).trim() === ""
   ) {
-    throw new Error('Notification ID is required.');
+    throw new Error("Notification ID is required.");
   }
 
   return String(id).trim();
 }
 
-/**
- * Normalize pagination/query parameters.
- */
 function normalizeParams(params = {}) {
-  if (!params || typeof params !== 'object') {
+  if (!params || typeof params !== "object") {
     return {};
   }
 
-  return {
-    ...params,
-  };
+  return { ...params };
+}
+
+function makeRequestKey(url, params = {}) {
+  const normalized = Object.keys(params)
+    .sort()
+    .map((key) => [key, params[key]]);
+
+  return `${url}:${JSON.stringify(normalized)}`;
+}
+
+/**
+ * Reuse an identical GET request if it is already running.
+ * Remove it after success or failure so future refreshes work.
+ */
+function getOnce(url, params = {}, fallback = undefined) {
+  const key = makeRequestKey(url, params);
+
+  if (inFlightRequests.has(key)) {
+    return inFlightRequests.get(key);
+  }
+
+  const request = api
+    .get(url, { params })
+    .then((response) => getResponseData(response, fallback))
+    .finally(() => {
+      if (inFlightRequests.get(key) === request) {
+        inFlightRequests.delete(key);
+      }
+    });
+
+  inFlightRequests.set(key, request);
+
+  return request;
 }
 
 /* ============================================================
@@ -45,83 +75,56 @@ function normalizeParams(params = {}) {
 
 const notificationService = {
   /**
-   * ----------------------------------------------------------
-   * LIST NOTIFICATIONS
-   * ----------------------------------------------------------
-   *
-   * Supported parameters may include:
-   *
-   * {
-   *   page: 1,
-   *   limit: 20,
-   *   unreadOnly: true,
-   *   sort: 'newest'
-   * }
+   * GET /notifications
    */
-  async list(params = {}) {
-    const response = await api.get(BASE_PATH, {
-      params: normalizeParams(params),
-    });
-
-    return getResponseData(response, []);
-  },
-
-  /**
-   * ----------------------------------------------------------
-   * GET SINGLE NOTIFICATION
-   * ----------------------------------------------------------
-   */
-  async get(id) {
-    const notificationId =
-      requireNotificationId(id);
-
-    const response = await api.get(
-      `${BASE_PATH}/${notificationId}`
+  list(params = {}) {
+    return getOnce(
+      BASE_PATH,
+      normalizeParams({ limit: 100, ...params }),
+      []
     );
-
-    return getResponseData(response);
   },
 
   /**
-   * ----------------------------------------------------------
-   * MARK ONE NOTIFICATION AS READ
-   * ----------------------------------------------------------
+   * GET /notifications/:id
+   */
+  get(id) {
+    const notificationId = requireNotificationId(id);
+
+    return getOnce(
+      `${BASE_PATH}/${encodeURIComponent(notificationId)}`
+    );
+  },
+
+  /**
+   * PATCH /notifications/:id/read
    */
   async markRead(id) {
-    const notificationId =
-      requireNotificationId(id);
+    const notificationId = requireNotificationId(id);
 
     const response = await api.patch(
-      `${BASE_PATH}/${notificationId}/read`
+      `${BASE_PATH}/${encodeURIComponent(notificationId)}/read`
     );
 
     return getResponseData(response);
   },
 
   /**
-   * ----------------------------------------------------------
-   * MARK ONE NOTIFICATION AS UNREAD
-   * ----------------------------------------------------------
-   *
-   * Only use this if the backend supports:
-   *
    * PATCH /notifications/:id/unread
+   * Requires backend support.
    */
   async markUnread(id) {
-    const notificationId =
-      requireNotificationId(id);
+    const notificationId = requireNotificationId(id);
 
     const response = await api.patch(
-      `${BASE_PATH}/${notificationId}/unread`
+      `${BASE_PATH}/${encodeURIComponent(notificationId)}/unread`
     );
 
     return getResponseData(response);
   },
 
   /**
-   * ----------------------------------------------------------
-   * MARK ALL NOTIFICATIONS AS READ
-   * ----------------------------------------------------------
+   * PATCH /notifications/read-all
    */
   async markAllRead() {
     const response = await api.patch(
@@ -132,68 +135,47 @@ const notificationService = {
   },
 
   /**
-   * ----------------------------------------------------------
-   * GET UNREAD NOTIFICATIONS
-   * ----------------------------------------------------------
+   * GET /notifications?unreadOnly=true
    */
-  async unread(params = {}) {
-    const response = await api.get(BASE_PATH, {
-      params: {
+  unread(params = {}) {
+    return getOnce(
+      BASE_PATH,
+      {
         ...normalizeParams(params),
         unreadOnly: true,
       },
-    });
-
-    return getResponseData(response, []);
-  },
-
-  /**
-   * ----------------------------------------------------------
-   * GET UNREAD COUNT
-   * ----------------------------------------------------------
-   *
-   * Requires backend support for:
-   *
-   * GET /notifications/unread-count
-   */
-  async unreadCount() {
-    const response = await api.get(
-      `${BASE_PATH}/unread-count`
+      []
     );
-
-    return getResponseData(response, {
-      count: 0,
-    });
   },
 
   /**
-   * ----------------------------------------------------------
-   * DELETE NOTIFICATION
-   * ----------------------------------------------------------
-   *
-   * Requires backend support for:
-   *
+   * GET /notifications/unread-count
+   * Requires backend support.
+   */
+  unreadCount() {
+    return getOnce(
+      `${BASE_PATH}/unread-count`,
+      {},
+      { count: 0 }
+    );
+  },
+
+  /**
    * DELETE /notifications/:id
    */
   async remove(id) {
-    const notificationId =
-      requireNotificationId(id);
+    const notificationId = requireNotificationId(id);
 
     const response = await api.delete(
-      `${BASE_PATH}/${notificationId}`
+      `${BASE_PATH}/${encodeURIComponent(notificationId)}`
     );
 
     return getResponseData(response);
   },
 
   /**
-   * ----------------------------------------------------------
-   * DELETE ALL READ NOTIFICATIONS
-   * ----------------------------------------------------------
-   *
-   * Requires backend support for:
-   *
    * DELETE /notifications/read
+   * Requires backend support.
    */
   async removeRead() {
     const response = await api.delete(
@@ -204,18 +186,11 @@ const notificationService = {
   },
 
   /**
-   * ----------------------------------------------------------
-   * CLEAR ALL NOTIFICATIONS
-   * ----------------------------------------------------------
-   *
-   * Requires backend support for:
-   *
    * DELETE /notifications
+   * Requires backend support.
    */
   async clearAll() {
-    const response = await api.delete(
-      BASE_PATH
-    );
+    const response = await api.delete(BASE_PATH);
 
     return getResponseData(response);
   },

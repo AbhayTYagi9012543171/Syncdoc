@@ -1,37 +1,26 @@
-import api, { getResponseData } from './api';
+
+import api, { getResponseData } from "./api";
 
 /* ============================================================
    SYNCDOC — WORKSPACE SERVICE
    Centralized workspace API operations.
-
-   Responsibilities:
-   - Workspace CRUD
-   - Workspace members
-   - Invitations
-   - Member roles
-   - Workspace documents
-   - Consistent validation
-   - Consistent response extraction
-
-   NOTE:
-   Additional methods should only be used when the matching
-   backend endpoint exists.
 ============================================================ */
 
-const BASE_PATH = '/workspaces';
+const BASE_PATH = "/workspaces";
+
+// Share identical GET requests while they are in progress.
+// Completed requests are removed, so future refreshes work.
+const inFlightGetRequests = new Map();
 
 /* ============================================================
    HELPERS
 ============================================================ */
 
-/**
- * Validate and normalize an ID.
- */
-function requireId(id, label = 'ID') {
+function requireId(id, label = "ID") {
   if (
     id === undefined ||
     id === null ||
-    String(id).trim() === ''
+    String(id).trim() === ""
   ) {
     throw new Error(`${label} is required.`);
   }
@@ -39,26 +28,66 @@ function requireId(id, label = 'ID') {
   return String(id).trim();
 }
 
-/**
- * Ensure query parameters are always an object.
- */
-function normalizeParams(params) {
-  if (!params || typeof params !== 'object') {
+function normalizeParams(params = {}) {
+  if (!params || typeof params !== "object") {
     return {};
   }
 
   return { ...params };
 }
 
-/**
- * Ensure request payloads are objects.
- */
 function normalizePayload(data) {
-  if (!data || typeof data !== 'object') {
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
     return {};
   }
 
   return { ...data };
+}
+
+function stableSerialize(value) {
+  if (value === null || typeof value !== "object") {
+    return JSON.stringify(value);
+  }
+
+  if (Array.isArray(value)) {
+    return `[${value.map(stableSerialize).join(",")}]`;
+  }
+
+  const keys = Object.keys(value).sort();
+
+  return `{${keys
+    .map(
+      (key) =>
+        `${JSON.stringify(key)}:${stableSerialize(value[key])}`
+    )
+    .join(",")}}`;
+}
+
+/**
+ * Deduplicate concurrent GET requests for the same URL and params.
+ * This is not a persistent cache.
+ */
+function getOnce(url, params = {}, fallback = null) {
+  const key = `${url}?${stableSerialize(params)}`;
+
+  const existingRequest = inFlightGetRequests.get(key);
+
+  if (existingRequest) {
+    return existingRequest;
+  }
+
+  const request = api
+    .get(url, { params })
+    .then((response) => getResponseData(response, fallback))
+    .finally(() => {
+      if (inFlightGetRequests.get(key) === request) {
+        inFlightGetRequests.delete(key);
+      }
+    });
+
+  inFlightGetRequests.set(key, request);
+
+  return request;
 }
 
 /* ============================================================
@@ -66,427 +95,230 @@ function normalizePayload(data) {
 ============================================================ */
 
 const workspaceService = {
-  /* ==========================================================
-     WORKSPACE CRUD
-  ========================================================== */
+  /* -------------------- WORKSPACE CRUD -------------------- */
 
   /**
-   * Get all workspaces available to the authenticated user.
-   *
    * GET /workspaces
    */
-  async getWorkspaces(params = {}) {
-    const response = await api.get(BASE_PATH, {
-      params: normalizeParams(params),
-    });
-
-    return getResponseData(response, []);
+  getWorkspaces(params = {}) {
+    return getOnce(
+      BASE_PATH,
+      normalizeParams(params),
+      []
+    );
   },
 
   /**
    * Alias for getWorkspaces().
-   *
-   * Useful for hooks/components that prefer "list".
    */
-  async list(params = {}) {
+  list(params = {}) {
     return this.getWorkspaces(params);
   },
 
   /**
-   * Get a single workspace.
-   *
    * GET /workspaces/:id
    */
-  async getWorkspace(id) {
-    const workspaceId =
-      requireId(id, 'Workspace ID');
+  getWorkspace(id) {
+    const workspaceId = requireId(id, "Workspace ID");
 
-    const response = await api.get(
-      `${BASE_PATH}/${workspaceId}`
+    return getOnce(
+      `${BASE_PATH}/${encodeURIComponent(workspaceId)}`,
+      {},
+      null
     );
-
-    return getResponseData(response, null);
   },
 
   /**
    * Alias for getWorkspace().
    */
-  async get(id) {
+  get(id) {
     return this.getWorkspace(id);
   },
 
   /**
-   * Create a new workspace.
-   *
    * POST /workspaces
    */
   async createWorkspace(data = {}) {
-    const payload =
-      normalizePayload(data);
-
     const response = await api.post(
       BASE_PATH,
-      payload
+      normalizePayload(data)
     );
 
     return getResponseData(response, null);
   },
 
   /**
-   * Update an existing workspace.
-   *
    * PUT /workspaces/:id
    */
   async updateWorkspace(id, data = {}) {
-    const workspaceId =
-      requireId(id, 'Workspace ID');
-
-    const payload =
-      normalizePayload(data);
+    const workspaceId = requireId(id, "Workspace ID");
 
     const response = await api.put(
-      `${BASE_PATH}/${workspaceId}`,
-      payload
+      `${BASE_PATH}/${encodeURIComponent(workspaceId)}`,
+      normalizePayload(data)
     );
 
     return getResponseData(response, null);
   },
 
   /**
-   * Delete a workspace.
-   *
    * DELETE /workspaces/:id
    */
   async deleteWorkspace(id) {
-    const workspaceId =
-      requireId(id, 'Workspace ID');
+    const workspaceId = requireId(id, "Workspace ID");
 
     const response = await api.delete(
-      `${BASE_PATH}/${workspaceId}`
+      `${BASE_PATH}/${encodeURIComponent(workspaceId)}`
     );
 
     return getResponseData(response, null);
   },
 
-  /* ==========================================================
-     MEMBERS
-  ========================================================== */
+  /* -------------------- MEMBERS -------------------- */
 
   /**
-   * Get workspace members.
-   *
    * GET /workspaces/:workspaceId/members
    */
-  async getMembers(workspaceId) {
-    const id =
-      requireId(
-        workspaceId,
-        'Workspace ID'
-      );
+  getMembers(workspaceId) {
+    const id = requireId(workspaceId, "Workspace ID");
 
-    const response = await api.get(
-      `${BASE_PATH}/${id}/members`
+    return getOnce(
+      `${BASE_PATH}/${encodeURIComponent(id)}/members`,
+      {},
+      []
     );
-
-    return getResponseData(response, []);
   },
 
   /**
-   * Get workspace members with optional
-   * pagination/filter parameters.
-   *
-   * GET /workspaces/:workspaceId/members
+   * GET /workspaces/:workspaceId/members with query params
    */
-  async listMembers(
-    workspaceId,
-    params = {}
-  ) {
-    const id =
-      requireId(
-        workspaceId,
-        'Workspace ID'
-      );
+  listMembers(workspaceId, params = {}) {
+    const id = requireId(workspaceId, "Workspace ID");
 
-    const response = await api.get(
-      `${BASE_PATH}/${id}/members`,
-      {
-        params: normalizeParams(params),
-      }
+    return getOnce(
+      `${BASE_PATH}/${encodeURIComponent(id)}/members`,
+      normalizeParams(params),
+      []
     );
-
-    return getResponseData(response, []);
   },
 
   /**
-   * Invite a new workspace member.
-   *
    * POST /workspaces/:workspaceId/members
    */
-  async inviteMember(
-    workspaceId,
-    data = {}
-  ) {
-    const id =
-      requireId(
-        workspaceId,
-        'Workspace ID'
-      );
-
-    const payload =
-      normalizePayload(data);
+  async inviteMember(workspaceId, data = {}) {
+    const id = requireId(workspaceId, "Workspace ID");
 
     const response = await api.post(
-      `${BASE_PATH}/${id}/members`,
-      payload
+      `${BASE_PATH}/${encodeURIComponent(id)}/members`,
+      normalizePayload(data)
     );
 
-    return getResponseData(
-      response,
-      null
-    );
+    return getResponseData(response, null);
   },
 
   /**
-   * Remove a member from workspace.
-   *
    * DELETE /workspaces/:workspaceId/members/:memberId
    */
-  async removeMember(
-    workspaceId,
-    memberId
-  ) {
-    const workspace =
-      requireId(
-        workspaceId,
-        'Workspace ID'
-      );
-
-    const member =
-      requireId(
-        memberId,
-        'Member ID'
-      );
+  async removeMember(workspaceId, memberId) {
+    const workspace = requireId(workspaceId, "Workspace ID");
+    const member = requireId(memberId, "Member ID");
 
     const response = await api.delete(
-      `${BASE_PATH}/${workspace}/members/${member}`
+      `${BASE_PATH}/${encodeURIComponent(workspace)}/members/${encodeURIComponent(member)}`
     );
 
-    return getResponseData(
-      response,
-      null
-    );
+    return getResponseData(response, null);
   },
 
   /**
-   * Update member role/permissions.
-   *
    * PATCH /workspaces/:workspaceId/members/:memberId
    */
-  async updateMemberRole(
-    workspaceId,
-    memberId,
-    data = {}
-  ) {
-    const workspace =
-      requireId(
-        workspaceId,
-        'Workspace ID'
-      );
-
-    const member =
-      requireId(
-        memberId,
-        'Member ID'
-      );
-
-    const payload =
-      normalizePayload(data);
+  async updateMemberRole(workspaceId, memberId, data = {}) {
+    const workspace = requireId(workspaceId, "Workspace ID");
+    const member = requireId(memberId, "Member ID");
 
     const response = await api.patch(
-      `${BASE_PATH}/${workspace}/members/${member}`,
-      payload
+      `${BASE_PATH}/${encodeURIComponent(workspace)}/members/${encodeURIComponent(member)}`,
+      normalizePayload(data)
     );
 
-    return getResponseData(
-      response,
-      null
-    );
+    return getResponseData(response, null);
   },
 
-  /* ==========================================================
-     DOCUMENTS
-  ========================================================== */
+  /* -------------------- DOCUMENTS -------------------- */
 
   /**
-   * Get documents belonging to a workspace.
-   *
-   * This assumes the backend supports:
-   *
    * GET /workspaces/:workspaceId/documents
    */
-  async getDocuments(
-    workspaceId,
-    params = {}
-  ) {
-    const id =
-      requireId(
-        workspaceId,
-        'Workspace ID'
-      );
+  getDocuments(workspaceId, params = {}) {
+    const id = requireId(workspaceId, "Workspace ID");
 
-    const response = await api.get(
-      `${BASE_PATH}/${id}/documents`,
-      {
-        params: normalizeParams(params),
-      }
-    );
-
-    return getResponseData(
-      response,
+    return getOnce(
+      `${BASE_PATH}/${encodeURIComponent(id)}/documents`,
+      normalizeParams(params),
       []
     );
   },
 
-  /* ==========================================================
-     INVITATIONS
-  ========================================================== */
+  /* -------------------- INVITATIONS -------------------- */
 
   /**
-   * Cancel/revoke an invitation.
-   *
-   * Requires:
-   *
    * DELETE /workspaces/:workspaceId/invitations/:invitationId
    */
-  async revokeInvitation(
-    workspaceId,
-    invitationId
-  ) {
-    const workspace =
-      requireId(
-        workspaceId,
-        'Workspace ID'
-      );
-
-    const invitation =
-      requireId(
-        invitationId,
-        'Invitation ID'
-      );
+  async revokeInvitation(workspaceId, invitationId) {
+    const workspace = requireId(workspaceId, "Workspace ID");
+    const invitation = requireId(invitationId, "Invitation ID");
 
     const response = await api.delete(
-      `${BASE_PATH}/${workspace}/invitations/${invitation}`
+      `${BASE_PATH}/${encodeURIComponent(workspace)}/invitations/${encodeURIComponent(invitation)}`
     );
 
-    return getResponseData(
-      response,
-      null
-    );
+    return getResponseData(response, null);
   },
 
   /**
-   * Get pending invitations.
-   *
-   * Requires:
-   *
    * GET /workspaces/:workspaceId/invitations
    */
-  async getInvitations(
-    workspaceId,
-    params = {}
-  ) {
-    const id =
-      requireId(
-        workspaceId,
-        'Workspace ID'
-      );
+  getInvitations(workspaceId, params = {}) {
+    const id = requireId(workspaceId, "Workspace ID");
 
-    const response = await api.get(
-      `${BASE_PATH}/${id}/invitations`,
-      {
-        params: normalizeParams(params),
-      }
-    );
-
-    return getResponseData(
-      response,
+    return getOnce(
+      `${BASE_PATH}/${encodeURIComponent(id)}/invitations`,
+      normalizeParams(params),
       []
     );
   },
 
-  /* ==========================================================
-     WORKSPACE SETTINGS
-  ========================================================== */
+  /* -------------------- WORKSPACE SETTINGS -------------------- */
 
   /**
-   * Update workspace settings.
-   *
-   * Requires:
-   *
    * PATCH /workspaces/:workspaceId/settings
    */
-  async updateSettings(
-    workspaceId,
-    settings = {}
-  ) {
-    const id =
-      requireId(
-        workspaceId,
-        'Workspace ID'
-      );
-
-    const payload =
-      normalizePayload(settings);
+  async updateSettings(workspaceId, settings = {}) {
+    const id = requireId(workspaceId, "Workspace ID");
 
     const response = await api.patch(
-      `${BASE_PATH}/${id}/settings`,
-      payload
+      `${BASE_PATH}/${encodeURIComponent(id)}/settings`,
+      normalizePayload(settings)
     );
 
-    return getResponseData(
-      response,
-      null
-    );
+    return getResponseData(response, null);
   },
 
-  /* ==========================================================
-     MEMBER ROLE SHORTCUT
-  ========================================================== */
+  /* -------------------- MEMBER ROLE SHORTCUT -------------------- */
 
   /**
-   * Convenience wrapper for changing
-   * a member's role.
-   *
-   * Example:
-   *
-   * updateRole(id, memberId, 'editor')
+   * Convenience wrapper for changing a member's role.
    */
-  async updateRole(
-    workspaceId,
-    memberId,
-    role
-  ) {
-    if (
-      typeof role !== 'string' ||
-      !role.trim()
-    ) {
-      throw new Error(
-        'Member role is required.'
-      );
+  updateRole(workspaceId, memberId, role) {
+    if (typeof role !== "string" || !role.trim()) {
+      throw new Error("Member role is required.");
     }
 
-    return this.updateMemberRole(
-      workspaceId,
-      memberId,
-      {
-        role: role.trim(),
-      }
-    );
+    return this.updateMemberRole(workspaceId, memberId, {
+      role: role.trim(),
+    });
   },
 };
-
-/* ============================================================
-   EXPORT
-============================================================ */
 
 export default workspaceService;

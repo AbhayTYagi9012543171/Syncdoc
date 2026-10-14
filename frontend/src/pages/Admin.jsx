@@ -1,1166 +1,174 @@
-import "./pages-premium.css";
-
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
-
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import '../styles/pages-premium.css';
 import Card from '../components/common/Card';
 import Badge from '../components/common/Badge';
 import userService from '../services/userService';
 
-/* ============================================================
-   HELPERS
-============================================================ */
-
-const getInitials = (name = '') => {
-  const parts = String(name)
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-
-  if (parts.length === 0) return 'U';
-
-  if (parts.length === 1) {
-    return parts[0].slice(0, 2).toUpperCase();
-  }
-
-  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+const toArray = (response) => {
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response?.users)) return response.users;
+  if (Array.isArray(response?.data?.users)) return response.data.users;
+  if (Array.isArray(response?.data)) return response.data;
+  return [];
 };
-
-const normalizeRole = (role) => {
-  if (!role) return 'User';
-
-  return String(role)
-    .replace(/[_-]/g, ' ')
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+const num = (value, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
 };
-
-const getRoleValue = (role) => {
-  return String(role || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[_-]/g, ' ');
-};
-
-const getRoleVariant = (role) => {
-  const normalized = getRoleValue(role);
-
-  if (
-    normalized === 'admin' ||
-    normalized === 'owner' ||
-    normalized === 'super admin'
-  ) {
-    return 'danger';
-  }
-
-  if (
-    normalized === 'editor' ||
-    normalized === 'manager'
-  ) {
-    return 'primary';
-  }
-
-  return 'secondary';
-};
-
-const getStatusValue = (status) => {
-  return String(status || '')
-    .trim()
-    .toLowerCase();
-};
-
-const getStatusVariant = (status) => {
-  return getStatusValue(status) === 'active'
-    ? 'success'
-    : 'secondary';
-};
-
-const getUserName = (user) => {
-  return (
-    user?.displayName ||
-    user?.name ||
-    user?.username ||
-    'Unknown User'
-  );
-};
-
-const getUserEmail = (user) => {
-  return user?.email || 'No email';
-};
-
-const getUserId = (user, index = 0) => {
-  return (
-    user?.id ||
-    user?._id ||
-    user?.userId ||
-    user?.email ||
-    `user-${index}`
-  );
-};
-
-const getNumber = (value, fallback = 0) => {
-  const number = Number(value);
-
-  return Number.isFinite(number)
-    ? number
-    : fallback;
-};
-
-const getUserStatus = (user) => {
-  if (user?.status) {
-    return String(user.status);
-  }
-
-  if (
-    typeof user?.isOnline === 'boolean'
-  ) {
-    return user.isOnline
-      ? 'Active'
-      : 'Inactive';
-  }
-
-  if (
-    typeof user?.active === 'boolean'
-  ) {
-    return user.active
-      ? 'Active'
-      : 'Inactive';
-  }
-
-  if (
-    typeof user?.isActive === 'boolean'
-  ) {
-    return user.isActive
-      ? 'Active'
-      : 'Inactive';
-  }
-
+const nameOf = (u) => u?.displayName || u?.name || u?.username || 'Unknown user';
+const emailOf = (u) => u?.email || 'No email';
+const roleOf = (role) => String(role || 'user').trim().toLowerCase().replace(/[_-]/g, ' ');
+const titleCase = (value) => String(value || 'unknown').replace(/\b\w/g, (c) => c.toUpperCase());
+const statusOf = (u) => {
+  if (u?.status) return String(u.status);
+  if (typeof u?.isActive === 'boolean') return u.isActive ? 'Active' : 'Inactive';
+  if (typeof u?.active === 'boolean') return u.active ? 'Active' : 'Inactive';
+  if (typeof u?.isOnline === 'boolean') return u.isOnline ? 'Active' : 'Inactive';
   return 'Inactive';
 };
-
-const getLastActive = (user) => {
-  return (
-    user?.lastActive ||
-    user?.lastActivity ||
-    user?.lastLogin ||
-    'Unknown'
-  );
+const idOf = (u, index) => u?.id || u?._id || u?.userId || u?.email || `user-${index}`;
+const initials = (name) => String(name || 'U').trim().split(/\s+/).filter(Boolean).slice(0, 2).map((s) => s[0]).join('').toUpperCase() || 'U';
+const dateLabel = (value) => {
+  if (!value || value === 'Unknown') return 'Not available';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 };
 
-/* ============================================================
-   STAT CARD
-============================================================ */
-
-function AdminStatCard({
-  label,
-  value,
-  description,
-  icon,
-  trend,
-}) {
-  return (
-    <div className="stat-card admin-stat-card">
-      <div className="admin-stat-top">
-        <div
-          className="admin-stat-icon"
-          aria-hidden="true"
-        >
-          {icon}
-        </div>
-
-        {trend && (
-          <span className="admin-stat-trend">
-            {trend}
-          </span>
-        )}
-      </div>
-
-      <strong>{value}</strong>
-
-      <span>{label}</span>
-
-      {description && (
-        <small>{description}</small>
-      )}
-    </div>
-  );
+function StatCard({ icon, label, value, detail, tone = 'violet' }) {
+  return <article className={`admin-premium-stat tone-${tone}`}>
+    <div className="admin-premium-stat-top"><span className="admin-premium-stat-icon" aria-hidden="true">{icon}</span><span className="admin-premium-stat-mark">↗</span></div>
+    <div className="admin-premium-stat-value">{value}</div>
+    <div className="admin-premium-stat-label">{label}</div>
+    <div className="admin-premium-stat-detail">{detail}</div>
+  </article>;
 }
 
-/* ============================================================
-   LOADING ROW
-============================================================ */
-
-function AdminTableLoading() {
-  return (
-    <div
-      className="admin-loading-state"
-      role="status"
-      aria-live="polite"
-    >
-      <div
-        className="admin-loading-spinner"
-        aria-hidden="true"
-      />
-
-      <strong>Loading users...</strong>
-
-      <span>
-        Fetching the latest administration data.
-      </span>
-    </div>
-  );
+function StatusPill({ status }) {
+  const active = String(status).toLowerCase() === 'active' || String(status).toLowerCase() === 'healthy' || String(status).toLowerCase() === 'connected' || String(status).toLowerCase() === 'operational';
+  const warning = ['degraded', 'warning', 'pending'].includes(String(status).toLowerCase());
+  return <span className={`admin-premium-pill ${active ? 'is-good' : warning ? 'is-warning' : 'is-neutral'}`}><i />{titleCase(status)}</span>;
 }
 
-/* ============================================================
-   ADMIN PAGE
-============================================================ */
-
-function Admin() {
+export default function Admin() {
   const [users, setUsers] = useState([]);
   const [serverStats, setServerStats] = useState(null);
-
+  const [activity, setActivity] = useState([]);
   const [error, setError] = useState('');
-
   const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const refreshLock = useRef(false);
+  const mounted = useRef(false);
+  const tableRef = useRef(null);
 
-  const [roleFilter, setRoleFilter] =
-    useState('all');
-
-  const [statusFilter, setStatusFilter] =
-    useState('all');
-
-  const [refreshing, setRefreshing] =
-    useState(false);
-
-  const [initialLoading, setInitialLoading] =
-    useState(true);
-
-  const mountedRef = useRef(true);
-
-  /* ==========================================================
-     MOUNT / UNMOUNT
-  ========================================================== */
-
-  useEffect(() => {
-    mountedRef.current = true;
-
-    return () => {
-      mountedRef.current = false;
-    };
+  const refresh = useCallback(async ({ initial = false } = {}) => {
+    if (refreshLock.current) return;
+    refreshLock.current = true;
+    if (initial) setInitialLoading(true);
+    setRefreshing(true);
+    setError('');
+    try {
+      const [usersResult, statsResult, activityResult] = await Promise.allSettled([
+        userService.list({ page: 1, limit: 500 }),
+        userService.stats(),
+        typeof userService.activity === 'function' ? userService.activity({ limit: 8 }) : Promise.resolve(null),
+      ]);
+      if (!mounted.current) return;
+      if (usersResult.status === 'fulfilled') {
+        setUsers(toArray(usersResult.value).map((user) => ({ ...user, status: statusOf(user) })));
+      } else {
+        throw usersResult.reason;
+      }
+      if (statsResult.status === 'fulfilled') setServerStats(statsResult.value?.data ?? statsResult.value ?? null);
+      if (activityResult.status === 'fulfilled' && activityResult.value) {
+        const value = activityResult.value?.data ?? activityResult.value;
+        setActivity(Array.isArray(value) ? value : Array.isArray(value?.items) ? value.items : Array.isArray(value?.activity) ? value.activity : []);
+      }
+      setLastUpdated(new Date());
+    } catch (err) {
+      if (mounted.current) setError(err?.response?.data?.message || err?.response?.data?.error || err?.message || 'Could not load administration data.');
+    } finally {
+      refreshLock.current = false;
+      if (mounted.current) { setRefreshing(false); setInitialLoading(false); }
+    }
   }, []);
 
-  /* ==========================================================
-     NORMALIZE USERS
-  ========================================================== */
-
-  const normalizeUsers = useCallback(
-    (response) => {
-      let list = [];
-
-      if (Array.isArray(response)) {
-        list = response;
-      } else if (
-        Array.isArray(response?.users)
-      ) {
-        list = response.users;
-      } else if (
-        Array.isArray(response?.data)
-      ) {
-        list = response.data;
-      } else if (
-        Array.isArray(response?.data?.users)
-      ) {
-        list = response.data.users;
-      }
-
-      return list.map((user) => ({
-        ...user,
-        status: getUserStatus(user),
-      }));
-    },
-    []
-  );
-
-  /* ==========================================================
-     LOAD ADMIN DATA
-  ========================================================== */
-
-  const handleRefresh = useCallback(
-    async (isInitialLoad = false) => {
-      if (refreshing && !isInitialLoad) {
-        return;
-      }
-
-      if (isInitialLoad) {
-        setInitialLoading(true);
-      }
-
-      setRefreshing(true);
-      setError('');
-
-      try {
-        const [userResponse, statsResponse] =
-          await Promise.all([
-            userService.list({
-              page: 1,
-              limit: 100,
-            }),
-            userService.stats(),
-          ]);
-
-        if (!mountedRef.current) {
-          return;
-        }
-
-        const nextUsers =
-          normalizeUsers(userResponse);
-
-        setUsers(nextUsers);
-        setServerStats(
-          statsResponse || null
-        );
-      } catch (err) {
-        if (!mountedRef.current) {
-          return;
-        }
-
-        const message =
-          err?.response?.data?.message ||
-          err?.response?.data?.error ||
-          err?.message ||
-          'Unable to load admin data.';
-
-        setError(message);
-      } finally {
-        if (mountedRef.current) {
-          setRefreshing(false);
-          setInitialLoading(false);
-        }
-      }
-    },
-    [normalizeUsers, refreshing]
-  );
-
-  /* ==========================================================
-     INITIAL LOAD
-  ========================================================== */
-
   useEffect(() => {
-    handleRefresh(true);
-  }, [handleRefresh]);
-
-  /* ==========================================================
-     DERIVED STATISTICS
-  ========================================================== */
-
-  const statistics = useMemo(() => {
-    const totalUsers = getNumber(
-      serverStats?.totalUsers,
-      users.length
-    );
-
-    const calculatedActiveUsers =
-      users.filter(
-        (user) =>
-          getStatusValue(
-            user?.status
-          ) === 'active'
-      ).length;
-
-    const activeUsers = getNumber(
-      serverStats?.activeUsers,
-      calculatedActiveUsers
-    );
-
-    const administrators =
-      users.filter((user) => {
-        const role = getRoleValue(
-          user?.role
-        );
-
-        return (
-          role === 'admin' ||
-          role === 'super admin' ||
-          role === 'owner'
-        );
-      }).length;
-
-    const totalDocuments = getNumber(
-      serverStats?.totalDocuments,
-      0
-    );
-
-    return {
-      totalUsers,
-      activeUsers,
-      administrators,
-      totalDocuments,
-    };
-  }, [users, serverStats]);
-
-  /* ==========================================================
-     FILTER USERS
-  ========================================================== */
+    mounted.current = true;
+    refresh({ initial: true });
+    const interval = window.setInterval(() => refresh(), 30000);
+    return () => { mounted.current = false; window.clearInterval(interval); };
+  }, [refresh]);
 
   const filteredUsers = useMemo(() => {
-    const normalizedSearch =
-      search.trim().toLowerCase();
-
-    return users.filter((user) => {
-      const name =
-        getUserName(user).toLowerCase();
-
-      const email =
-        getUserEmail(user).toLowerCase();
-
-      const username =
-        String(
-          user?.username || ''
-        ).toLowerCase();
-
-      const role =
-        getRoleValue(user?.role);
-
-      const status =
-        getStatusValue(user?.status);
-
-      const matchesSearch =
-        !normalizedSearch ||
-        name.includes(normalizedSearch) ||
-        email.includes(normalizedSearch) ||
-        username.includes(normalizedSearch);
-
-      const matchesRole =
-        roleFilter === 'all' ||
-        role ===
-          roleFilter.toLowerCase();
-
-      const matchesStatus =
-        statusFilter === 'all' ||
-        status ===
-          statusFilter.toLowerCase();
-
-      return (
-        matchesSearch &&
-        matchesRole &&
-        matchesStatus
-      );
+    const q = search.trim().toLowerCase();
+    return users.filter((u) => {
+      const role = roleOf(u.role);
+      const status = String(u.status || '').toLowerCase();
+      const matchesQuery = !q || [nameOf(u), emailOf(u), u?.username, u?.role].some((v) => String(v || '').toLowerCase().includes(q));
+      const matchesRole = roleFilter === 'all' || role === roleFilter;
+      const matchesStatus = statusFilter === 'all' || status === statusFilter;
+      return matchesQuery && matchesRole && matchesStatus;
     });
-  }, [
-    users,
-    search,
-    roleFilter,
-    statusFilter,
-  ]);
+  }, [users, search, roleFilter, statusFilter]);
 
-  /* ==========================================================
-     CLEAR FILTERS
-  ========================================================== */
+  useEffect(() => setPage(1), [search, roleFilter, statusFilter, pageSize]);
+  const pageCount = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
+  const visibleUsers = filteredUsers.slice((page - 1) * pageSize, page * pageSize);
+  const activeCount = users.filter((u) => String(u.status).toLowerCase() === 'active').length;
+  const adminsCount = users.filter((u) => ['admin', 'owner', 'super admin'].includes(roleOf(u.role))).length;
+  const documentsCount = num(serverStats?.totalDocuments ?? serverStats?.documentsCount ?? serverStats?.documentCount, users.reduce((sum, u) => sum + num(u.documentCount ?? u.documents), 0));
+  const totalUsers = num(serverStats?.totalUsers ?? serverStats?.usersCount, users.length);
+  const health = serverStats?.health || serverStats?.systemHealth || {};
 
-  const clearFilters = useCallback(() => {
-    setSearch('');
-    setRoleFilter('all');
-    setStatusFilter('all');
-  }, []);
+  const exportCsv = () => {
+    const columns = ['Name', 'Email', 'Username', 'Role', 'Status', 'Documents', 'Workspaces', 'Last active'];
+    const rows = filteredUsers.map((u) => [nameOf(u), emailOf(u), u.username || '', titleCase(u.role), u.status, num(u.documentCount ?? u.documents), num(u.workspaceCount ?? u.workspaces), u.lastActive || u.lastActivity || u.lastLogin || '']);
+    const escape = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const csv = [columns, ...rows].map((row) => row.map(escape).join(',')).join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `syncdoc-users-${new Date().toISOString().slice(0, 10)}.csv`; a.click(); URL.revokeObjectURL(url);
+  };
 
-  const hasActiveFilters =
-    Boolean(search.trim()) ||
-    roleFilter !== 'all' ||
-    statusFilter !== 'all';
+  return <main className="page admin-page admin-premium-page">
+    <div className="admin-premium-orb orb-one" aria-hidden="true" /><div className="admin-premium-orb orb-two" aria-hidden="true" />
+    <header className="admin-premium-hero">
+      <div className="admin-premium-heading-copy"><div className="admin-premium-eyebrow"><span className="admin-premium-live-dot" /> WORKSPACE CONTROL CENTER</div><h1>Admin <span>Console</span></h1><p>Manage your people, monitor platform health, and keep your workspace moving.</p>
+        <div className="admin-premium-meta"><span><i className="admin-premium-meta-dot" /> Live overview</span><span>{lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Waiting for first sync'}</span></div>
+      </div>
+      <div className="admin-premium-hero-actions"><button className="admin-premium-btn admin-premium-btn-quiet" type="button" onClick={exportCsv} disabled={!filteredUsers.length}>⇩ <span>Export CSV</span></button><button className="admin-premium-btn admin-premium-btn-primary" type="button" onClick={() => refresh()} disabled={refreshing}><span className={refreshing ? 'admin-premium-refresh-spin' : ''}>↻</span> {refreshing ? 'Refreshing…' : 'Refresh data'}</button></div>
+    </header>
 
-  /* ==========================================================
-     FILTERED COUNTS
-  ========================================================== */
+    {error && <div className="admin-premium-alert" role="alert"><span>!</span><div><strong>We couldn’t refresh all admin data.</strong><p>{error}</p></div><button type="button" onClick={() => refresh()}>Try again</button></div>}
 
-  const filteredCountLabel = useMemo(() => {
-    return filteredUsers.length === 1
-      ? 'user found'
-      : 'users found';
-  }, [filteredUsers.length]);
+    <section className="admin-premium-stats" aria-label="Workspace statistics">
+      <StatCard icon="♙" label="Total users" value={initialLoading ? '—' : totalUsers.toLocaleString()} detail="Registered accounts" tone="violet" />
+      <StatCard icon="▤" label="Documents" value={initialLoading ? '—' : documentsCount.toLocaleString()} detail="Across your workspace" tone="blue" />
+      <StatCard icon="ϟ" label="Active users" value={initialLoading ? '—' : activeCount.toLocaleString()} detail="Marked active by the API" tone="green" />
+      <StatCard icon="✧" label="Administrators" value={initialLoading ? '—' : adminsCount.toLocaleString()} detail="Privileged accounts" tone="amber" />
+    </section>
 
-  /* ==========================================================
-     SERVER INFORMATION
-  ========================================================== */
-
-  const growthLabel = useMemo(() => {
-    const growth = serverStats?.growth;
-
-    if (Array.isArray(growth)) {
-      return growth.length
-        ? `${growth.length}d`
-        : undefined;
-    }
-
-    if (
-      typeof growth === 'number' &&
-      Number.isFinite(growth)
-    ) {
-      return `${growth >= 0 ? '+' : ''}${growth}%`;
-    }
-
-    return undefined;
-  }, [serverStats]);
-
-  const verifiedLabel = useMemo(() => {
-    const verified =
-      serverStats?.verifiedUsers;
-
-    if (
-      verified === null ||
-      verified === undefined
-    ) {
-      return undefined;
-    }
-
-    return `${getNumber(verified)} verified`;
-  }, [serverStats]);
-
-  /* ==========================================================
-     RENDER
-  ========================================================== */
-
-  return (
-    <div className="page admin-page">
-
-      {/* ======================================================
-          PAGE HEADER
-      ====================================================== */}
-
-      <header className="page-heading admin-page-heading">
-        <div>
-          <span className="eyebrow">
-            SYSTEM
-          </span>
-
-          <h1>Admin Console</h1>
-
-          <p>
-            Monitor users, documents and workspace
-            activity from one central dashboard.
-          </p>
+    <section className="admin-premium-main-grid">
+      <Card title="User management" className="admin-users-card admin-premium-panel">
+        <div className="admin-premium-toolbar"><label className="admin-premium-search"><span aria-hidden="true">⌕</span><input value={search} onChange={(e) => setSearch(e.target.value)} type="search" placeholder="Search name, email or username…" aria-label="Search users" />{search && <button type="button" aria-label="Clear search" onClick={() => setSearch('')}>×</button>}</label>
+          <div className="admin-premium-filter-group"><label><span className="sr-only">Filter by role</span><select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}><option value="all">All roles</option><option value="admin">Admin</option><option value="super admin">Super admin</option><option value="owner">Owner</option><option value="editor">Editor</option><option value="manager">Manager</option><option value="user">User</option></select></label><label><span className="sr-only">Filter by status</span><select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}><option value="all">All status</option><option value="active">Active</option><option value="inactive">Inactive</option></select></label></div>
         </div>
-
-        <div className="page-heading-actions">
-          <button
-            type="button"
-            className="btn secondary"
-            onClick={() =>
-              handleRefresh(false)
-            }
-            disabled={refreshing}
-            aria-label="Refresh admin data"
-          >
-            <span
-              aria-hidden="true"
-              className={
-                refreshing
-                  ? 'admin-refresh-icon is-spinning'
-                  : 'admin-refresh-icon'
-              }
-            >
-              ↻
-            </span>
-
-            {refreshing
-              ? 'Refreshing...'
-              : 'Refresh'}
-          </button>
-        </div>
-      </header>
-
-      {/* ======================================================
-          ERROR
-      ====================================================== */}
-
-      {error && (
-        <div
-          className="page-alert"
-          role="alert"
-        >
-          <strong>
-            Unable to load admin data.
-          </strong>
-
-          <span>{error}</span>
-
-          <button
-            type="button"
-            className="btn link"
-            onClick={() =>
-              handleRefresh(false)
-            }
-            disabled={refreshing}
-          >
-            Try again
-          </button>
-        </div>
-      )}
-
-      {/* ======================================================
-          OVERVIEW STATS
-      ====================================================== */}
-
-      <section
-        className="stats-grid admin-stats-grid"
-        aria-label="System overview"
-      >
-        <AdminStatCard
-          icon="👥"
-          value={statistics.totalUsers}
-          label="Users"
-          description="Registered accounts"
-          trend={growthLabel}
-        />
-
-        <AdminStatCard
-          icon="📄"
-          value={statistics.totalDocuments}
-          label="Documents"
-          description="Documents created"
-          trend={verifiedLabel}
-        />
-
-        <AdminStatCard
-          icon="⚡"
-          value={statistics.activeUsers}
-          label="Active now"
-          description="Currently active users"
-        />
-
-        <AdminStatCard
-          icon="🛡"
-          value={statistics.administrators}
-          label="Administrators"
-          description="Users with admin access"
-        />
-      </section>
-
-      {/* ======================================================
-          USERS CARD
-      ====================================================== */}
-
-      <Card
-        title="User Management"
-        className="admin-users-card"
-      >
-
-        {/* ====================================================
-            TOOLBAR
-        ==================================================== */}
-
-        <div className="admin-toolbar">
-
-          <div className="admin-search">
-            <span
-              className="admin-search-icon"
-              aria-hidden="true"
-            >
-              ⌕
-            </span>
-
-            <input
-              type="search"
-              value={search}
-              onChange={(event) =>
-                setSearch(
-                  event.target.value
-                )
-              }
-              placeholder="Search users..."
-              aria-label="Search users"
-              autoComplete="off"
-            />
-
-            {search && (
-              <button
-                type="button"
-                className="admin-search-clear"
-                onClick={() =>
-                  setSearch('')
-                }
-                aria-label="Clear search"
-              >
-                ×
-              </button>
-            )}
-          </div>
-
-          <div className="admin-filters">
-
-            <label className="admin-filter">
-              <span>Role</span>
-
-              <select
-                value={roleFilter}
-                onChange={(event) =>
-                  setRoleFilter(
-                    event.target.value
-                  )
-                }
-                aria-label="Filter users by role"
-              >
-                <option value="all">
-                  All roles
-                </option>
-
-                <option value="admin">
-                  Admin
-                </option>
-
-                <option value="editor">
-                  Editor
-                </option>
-
-                <option value="user">
-                  User
-                </option>
-              </select>
-            </label>
-
-            <label className="admin-filter">
-              <span>Status</span>
-
-              <select
-                value={statusFilter}
-                onChange={(event) =>
-                  setStatusFilter(
-                    event.target.value
-                  )
-                }
-                aria-label="Filter users by status"
-              >
-                <option value="all">
-                  All status
-                </option>
-
-                <option value="active">
-                  Active
-                </option>
-
-                <option value="inactive">
-                  Inactive
-                </option>
-              </select>
-            </label>
-
-          </div>
-        </div>
-
-        {/* ====================================================
-            RESULT SUMMARY
-        ==================================================== */}
-
-        <div className="admin-results-bar">
-          <div>
-            <strong>
-              {filteredUsers.length}
-            </strong>
-
-            <span>
-              {' '}
-              {filteredCountLabel}
-            </span>
-          </div>
-
-          {hasActiveFilters && (
-            <button
-              type="button"
-              className="btn link"
-              onClick={clearFilters}
-            >
-              Clear filters
-            </button>
-          )}
-        </div>
-
-        {/* ====================================================
-            INITIAL LOADING
-        ==================================================== */}
-
-        {initialLoading ? (
-          <AdminTableLoading />
-        ) : filteredUsers.length > 0 ? (
-
-          /* ==================================================
-             USERS TABLE
-          ================================================== */
-
-          <div className="table-wrap admin-table-wrap">
-            <table className="data-table admin-table">
-
-              <thead>
-                <tr>
-                  <th scope="col">
-                    User
-                  </th>
-
-                  <th scope="col">
-                    Email
-                  </th>
-
-                  <th scope="col">
-                    Role
-                  </th>
-
-                  <th scope="col">
-                    Documents
-                  </th>
-
-                  <th scope="col">
-                    Workspaces
-                  </th>
-
-                  <th scope="col">
-                    Status
-                  </th>
-
-                  <th scope="col">
-                    Last active
-                  </th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {filteredUsers.map(
-                  (user, index) => {
-                    const name =
-                      getUserName(user);
-
-                    const email =
-                      getUserEmail(user);
-
-                    const role =
-                      normalizeRole(
-                        user?.role
-                      );
-
-                    const status =
-                      getUserStatus(user);
-
-                    const userId =
-                      getUserId(
-                        user,
-                        index
-                      );
-
-                    const documents =
-                      getNumber(
-                        user?.documents ??
-                          user?.documentCount
-                      );
-
-                    const workspaces =
-                      getNumber(
-                        user?.workspaces ??
-                          user?.workspaceCount
-                      );
-
-                    const lastActive =
-                      getLastActive(user);
-
-                    return (
-                      <tr
-                        key={userId}
-                      >
-
-                        {/* USER */}
-
-                        <td>
-                          <div className="admin-user-cell">
-
-                            <div
-                              className="admin-user-avatar"
-                              aria-hidden="true"
-                            >
-                              {getInitials(
-                                name
-                              )}
-                            </div>
-
-                            <div className="admin-user-details">
-
-                              <strong>
-                                {name}
-                              </strong>
-
-                              {user?.username && (
-                                <span>
-                                  @{user.username}
-                                </span>
-                              )}
-
-                            </div>
-
-                          </div>
-                        </td>
-
-                        {/* EMAIL */}
-
-                        <td>
-                          <span className="admin-email">
-                            {email}
-                          </span>
-                        </td>
-
-                        {/* ROLE */}
-
-                        <td>
-                          <Badge
-                            variant={getRoleVariant(
-                              user?.role
-                            )}
-                          >
-                            {role}
-                          </Badge>
-                        </td>
-
-                        {/* DOCUMENTS */}
-
-                        <td>
-                          <span className="admin-number">
-                            {documents}
-                          </span>
-                        </td>
-
-                        {/* WORKSPACES */}
-
-                        <td>
-                          <span className="admin-number">
-                            {workspaces}
-                          </span>
-                        </td>
-
-                        {/* STATUS */}
-
-                        <td>
-                          <Badge
-                            variant={getStatusVariant(
-                              status
-                            )}
-                          >
-                            {String(status)}
-                          </Badge>
-                        </td>
-
-                        {/* LAST ACTIVE */}
-
-                        <td>
-                          <span className="admin-last-active">
-                            {lastActive}
-                          </span>
-                        </td>
-
-                      </tr>
-                    );
-                  }
-                )}
-              </tbody>
-
-            </table>
-          </div>
-
-        ) : (
-
-          /* ==================================================
-             EMPTY STATE
-          ================================================== */
-
-          <div
-            className="admin-empty-state"
-            role="status"
-          >
-            <div
-              className="admin-empty-icon"
-              aria-hidden="true"
-            >
-              👥
-            </div>
-
-            <h3>
-              No users found
-            </h3>
-
-            <p>
-              {hasActiveFilters
-                ? 'Try changing your search or filter criteria.'
-                : 'There are no registered users to display.'}
-            </p>
-
-            {hasActiveFilters && (
-              <button
-                type="button"
-                className="btn secondary"
-                onClick={clearFilters}
-              >
-                Clear filters
-              </button>
-            )}
-          </div>
-        )}
-
+        <div className="admin-premium-table-caption"><div><strong>{filteredUsers.length.toLocaleString()}</strong> <span>{filteredUsers.length === 1 ? 'account' : 'accounts'} found</span></div><label>Rows <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}><option value={10}>10</option><option value={25}>25</option><option value={50}>50</option></select></label></div>
+        {initialLoading ? <div className="admin-premium-loading" role="status"><span className="admin-premium-loader" /><strong>Loading workspace data</strong><p>Connecting to your administration API…</p></div> : visibleUsers.length ? <div className="admin-premium-table-wrap" ref={tableRef}><table className="admin-premium-table"><thead><tr><th>User</th><th>Role</th><th>Documents</th><th>Workspaces</th><th>Status</th><th>Last active</th></tr></thead><tbody>{visibleUsers.map((u, index) => { const role = roleOf(u.role); const id = idOf(u, index + (page - 1) * pageSize); return <tr key={id}><td><div className="admin-premium-user"><span className="admin-premium-avatar">{initials(nameOf(u))}</span><span className="admin-premium-user-copy"><strong>{nameOf(u)}</strong><small>{emailOf(u)}</small></span></div></td><td><span className={`admin-premium-role role-${role.replace(/\s/g, '-')}`}>{titleCase(role)}</span></td><td><strong className="admin-premium-number">{num(u.documentCount ?? u.documents)}</strong></td><td><strong className="admin-premium-number">{num(u.workspaceCount ?? u.workspaces)}</strong></td><td><StatusPill status={u.status} /></td><td><span className="admin-premium-last-active">{dateLabel(u.lastActive || u.lastActivity || u.lastLogin)}</span></td></tr>; })}</tbody></table></div> : <div className="admin-premium-empty"><span>⌕</span><h3>{users.length ? 'No matching accounts' : 'No users to display yet'}</h3><p>{users.length ? 'Try another search term or clear your filters.' : 'When users are returned by your API, they will appear here.'}</p>{(search || roleFilter !== 'all' || statusFilter !== 'all') && <button className="admin-premium-btn admin-premium-btn-quiet" onClick={() => { setSearch(''); setRoleFilter('all'); setStatusFilter('all'); }}>Clear filters</button>}</div>}
+        {!initialLoading && filteredUsers.length > 0 && <footer className="admin-premium-pagination"><span>Showing {((page - 1) * pageSize) + 1}–{Math.min(page * pageSize, filteredUsers.length)} of {filteredUsers.length}</span><div><button type="button" aria-label="Previous page" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>←</button><span>Page {page} of {pageCount}</span><button type="button" aria-label="Next page" disabled={page >= pageCount} onClick={() => setPage((p) => Math.min(pageCount, p + 1))}>→</button></div></footer>}
       </Card>
 
-      {/* ======================================================
-          SYSTEM INFORMATION
-      ====================================================== */}
-
-      <section className="admin-system-grid">
-
-        {/* ====================================================
-            SYSTEM HEALTH
-        ==================================================== */}
-
-        <Card title="System Health">
-
-          <div className="admin-health-list">
-
-            <div className="admin-health-item">
-              <span>
-                <i
-                  className="admin-health-dot"
-                  aria-hidden="true"
-                />
-                API Server
-              </span>
-
-              <Badge variant="success">
-                Operational
-              </Badge>
-            </div>
-
-            <div className="admin-health-item">
-              <span>
-                <i
-                  className="admin-health-dot"
-                  aria-hidden="true"
-                />
-                Database
-              </span>
-
-              <Badge variant="success">
-                Connected
-              </Badge>
-            </div>
-
-            <div className="admin-health-item">
-              <span>
-                <i
-                  className="admin-health-dot"
-                  aria-hidden="true"
-                />
-                Collaboration
-              </span>
-
-              <Badge variant="success">
-                Operational
-              </Badge>
-            </div>
-
-          </div>
-
-        </Card>
-
-        {/* ====================================================
-            ADMINISTRATION
-        ==================================================== */}
-
-        <Card title="Administration">
-
-          <div className="admin-quick-actions">
-
-            <button
-              type="button"
-              className="admin-quick-action"
-            >
-              <span
-                aria-hidden="true"
-              >
-                👥
-              </span>
-
-              <div>
-                <strong>
-                  Manage Users
-                </strong>
-
-                <small>
-                  View and manage accounts
-                </small>
-              </div>
-
-              <span
-                aria-hidden="true"
-              >
-                →
-              </span>
-            </button>
-
-            <button
-              type="button"
-              className="admin-quick-action"
-            >
-              <span
-                aria-hidden="true"
-              >
-                📄
-              </span>
-
-              <div>
-                <strong>
-                  Documents
-                </strong>
-
-                <small>
-                  Monitor document activity
-                </small>
-              </div>
-
-              <span
-                aria-hidden="true"
-              >
-                →
-              </span>
-            </button>
-
-            <button
-              type="button"
-              className="admin-quick-action"
-            >
-              <span
-                aria-hidden="true"
-              >
-                ⚙
-              </span>
-
-              <div>
-                <strong>
-                  System Settings
-                </strong>
-
-                <small>
-                  Configure platform settings
-                </small>
-              </div>
-
-              <span
-                aria-hidden="true"
-              >
-                →
-              </span>
-            </button>
-
-          </div>
-
-        </Card>
-
-      </section>
-
-    </div>
-  );
+      <aside className="admin-premium-side-column">
+        <Card title="System health" className="admin-premium-panel admin-premium-health-panel"><div className="admin-premium-health-intro"><span className="admin-premium-health-emblem">⌁</span><div><strong>{health?.status ? titleCase(health.status) : 'Health status unavailable'}</strong><p>{health?.message || 'Connect a health endpoint to show live service status.'}</p></div></div><div className="admin-premium-health-list"><div><span>API server</span><StatusPill status={health?.api || health?.apiStatus || 'Unknown'} /></div><div><span>Database</span><StatusPill status={health?.database || health?.databaseStatus || 'Unknown'} /></div><div><span>Collaboration</span><StatusPill status={health?.collaboration || health?.collaborationStatus || 'Unknown'} /></div></div><small className="admin-premium-health-note">Health indicators reflect API data; unknown states are not assumed operational.</small></Card>
+        <Card title="Recent activity" className="admin-premium-panel admin-premium-activity-panel"><div className="admin-premium-activity-head"><span>Latest workspace events</span><span className="admin-premium-activity-count">{activity.length}</span></div>{activity.length ? <div className="admin-premium-activity-list">{activity.slice(0, 8).map((item, i) => <div className="admin-premium-activity-item" key={item.id || item._id || `${item.createdAt || item.timestamp || 'event'}-${i}`}><span className="admin-premium-activity-icon">{item.icon || (String(item.action || item.type || '').toLowerCase().includes('delete') ? '−' : '↗')}</span><div><strong>{item.title || item.message || titleCase(item.action || item.type || 'Workspace update')}</strong><p>{item.description || item.actor?.name || item.user?.name || item.userName || 'Workspace activity'}</p><small>{dateLabel(item.createdAt || item.timestamp || item.updatedAt)}</small></div></div>)}</div> : <div className="admin-premium-activity-empty"><span>◷</span><strong>No recent activity returned</strong><p>Expose <code>userService.activity()</code> from your API service to populate this feed with saved backend events.</p></div>}</Card>
+        <Card title="Quick links" className="admin-premium-panel"><nav className="admin-premium-quick-links" aria-label="Administration quick links"><a href="/documents"><span>▤</span><span><strong>Documents</strong><small>Browse workspace documents</small></span><b>↗</b></a><a href="/workspaces"><span>⌘</span><span><strong>Workspaces</strong><small>Review team spaces</small></span><b>↗</b></a><a href="/settings"><span>⚙</span><span><strong>Settings</strong><small>Configure your account</small></span><b>↗</b></a></nav></Card>
+      </aside>
+    </section>
+  </main>;
 }
-
-export default Admin;

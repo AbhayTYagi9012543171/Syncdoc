@@ -1,989 +1,752 @@
 import "./pages-premium.css";
+import "./profile-premium.css";
 
 import React, {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
-
+import { Link } from "react-router-dom";
 import {
-  Link,
-  useNavigate,
-} from "react-router-dom";
+  AnimatePresence,
+  motion,
+  useReducedMotion,
+} from "framer-motion";
+import {
+  ArrowRight,
+  BadgeCheck,
+  BriefcaseBusiness,
+  Check,
+  CheckCircle2,
+  ChevronRight,
+  Clock3,
+  FileText,
+  ImagePlus,
+  LoaderCircle,
+  Mail,
+  RotateCcw,
+  Save,
+  Settings2,
+  ShieldCheck,
+  Upload,
+  UserRound,
+  X,
+} from "lucide-react";
 
-import Avatar from "../components/common/Avatar";
 import Button from "../components/common/Button";
 import Card from "../components/common/Card";
 import { useAuth } from "../context/AuthContext";
+import profileService from "../services/profileService";
 
-/* ============================================================
-   SYNCDOC — PROFILE PAGE
-   High-level production-ready profile management
-============================================================ */
-
-/* ============================================================
-   CONSTANTS
-============================================================ */
-
+const MAX_NAME_LENGTH = 50;
 const MAX_BIO_LENGTH = 500;
-const MAX_NAME_LENGTH = 80;
+const MAX_PHOTO_SIZE = 5 * 1024 * 1024;
 
-const DEFAULT_FORM = {
-  name: "",
-  email: "",
-  bio: "",
-};
+const ALLOWED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+];
 
-/* ============================================================
-   HELPERS
-============================================================ */
-
-/**
- * Safely get the user's display name.
- */
-function getUserName(user) {
-  if (!user || typeof user !== "object") {
-    return "User";
-  }
-
-  return (
-    user.name ||
-    user.displayName ||
-    user.username ||
-    user.fullName ||
-    "User"
-  );
-}
-
-/**
- * Safely get the user's email.
- */
-function getUserEmail(user) {
-  if (!user || typeof user !== "object") {
-    return "";
-  }
-
-  return (
-    user.email ||
-    user.emailAddress ||
-    ""
-  );
-}
-
-/**
- * Normalize role into a readable label.
- */
-function getUserRole(user) {
-  if (!user || typeof user !== "object") {
-    return "Member";
-  }
-
-  const role =
-    user.role ||
-    user.workspaceRole ||
-    user.permissions?.role;
-
-  if (!role) {
-    return "Member";
-  }
-
-  const normalized = String(role)
-    .trim()
-    .toLowerCase();
-
-  if (!normalized) {
-    return "Member";
-  }
-
-  return (
-    normalized.charAt(0).toUpperCase() +
-    normalized.slice(1)
-  );
-}
-
-/**
- * Get user's bio.
- */
-function getUserBio(user) {
-  if (!user || typeof user !== "object") {
-    return "";
-  }
-
+function displayName(user) {
   return String(
-    user.bio ||
-      user.about ||
-      user.description ||
-      ""
+    user?.displayName ||
+      user?.name ||
+      user?.username ||
+      user?.fullName ||
+      "User"
   );
 }
 
-/**
- * Get initials for fallback avatar.
- */
-function getInitials(name = "User") {
-  const normalized = String(name)
-    .trim()
-    .replace(/\s+/g, " ");
+function initials(name) {
+  const words = String(name).trim().split(/\s+/).filter(Boolean);
 
-  if (!normalized) {
-    return "U";
+  if (!words.length) return "U";
+
+  if (words.length === 1) {
+    return words[0].slice(0, 2).toUpperCase();
   }
 
-  const parts = normalized
-    .split(" ")
-    .filter(Boolean);
-
-  if (parts.length === 1) {
-    return parts[0]
-      .slice(0, 2)
-      .toUpperCase();
-  }
-
-  return `${parts[0][0]}${
-    parts[parts.length - 1][0]
-  }`.toUpperCase();
+  return `${words[0][0]}${words[words.length - 1][0]}`.toUpperCase();
 }
 
-/**
- * Safely format account creation date.
- */
-function formatJoinedDate(user) {
+function memberSince(user) {
   const value =
     user?.createdAt ||
     user?.created_at ||
     user?.joinedAt ||
     user?.dateJoined;
 
-  if (!value) {
+  if (!value || Number.isNaN(new Date(value).getTime())) {
     return "Recently";
   }
 
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "Recently";
-  }
-
-  return new Intl.DateTimeFormat(
-    undefined,
-    {
-      month: "short",
-      year: "numeric",
-    }
-  ).format(date);
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    year: "numeric",
+  }).format(new Date(value));
 }
 
-/**
- * Normalize form values.
- */
-function normalizeForm(user) {
-  return {
-    name:
-      user?.name ||
-      user?.displayName ||
-      user?.username ||
-      user?.fullName ||
-      "",
+function roleLabel(user) {
+  const role = String(
+    user?.role ||
+      user?.workspaceRole ||
+      user?.permissions?.role ||
+      "Member"
+  ).trim();
 
-    email:
-      user?.email ||
-      user?.emailAddress ||
-      "",
-
-    bio:
-      user?.bio ||
-      user?.about ||
-      user?.description ||
-      "",
-  };
+  return role
+    ? role.charAt(0).toUpperCase() + role.slice(1)
+    : "Member";
 }
 
-/**
- * Compare two forms.
- */
-function formsEqual(first, second) {
+function getResponseUser(result) {
   return (
-    first.name === second.name &&
-    first.email === second.email &&
-    first.bio === second.bio
+    result?.user ||
+    result?.data?.user ||
+    result?.data?.data?.user ||
+    result?.data ||
+    result ||
+    null
   );
 }
 
-/**
- * Validate profile form.
- */
-function validateProfileForm(form) {
-  const errors = {
-    name: "",
-    bio: "",
-  };
-
+function validateProfile(form) {
+  const errors = { name: "", bio: "" };
   const name = form.name.trim();
-  const bio = form.bio.trim();
 
   if (!name) {
-    errors.name =
-      "Display name is required.";
+    errors.name = "Display name is required.";
   } else if (name.length < 2) {
-    errors.name =
-      "Display name must contain at least 2 characters.";
-  } else if (
-    name.length > MAX_NAME_LENGTH
-  ) {
-    errors.name =
-      `Display name cannot exceed ${MAX_NAME_LENGTH} characters.`;
+    errors.name = "Use at least 2 characters.";
+  } else if (name.length > MAX_NAME_LENGTH) {
+    errors.name = `Maximum ${MAX_NAME_LENGTH} characters.`;
   }
 
-  if (bio.length > MAX_BIO_LENGTH) {
-    errors.bio =
-      `Bio cannot exceed ${MAX_BIO_LENGTH} characters.`;
+  if (form.bio.length > MAX_BIO_LENGTH) {
+    errors.bio = `Maximum ${MAX_BIO_LENGTH} characters.`;
   }
 
   return errors;
 }
 
-/**
- * Calculate profile completion.
- */
-function getProfileCompletion(
-  user,
-  form
-) {
-  const fields = [
-    Boolean(
-      form.name?.trim() ||
-        getUserName(user) !== "User"
-    ),
-    Boolean(form.email?.trim()),
-    Boolean(form.bio?.trim()),
-    Boolean(user?.avatar),
-  ];
+function Stat({ icon: Icon, label, value, detail }) {
+  return (
+    <motion.div
+      className="profile-stat"
+      whileHover={{ y: -3 }}
+      transition={{ duration: 0.18 }}
+    >
+      <span className="profile-stat-icon">
+        <Icon size={19} aria-hidden="true" />
+      </span>
 
-  const completed =
-    fields.filter(Boolean).length;
-
-  return Math.round(
-    (completed / fields.length) * 100
+      <div className="profile-stat-copy">
+        <span>{label}</span>
+        <strong>{value}</strong>
+        <small>{detail}</small>
+      </div>
+    </motion.div>
   );
 }
 
-/* ============================================================
-   PROFILE
-============================================================ */
-
 export default function Profile() {
-  const {
-    user,
-  } = useAuth();
+  const { user, updateUser } = useAuth();
+  const reduceMotion = useReducedMotion();
 
-  const navigate = useNavigate();
+  const [form, setForm] = useState({
+    name: user?.displayName || user?.name || "",
+    bio: user?.bio || "",
+  });
 
-  /* ==========================================================
-     DERIVED USER DATA
-  ========================================================== */
+  const [savedForm, setSavedForm] = useState({
+    name: user?.displayName || user?.name || "",
+    bio: user?.bio || "",
+  });
 
-  const userName = useMemo(
-    () => getUserName(user),
-    [user]
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({
+    name: "",
+    bio: "",
+  });
+  const [notice, setNotice] = useState("");
+
+  const [photoEditorOpen, setPhotoEditorOpen] = useState(false);
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState("");
+  const [photoUrl, setPhotoUrl] = useState(user?.avatar || "");
+  const [photoError, setPhotoError] = useState("");
+  const [photoSaving, setPhotoSaving] = useState(false);
+
+  const fileInputRef = useRef(null);
+
+  const name = form.name.trim() || displayName(user);
+  const email = user?.email || user?.emailAddress || "";
+  const role = roleLabel(user);
+  const joined = memberSince(user);
+  const bioLength = form.bio.length;
+
+  const isDirty =
+    form.name !== savedForm.name ||
+    form.bio !== savedForm.bio;
+
+  const currentErrors = useMemo(
+    () => validateProfile(form),
+    [form]
   );
 
-  const userEmail = useMemo(
-    () => getUserEmail(user),
-    [user]
-  );
+  const completion = useMemo(() => {
+    const checks = [
+      Boolean(form.name.trim()),
+      Boolean(email),
+      Boolean(form.bio.trim()),
+      Boolean(user?.avatar),
+    ];
 
-  const userRole = useMemo(
-    () => getUserRole(user),
-    [user]
-  );
-
-  const userBio = useMemo(
-    () => getUserBio(user),
-    [user]
-  );
-
-  const initials = useMemo(
-    () => getInitials(userName),
-    [userName]
-  );
-
-  const joinedDate = useMemo(
-    () => formatJoinedDate(user),
-    [user]
-  );
-
-  /* ==========================================================
-     FORM STATE
-  ========================================================== */
-
-  const [form, setForm] =
-    useState(() =>
-      normalizeForm(user)
+    return Math.round(
+      (checks.filter(Boolean).length / checks.length) * 100
     );
-
-  const [initialForm, setInitialForm] =
-    useState(() =>
-      normalizeForm(user)
-    );
-
-  /* ==========================================================
-     UI STATE
-  ========================================================== */
-
-  const [saving, setSaving] =
-    useState(false);
-
-  const [saved, setSaved] =
-    useState(false);
-
-  const [errors, setErrors] =
-    useState({
-      name: "",
-      bio: "",
-      form: "",
-    });
-
-  /* ==========================================================
-     SYNC USER → FORM
-  ========================================================== */
+  }, [form, email, user?.avatar]);
 
   useEffect(() => {
-    const nextForm =
-      normalizeForm(user);
+    const nextForm = {
+      name: user?.displayName || user?.name || "",
+      bio: user?.bio || "",
+    };
 
     setForm(nextForm);
-    setInitialForm(nextForm);
-
+    setSavedForm(nextForm);
+    setPhotoUrl(user?.avatar || "");
+    setPhotoFile(null);
+    setPhotoPreview("");
+    setFieldErrors({ name: "", bio: "" });
+    setFormError("");
     setSaved(false);
-
-    setErrors({
-      name: "",
-      bio: "",
-      form: "",
-    });
   }, [user]);
 
-  /* ==========================================================
-     DERIVED FORM STATE
-  ========================================================== */
+  useEffect(() => {
+    return () => {
+      if (photoPreview.startsWith("blob:")) {
+        URL.revokeObjectURL(photoPreview);
+      }
+    };
+  }, [photoPreview]);
 
-  const isDirty = useMemo(
-    () =>
-      !formsEqual(
-        form,
-        initialForm
-      ),
-    [form, initialForm]
+  const changeField = useCallback((event) => {
+    const { name: field, value } = event.target;
+
+    setForm((previous) => ({
+      ...previous,
+      [field]: value,
+    }));
+
+    setSaved(false);
+    setNotice("");
+    setFormError("");
+
+    setFieldErrors((previous) => ({
+      ...previous,
+      [field]: "",
+    }));
+  }, []);
+
+  const blurField = useCallback(
+    (event) => {
+      const field = event.target.name;
+      const errors = validateProfile(form);
+
+      if (field === "name" || field === "bio") {
+        setFieldErrors((previous) => ({
+          ...previous,
+          [field]: errors[field],
+        }));
+      }
+    },
+    [form]
   );
 
-  const bioLength =
-    form.bio.length;
+  const discardChanges = useCallback(() => {
+    if (saving) return;
 
-  const profileCompletion =
-    useMemo(
-      () =>
-        getProfileCompletion(
-          user,
-          form
-        ),
-      [user, form]
-    );
+    setForm(savedForm);
+    setFieldErrors({ name: "", bio: "" });
+    setFormError("");
+    setSaved(false);
+  }, [saving, savedForm]);
 
-  const hasFieldErrors =
-    Boolean(
-      errors.name ||
-        errors.bio
-    );
+  const saveProfile = useCallback(
+    async (event) => {
+      event.preventDefault();
 
-  /* ==========================================================
-     INPUT CHANGE
-  ========================================================== */
+      if (saving) return;
 
-  const handleChange =
-    useCallback(
-      (event) => {
-        const {
-          name,
-          value,
-        } = event.target;
+      const errors = validateProfile(form);
+      setFieldErrors(errors);
 
-        setForm(
-          (previous) => ({
-            ...previous,
-            [name]: value,
-          })
-        );
-
-        setSaved(false);
-
-        setErrors(
-          (previous) => ({
-            ...previous,
-            [name]: "",
-            form: "",
-          })
-        );
-      },
-      []
-    );
-
-  /* ==========================================================
-     FIELD BLUR
-  ========================================================== */
-
-  const handleBlur =
-    useCallback(
-      (event) => {
-        const {
-          name,
-        } = event.target;
-
-        const fieldErrors =
-          validateProfileForm(
-            form
-          );
-
-        if (
-          name === "name"
-        ) {
-          setErrors(
-            (previous) => ({
-              ...previous,
-              name:
-                fieldErrors.name,
-            })
-          );
-        }
-
-        if (
-          name === "bio"
-        ) {
-          setErrors(
-            (previous) => ({
-              ...previous,
-              bio:
-                fieldErrors.bio,
-            })
-          );
-        }
-      },
-      [form]
-    );
-
-  /* ==========================================================
-     RESET FORM
-  ========================================================== */
-
-  const handleReset =
-    useCallback(() => {
-      if (saving) {
+      if (errors.name || errors.bio) {
+        setFormError("Please fix the highlighted fields.");
         return;
       }
 
-      setForm(initialForm);
+      if (!isDirty) {
+        setSaved(true);
+        return;
+      }
 
-      setErrors({
-        name: "",
-        bio: "",
-        form: "",
-      });
-
+      setSaving(true);
       setSaved(false);
-    }, [
-      initialForm,
-      saving,
-    ]);
+      setFormError("");
+      setNotice("");
 
-  /* ==========================================================
-     SAVE PROFILE
-  ========================================================== */
-
-  const handleSubmit =
-    useCallback(
-      async (event) => {
-        event.preventDefault();
-
-        if (saving) {
-          return;
-        }
-
-        const fieldErrors =
-          validateProfileForm(
-            form
-          );
-
-        const hasErrors =
-          Boolean(
-            fieldErrors.name ||
-              fieldErrors.bio
-          );
-
-        if (hasErrors) {
-          setErrors({
-            ...fieldErrors,
-            form:
-              "Please correct the highlighted fields.",
-          });
-
-          return;
-        }
-
-        if (!isDirty) {
-          setSaved(true);
-          return;
-        }
-
-        setSaving(true);
-        setSaved(false);
-
-        setErrors({
-          name: "",
-          bio: "",
-          form: "",
+      try {
+        const result = await profileService.update({
+          displayName: form.name.trim(),
+          bio: form.bio.trim(),
         });
 
-        try {
-          /*
-           * ====================================================
-           * CONNECT YOUR REAL API HERE
-           *
-           * Example:
-           *
-           * await userService.updateProfile({
-           *   name: form.name.trim(),
-           *   bio: form.bio.trim(),
-           * });
-           *
-           * ====================================================
-           */
+        const updated = getResponseUser(result);
+        const nextForm = {
+          name:
+            updated?.displayName ||
+            updated?.name ||
+            form.name.trim(),
+          bio: updated?.bio ?? form.bio.trim(),
+        };
 
-          /*
-           * Temporary successful operation.
-           *
-           * Replace this with your actual
-           * userService.updateProfile() call.
-           */
-          await new Promise(
-            (resolve) =>
-              setTimeout(
-                resolve,
-                500
-              )
-          );
-
-          const updatedForm = {
-            ...form,
-            name:
-              form.name.trim(),
-            bio:
-              form.bio.trim(),
-          };
-
-          setForm(updatedForm);
-          setInitialForm(
-            updatedForm
-          );
-
-          setSaved(true);
-        } catch (error) {
-          console.error(
-            "SyncDoc: failed to update profile:",
-            error
-          );
-
-          setErrors({
-            name: "",
-            bio: "",
-            form:
-              error?.response
-                ?.data?.message ||
-              error?.message ||
-              "Unable to update your profile. Please try again.",
+        if (typeof updateUser === "function") {
+          updateUser({
+            ...(updated && typeof updated === "object" ? updated : {}),
+            displayName: nextForm.name,
+            name: nextForm.name,
+            bio: nextForm.bio,
           });
-        } finally {
-          setSaving(false);
         }
-      },
-      [
-        form,
-        saving,
-        isDirty,
-      ]
-    );
 
-  /* ==========================================================
-     AVATAR HANDLER
-  ========================================================== */
+        setForm(nextForm);
+        setSavedForm(nextForm);
+        setSaved(true);
+        setNotice("Your profile has been saved.");
+      } catch (error) {
+        setFormError(
+          error?.userMessage ||
+            error?.response?.data?.message ||
+            "Unable to save your profile. Please try again."
+        );
+      } finally {
+        setSaving(false);
+      }
+    },
+    [form, saving, isDirty, updateUser]
+  );
 
-  const handleAvatarAction =
-    useCallback(() => {
-      /*
-       * Avatar upload can be connected here.
-       *
-       * Example:
-       * setAvatarModalOpen(true);
-       *
-       * Or navigate to a dedicated
-       * avatar management screen.
-       */
-      console.info(
-        "Avatar management is ready to be connected."
+  const openPhotoEditor = useCallback(() => {
+    setPhotoUrl(user?.avatar || "");
+    setPhotoFile(null);
+    setPhotoPreview("");
+    setPhotoError("");
+    setPhotoEditorOpen(true);
+  }, [user?.avatar]);
+
+  const closePhotoEditor = useCallback(() => {
+    if (photoSaving) return;
+
+    setPhotoEditorOpen(false);
+    setPhotoFile(null);
+    setPhotoPreview("");
+    setPhotoError("");
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }, [photoSaving]);
+
+  const choosePhoto = useCallback((event) => {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setPhotoError(
+        "Choose a JPG, PNG, WEBP, or GIF image. SVG is not supported."
       );
-    }, []);
+      event.target.value = "";
+      return;
+    }
 
-  /* ==========================================================
-     NAVIGATION
-  ========================================================== */
+    if (file.size > MAX_PHOTO_SIZE) {
+      setPhotoError("Your photo must be 5 MB or smaller.");
+      event.target.value = "";
+      return;
+    }
 
-  const handleSettings =
-    useCallback(() => {
-      navigate(
-        "/settings"
+    setPhotoError("");
+    setPhotoFile(file);
+    setPhotoUrl("");
+
+    setPhotoPreview((previous) => {
+      if (previous.startsWith("blob:")) {
+        URL.revokeObjectURL(previous);
+      }
+
+      return URL.createObjectURL(file);
+    });
+  }, []);
+
+  const savePhoto = useCallback(
+    async (event) => {
+      event.preventDefault();
+
+      if (photoSaving) return;
+
+      setPhotoSaving(true);
+      setPhotoError("");
+      setNotice("");
+
+      try {
+        let result;
+
+        if (photoFile) {
+          result = await profileService.uploadAvatar(photoFile);
+        } else {
+          const url = photoUrl.trim();
+
+          if (url && !/^https:\/\//i.test(url)) {
+            setPhotoError("Use a valid HTTPS image URL.");
+            setPhotoSaving(false);
+            return;
+          }
+
+          if (!url && user?.avatar) {
+            result = await profileService.removeAvatar();
+          } else if (url) {
+            result = await profileService.update({ avatar: url });
+          } else {
+            setPhotoError("Choose a photo or enter an image URL.");
+            setPhotoSaving(false);
+            return;
+          }
+        }
+
+        const updated = getResponseUser(result);
+        const avatar =
+          updated?.avatar ??
+          result?.avatar ??
+          result?.data?.avatar ??
+          null;
+
+        if (typeof updateUser === "function") {
+          updateUser({
+            ...(updated && typeof updated === "object" ? updated : {}),
+            avatar,
+          });
+        }
+
+        setPhotoUrl(avatar || "");
+        setPhotoFile(null);
+        setPhotoPreview("");
+        setPhotoEditorOpen(false);
+        setNotice(avatar ? "Profile photo updated." : "Profile photo removed.");
+      } catch (error) {
+        setPhotoError(
+          error?.userMessage ||
+            error?.response?.data?.message ||
+            error?.message ||
+            "Unable to update your photo. Please try again."
+        );
+      } finally {
+        setPhotoSaving(false);
+      }
+    },
+    [photoSaving, photoFile, photoUrl, user?.avatar, updateUser]
+  );
+
+  const removePhoto = useCallback(async () => {
+    if (photoSaving) return;
+
+    setPhotoSaving(true);
+    setPhotoError("");
+
+    try {
+      const result = await profileService.removeAvatar();
+      const updated = getResponseUser(result);
+
+      if (typeof updateUser === "function") {
+        updateUser({
+          ...(updated && typeof updated === "object" ? updated : {}),
+          avatar: null,
+        });
+      }
+
+      setPhotoUrl("");
+      setPhotoFile(null);
+      setPhotoPreview("");
+      setPhotoEditorOpen(false);
+      setNotice("Profile photo removed.");
+    } catch (error) {
+      setPhotoError(
+        error?.userMessage ||
+          error?.response?.data?.message ||
+          "Unable to remove your photo."
       );
-    }, [navigate]);
-
-  /* ==========================================================
-     RENDER
-  ========================================================== */
+    } finally {
+      setPhotoSaving(false);
+    }
+  }, [photoSaving, updateUser]);
 
   return (
-    <main
-      className="page profile-page"
+    <motion.main
+      className="page profile-premium"
       aria-labelledby="profile-title"
+      initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.28 }}
     >
-      {/* ======================================================
-          PAGE HEADER
-      ====================================================== */}
-
-      <header className="page-heading profile-page-heading">
-        <div className="page-heading-content">
-          <span className="eyebrow">
-            ACCOUNT
+      <header className="profile-topbar">
+        <div className="profile-heading-copy">
+          <span className="profile-eyebrow">
+            <SparklesIcon /> ACCOUNT WORKSPACE
           </span>
-
           <h1 id="profile-title">
-            My profile
+            Your profile<span>.</span>
           </h1>
-
-          <p>
-            Manage your personal information,
-            identity and workspace profile.
-          </p>
+          <p>Manage your identity and how your team sees you.</p>
         </div>
 
-        <div className="profile-header-actions">
+        <div className="profile-topbar-actions">
           {isDirty && (
-            <span
-              className="profile-unsaved-indicator"
-              role="status"
-              aria-live="polite"
-            >
-              Unsaved changes
+            <span className="profile-dirty-pill" role="status">
+              <span /> Unsaved changes
             </span>
           )}
-
           <Button
             variant="secondary"
-            onClick={
-              handleSettings
-            }
+            onClick={() => {
+              window.location.assign("/settings");
+            }}
           >
-            Settings
+            <Settings2 size={16} /> Settings
           </Button>
         </div>
       </header>
 
-      {/* ======================================================
-          PROFILE HERO
-      ====================================================== */}
-
-      <Card
-        className="profile-hero-card"
-      >
-        <div className="profile-hero">
-          {/* ==================================================
-              AVATAR
-          ================================================== */}
-
-          <div className="profile-avatar-section">
-            <div
-              className="profile-avatar-large"
-              aria-label={`${userName} profile avatar`}
+      <AnimatePresence>
+        {notice && (
+          <motion.div
+            className="profile-toast"
+            role="status"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+          >
+            <CheckCircle2 size={17} />
+            <span>{notice}</span>
+            <button
+              type="button"
+              onClick={() => setNotice("")}
+              aria-label="Dismiss message"
             >
-              <Avatar
-                user={user}
-                name={userName}
-                size="xl"
-                status="online"
-              />
+              <X size={15} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-              {!user?.avatar && (
-                <span
-                  className="profile-initials"
-                  aria-hidden="true"
-                >
-                  {initials}
+      <motion.section
+        className="profile-hero-premium"
+        initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05, duration: 0.32 }}
+      >
+        <div className="profile-hero-glow" />
+
+        <div className="profile-hero-main">
+          <div className="profile-avatar-wrap">
+            <div className="profile-avatar-ring">
+              {user?.avatar ? (
+                <img src={user.avatar} alt={`${name}'s profile`} />
+              ) : (
+                <span className="profile-avatar-fallback">
+                  {initials(name)}
                 </span>
               )}
             </div>
 
             <button
               type="button"
-              className="profile-avatar-action"
-              onClick={
-                handleAvatarAction
-              }
+              className="profile-avatar-edit"
+              onClick={openPhotoEditor}
+              aria-label="Change profile photo"
             >
-              Change photo
+              <ImagePlus size={16} />
             </button>
           </div>
 
-          {/* ==================================================
-              USER INFORMATION
-          ================================================== */}
-
-          <div className="profile-hero-info">
-            <div className="profile-name-row">
-              <h2>
-                {userName}
-              </h2>
-
-              <span className="profile-role-badge">
-                {userRole}
+          <div className="profile-hero-identity">
+            <div className="profile-name-line">
+              <h2>{name}</h2>
+              <span className="profile-verified">
+                <BadgeCheck size={14} /> {role}
               </span>
             </div>
 
-            <p className="profile-email">
-              {userEmail ||
-                "Email not available"}
+            <p className="profile-hero-email">
+              <Mail size={15} />
+              {email || "Email not available"}
             </p>
 
-            <p className="profile-member">
-              SyncDoc workspace member
-              <span
-                className="profile-meta-dot"
-                aria-hidden="true"
-              >
-                •
-              </span>
-              Joined {joinedDate}
-            </p>
+            <div className="profile-hero-meta">
+              <span><Clock3 size={14} /> Member since {joined}</span>
+              <span><ShieldCheck size={14} /> Account active</span>
+            </div>
 
-            {userBio && (
-              <p className="profile-hero-bio">
-                {userBio}
-              </p>
+            {form.bio && (
+              <p className="profile-hero-bio">{form.bio}</p>
             )}
-          </div>
 
-          {/* ==================================================
-              COMPLETION
-          ================================================== */}
-
-          <div
-            className="profile-completion"
-            aria-label={`Profile ${profileCompletion}% complete`}
-          >
-            <div className="profile-completion-header">
-              <span>
-                Profile completion
-              </span>
-
-              <strong>
-                {profileCompletion}%
-              </strong>
-            </div>
-
-            <div
-              className="profile-completion-track"
-              aria-hidden="true"
+            <button
+              type="button"
+              className="profile-photo-text-button"
+              onClick={openPhotoEditor}
             >
-              <span
-                className="profile-completion-progress"
-                style={{
-                  width: `${profileCompletion}%`,
-                }}
-              />
-            </div>
-
-            <small>
-              Complete your profile to help
-              teammates recognize you.
-            </small>
+              Update profile photo <ArrowRight size={14} />
+            </button>
           </div>
         </div>
-      </Card>
 
-      {/* ======================================================
-          MAIN GRID
-      ====================================================== */}
+        <div className="profile-completion-panel">
+          <div className="profile-completion-top">
+            <span>Profile strength</span>
+            <strong>{completion}%</strong>
+          </div>
 
-      <div className="profile-grid">
-        {/* ====================================================
-            PERSONAL INFORMATION
-        ==================================================== */}
-
-        <Card
-          title="Personal information"
-          className="profile-form-card"
-        >
-          <form
-            className="profile-form"
-            onSubmit={
-              handleSubmit
-            }
-            noValidate
+          <div
+            className="profile-completion-track"
+            role="progressbar"
+            aria-label="Profile completion"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={completion}
           >
-            {/* ================================================
-                FORM ERROR
-            ================================================= */}
+            <motion.span
+              initial={false}
+              animate={{ width: `${completion}%` }}
+              transition={{ duration: reduceMotion ? 0 : 0.55 }}
+            />
+          </div>
 
-            {errors.form && (
-              <div
-                className="profile-form-alert"
-                role="alert"
-                aria-live="assertive"
-              >
-                <span
-                  className="profile-form-alert-icon"
-                  aria-hidden="true"
+          <p>
+            {completion === 100
+              ? "Looking good — your profile is complete."
+              : "Add a few details to help your team recognize you."}
+          </p>
+
+          <div className="profile-completion-checks">
+            <span className={form.name.trim() ? "complete" : ""}>
+              <Check size={12} /> Name
+            </span>
+            <span className={email ? "complete" : ""}>
+              <Check size={12} /> Email
+            </span>
+            <span className={form.bio.trim() ? "complete" : ""}>
+              <Check size={12} /> About
+            </span>
+            <span className={user?.avatar ? "complete" : ""}>
+              <Check size={12} /> Photo
+            </span>
+          </div>
+        </div>
+      </motion.section>
+
+      <section className="profile-stats-grid" aria-label="Profile overview">
+        <Stat
+          icon={UserRound}
+          label="Account type"
+          value={role}
+          detail="Your current role"
+        />
+        <Stat
+          icon={ShieldCheck}
+          label="Account status"
+          value="Active"
+          detail="Access is enabled"
+        />
+        <Stat
+          icon={Clock3}
+          label="Member since"
+          value={joined}
+          detail="Your SyncDoc journey"
+        />
+      </section>
+
+      <div className="profile-content-grid">
+        <Card title="Personal information" className="profile-edit-card">
+          <div className="profile-card-intro">
+            <span className="profile-section-icon"><UserRound size={18} /></span>
+            <p>These details help teammates recognize you across SyncDoc.</p>
+          </div>
+
+          <form className="profile-premium-form" onSubmit={saveProfile} noValidate>
+            <AnimatePresence>
+              {formError && (
+                <motion.div
+                  className="profile-form-alert"
+                  role="alert"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
                 >
-                  !
-                </span>
+                  <X size={17} />
+                  <span>{formError}</span>
+                  <button type="button" onClick={() => setFormError("")} aria-label="Dismiss error">
+                    <X size={15} />
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-                <span>
-                  {errors.form}
-                </span>
-              </div>
-            )}
-
-            {/* ================================================
-                NAME + EMAIL
-            ================================================= */}
-
-            <div className="form-grid">
-              {/* ==============================================
-                  NAME
-              =============================================== */}
-
-              <div className="form-field">
-                <label htmlFor="profile-name">
-                  <span>
-                    Display name
-                  </span>
-
-                  <span
-                    className="form-required"
-                    aria-hidden="true"
-                  >
-                    *
-                  </span>
-                </label>
-
+            <div className="profile-fields-grid">
+              <div className="profile-field">
+                <label htmlFor="profile-name">Display name <span>*</span></label>
                 <input
                   id="profile-name"
                   name="name"
-                  type="text"
                   value={form.name}
-                  onChange={
-                    handleChange
-                  }
-                  onBlur={
-                    handleBlur
-                  }
-                  placeholder="Your name"
+                  onChange={changeField}
+                  onBlur={blurField}
+                  maxLength={MAX_NAME_LENGTH}
                   autoComplete="name"
-                  maxLength={
-                    MAX_NAME_LENGTH
-                  }
-                  required
+                  placeholder="Your name"
                   disabled={saving}
-                  aria-invalid={Boolean(
-                    errors.name
-                  )}
-                  aria-describedby={
-                    errors.name
-                      ? "profile-name-error"
-                      : "profile-name-help"
-                  }
+                  aria-invalid={Boolean(fieldErrors.name)}
+                  aria-describedby="profile-name-help"
                 />
-
-                {errors.name ? (
-                  <small
-                    id="profile-name-error"
-                    className="field-error"
-                    role="alert"
-                  >
-                    {errors.name}
-                  </small>
+                {fieldErrors.name ? (
+                  <small className="profile-field-error">{fieldErrors.name}</small>
                 ) : (
-                  <small
-                    id="profile-name-help"
-                    className="field-help"
-                  >
-                    This name will be visible to
-                    your workspace members.
-                  </small>
+                  <small id="profile-name-help">This name is visible to your teammates.</small>
                 )}
               </div>
 
-              {/* ==============================================
-                  EMAIL
-              =============================================== */}
-
-              <div className="form-field">
-                <label htmlFor="profile-email">
-                  <span>
-                    Email address
-                  </span>
-                </label>
-
-                <input
-                  id="profile-email"
-                  name="email"
-                  type="email"
-                  value={form.email}
-                  placeholder="you@example.com"
-                  autoComplete="email"
-                  disabled
-                  readOnly
-                  aria-describedby="profile-email-help"
-                />
-
-                <small
-                  id="profile-email-help"
-                  className="field-help"
-                >
-                  Email changes may require
-                  account verification.
-                </small>
+              <div className="profile-field">
+                <label htmlFor="profile-email">Email address</label>
+                <div className="profile-input-with-icon">
+                  <Mail size={16} />
+                  <input id="profile-email" value={email} disabled readOnly />
+                </div>
+                <small>Email is managed by your account sign-in.</small>
               </div>
             </div>
 
-            {/* ================================================
-                BIO
-            ================================================= */}
-
-            <div className="form-field">
-              <div className="form-label-row">
-                <label htmlFor="profile-bio">
-                  <span>
-                    About you
-                  </span>
-                </label>
-
-                <span
-                  className={
-                    bioLength >
-                    MAX_BIO_LENGTH
-                      ? "character-count is-over-limit"
-                      : "character-count"
-                  }
-                  aria-live="polite"
-                >
-                  {bioLength}/
-                  {MAX_BIO_LENGTH}
+            <div className="profile-field">
+              <div className="profile-bio-label">
+                <label htmlFor="profile-bio">About you</label>
+                <span className="profile-character-count">
+                  {bioLength}/{MAX_BIO_LENGTH}
                 </span>
               </div>
 
@@ -991,301 +754,243 @@ export default function Profile() {
                 id="profile-bio"
                 name="bio"
                 value={form.bio}
-                onChange={
-                  handleChange
-                }
-                onBlur={
-                  handleBlur
-                }
-                placeholder="Tell your team a little about yourself..."
-                rows={6}
-                maxLength={
-                  MAX_BIO_LENGTH
-                }
+                onChange={changeField}
+                onBlur={blurField}
+                maxLength={MAX_BIO_LENGTH}
+                rows={5}
+                placeholder="Share a little about what you do or what you're working on..."
                 disabled={saving}
-                aria-invalid={Boolean(
-                  errors.bio
-                )}
-                aria-describedby={
-                  errors.bio
-                    ? "profile-bio-error"
-                    : "profile-bio-help"
-                }
+                aria-invalid={Boolean(fieldErrors.bio)}
               />
 
-              {errors.bio ? (
-                <small
-                  id="profile-bio-error"
-                  className="field-error"
-                  role="alert"
-                >
-                  {errors.bio}
-                </small>
+              {fieldErrors.bio ? (
+                <small className="profile-field-error">{fieldErrors.bio}</small>
               ) : (
-                <small
-                  id="profile-bio-help"
-                  className="field-help"
-                >
-                  A short introduction helps
-                  teammates know who you are.
-                </small>
+                <small>A short introduction helps your team know you better.</small>
               )}
             </div>
 
-            {/* ================================================
-                FORM FOOTER
-            ================================================= */}
-
-            <div className="profile-form-footer">
-              <div className="profile-form-status">
+            <div className="profile-form-bottom">
+              <div className="profile-save-status">
                 {saved && !isDirty && (
-                  <span
-                    className="save-success"
-                    role="status"
-                    aria-live="polite"
-                  >
-                    <span
-                      aria-hidden="true"
-                    >
-                      ✓
-                    </span>
-
-                    Changes saved
+                  <span className="profile-saved-label">
+                    <CheckCircle2 size={16} /> All changes saved
                   </span>
                 )}
-
-                {hasFieldErrors && (
-                  <span
-                    className="save-error"
-                    role="alert"
-                  >
-                    Please review the
-                    highlighted fields.
-                  </span>
-                )}
+                {!saved && isDirty && <span>Remember to save your changes.</span>}
               </div>
 
-              <div className="profile-form-actions">
+              <div className="profile-form-buttons">
                 {isDirty && (
                   <Button
                     type="button"
                     variant="ghost"
-                    onClick={
-                      handleReset
-                    }
-                    disabled={
-                      saving
-                    }
+                    onClick={discardChanges}
+                    disabled={saving}
                   >
-                    Discard
+                    <RotateCcw size={15} /> Discard
                   </Button>
                 )}
 
                 <Button
                   type="submit"
                   variant="primary"
-                  loading={saving}
                   disabled={
                     saving ||
-                    !isDirty
+                    !isDirty ||
+                    Boolean(currentErrors.name || currentErrors.bio)
                   }
                 >
-                  {saving
-                    ? "Saving..."
-                    : "Save changes"}
+                  {saving ? (
+                    <><LoaderCircle className="profile-spin" size={16} /> Saving…</>
+                  ) : (
+                    <><Save size={16} /> Save changes</>
+                  )}
                 </Button>
               </div>
             </div>
           </form>
         </Card>
 
-        {/* ====================================================
-            ACCOUNT INFORMATION
-        ==================================================== */}
-
-        <Card
-          title="Account"
-          className="profile-account-card"
-        >
-          <div className="account-info-list">
-            {/* ================================================
-                ROLE
-            ================================================= */}
-
-            <div className="account-info-item">
-              <span
-                className="account-info-icon"
-                aria-hidden="true"
-              >
-                ◉
-              </span>
-
-              <div>
-                <strong>
-                  Account role
-                </strong>
-
-                <small>
-                  {userRole}
-                </small>
+        <div className="profile-side-column">
+          <Card title="Your account" className="profile-account-panel">
+            <div className="profile-account-list">
+              <div className="profile-account-row">
+                <span className="profile-account-icon"><Mail size={17} /></span>
+                <div><small>Email address</small><strong>{email || "Not available"}</strong></div>
+              </div>
+              <div className="profile-account-row">
+                <span className="profile-account-icon"><ShieldCheck size={17} /></span>
+                <div><small>Account role</small><strong>{role}</strong></div>
+              </div>
+              <div className="profile-account-row">
+                <span className="profile-account-icon"><CheckCircle2 size={17} /></span>
+                <div><small>Account status</small><strong>Active</strong></div>
               </div>
             </div>
 
-            {/* ================================================
-                EMAIL
-            ================================================= */}
+            <div className="profile-side-divider" />
+            <h3 className="profile-quick-title">Quick links</h3>
 
-            <div className="account-info-item">
-              <span
-                className="account-info-icon"
-                aria-hidden="true"
-              >
-                @
-              </span>
+            <nav className="profile-quick-links" aria-label="Account quick links">
+              <Link to="/workspace"><span><BriefcaseBusiness size={16} /> Workspace</span><ChevronRight size={16} /></Link>
+              <Link to="/documents"><span><FileText size={16} /> My documents</span><ChevronRight size={16} /></Link>
+              <Link to="/settings"><span><Settings2 size={16} /> Account settings</span><ChevronRight size={16} /></Link>
+            </nav>
+          </Card>
 
-              <div>
-                <strong>
-                  Email
-                </strong>
-
-                <small>
-                  {userEmail ||
-                    "Not available"}
-                </small>
-              </div>
+          <motion.div
+            className="profile-security-panel"
+            whileHover={reduceMotion ? undefined : { y: -2 }}
+          >
+            <span className="profile-security-badge"><ShieldCheck size={20} /></span>
+            <div>
+              <strong>Your account, protected</strong>
+              <p>Only your authenticated account can update these profile details.</p>
+              <Link to="/settings">Review security settings <ArrowRight size={14} /></Link>
             </div>
-
-            {/* ================================================
-                STATUS
-            ================================================= */}
-
-            <div className="account-info-item">
-              <span
-                className="account-info-icon"
-                aria-hidden="true"
-              >
-                ✓
-              </span>
-
-              <div>
-                <strong>
-                  Account status
-                </strong>
-
-                <small className="account-status-active">
-                  Active
-                </small>
-              </div>
-            </div>
-
-            {/* ================================================
-                MEMBER SINCE
-            ================================================= */}
-
-            <div className="account-info-item">
-              <span
-                className="account-info-icon"
-                aria-hidden="true"
-              >
-                ◷
-              </span>
-
-              <div>
-                <strong>
-                  Member since
-                </strong>
-
-                <small>
-                  {joinedDate}
-                </small>
-              </div>
-            </div>
-          </div>
-
-          <div className="profile-card-divider" />
-
-          {/* ==================================================
-              QUICK ACTIONS
-          ================================================== */}
-
-          <div className="profile-account-actions">
-            <Link
-              to="/workspace"
-              className="profile-action-link"
-            >
-              <span>
-                Workspace
-              </span>
-
-              <span aria-hidden="true">
-                →
-              </span>
-            </Link>
-
-            <Link
-              to="/documents"
-              className="profile-action-link"
-            >
-              <span>
-                My documents
-              </span>
-
-              <span aria-hidden="true">
-                →
-              </span>
-            </Link>
-
-            <Link
-              to="/settings"
-              className="profile-action-link"
-            >
-              <span>
-                Account settings
-              </span>
-
-              <span aria-hidden="true">
-                →
-              </span>
-            </Link>
-          </div>
-        </Card>
+          </motion.div>
+        </div>
       </div>
 
-      {/* ======================================================
-          SECURITY / PROFILE FOOTER
-      ====================================================== */}
+      <AnimatePresence>
+        {photoEditorOpen && (
+          <motion.div
+            className="profile-modal-backdrop"
+            role="presentation"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onMouseDown={(event) => {
+              if (
+                event.target === event.currentTarget &&
+                !photoSaving
+              ) {
+                closePhotoEditor();
+              }
+            }}
+          >
+            <motion.section
+              className="profile-avatar-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="profile-avatar-title"
+              initial={reduceMotion ? false : { opacity: 0, y: 12, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8, scale: 0.98 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className="profile-modal-heading">
+                <span className="profile-section-icon"><ImagePlus size={19} /></span>
+                <button
+                  type="button"
+                  onClick={closePhotoEditor}
+                  disabled={photoSaving}
+                  aria-label="Close photo editor"
+                >
+                  <X size={18} />
+                </button>
+              </div>
 
-      <section
-        className="profile-security-card"
-        aria-label="Profile security"
-      >
-        <div className="profile-security-icon">
-          ✓
-        </div>
+              <h2 id="profile-avatar-title">Update your photo</h2>
+              <p>Choose a photo that helps your teammates recognize you.</p>
 
-        <div className="profile-security-content">
-          <strong>
-            Your account is protected
-          </strong>
+              <form onSubmit={savePhoto}>
+                <div className="profile-photo-upload-preview">
+                  {photoPreview || user?.avatar ? (
+                    <img
+                      src={photoPreview || user.avatar}
+                      alt="Profile photo preview"
+                    />
+                  ) : (
+                    <span><UserRound size={34} /></span>
+                  )}
+                </div>
 
-          <p>
-            Keep your account information
-            accurate and review your security
-            settings regularly.
-          </p>
-        </div>
+                <input
+                  ref={fileInputRef}
+                  id="profile-avatar-file"
+                  className="profile-photo-file-input"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  onChange={choosePhoto}
+                  aria-label="Choose profile photo"
+                />
 
-        <Link
-          to="/settings"
-          className="profile-security-link"
-        >
-          Review settings
-          <span aria-hidden="true">
-            →
-          </span>
-        </Link>
-      </section>
-    </main>
+                <label className="profile-photo-dropzone" htmlFor="profile-avatar-file">
+                  <Upload size={22} />
+                  <strong>{photoFile ? photoFile.name : "Choose a photo to upload"}</strong>
+                  <span>JPG, PNG, WEBP or GIF · Maximum 5 MB</span>
+                </label>
+
+                {photoError && (
+                  <small className="profile-field-error" role="alert">
+                    {photoError}
+                  </small>
+                )}
+
+                <div className="profile-photo-url-divider">
+                  <span>or use an image URL</span>
+                </div>
+
+                <label htmlFor="profile-avatar-url">Secure image URL</label>
+                <input
+                  id="profile-avatar-url"
+                  type="url"
+                  value={photoUrl}
+                  onChange={(event) => {
+                    setPhotoUrl(event.target.value);
+                    setPhotoFile(null);
+                    setPhotoPreview("");
+                    setPhotoError("");
+
+                    if (fileInputRef.current) {
+                      fileInputRef.current.value = "";
+                    }
+                  }}
+                  placeholder="https://example.com/photo.jpg"
+                  disabled={Boolean(photoFile) || photoSaving}
+                />
+
+                <small className="profile-modal-hint">
+                  Only upload images you own or have permission to use. The server validates uploaded files.
+                </small>
+
+                <div className="profile-modal-actions">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={removePhoto}
+                    disabled={photoSaving || !user?.avatar}
+                  >
+                    Remove photo
+                  </Button>
+
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    disabled={photoSaving || (!photoFile && !photoUrl.trim())}
+                  >
+                    {photoSaving ? (
+                      <><LoaderCircle size={16} className="profile-spin" /> {photoFile ? "Uploading…" : "Saving…"}</>
+                    ) : (
+                      <><Upload size={16} /> {photoFile ? "Upload photo" : "Save photo"}</>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </motion.section>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <span className="sr-only" aria-live="polite">
+        {saved ? "Profile changes saved." : isDirty ? "Profile has unsaved changes." : "Profile is up to date."}
+      </span>
+    </motion.main>
   );
 }
 
+function SparklesIcon() {
+  return <BadgeCheck size={13} aria-hidden="true" />;
+}

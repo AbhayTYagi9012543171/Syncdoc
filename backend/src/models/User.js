@@ -1,4 +1,3 @@
-// src/models/User.js
 
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
@@ -42,12 +41,23 @@ const UserSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Display name is required'],
       trim: true,
+      minlength: [2, 'Display name must be at least 2 characters'],
       maxlength: [50, 'Display name cannot exceed 50 characters'],
     },
 
+    // Profile photo URL or relative URL.
+    // Uploaded photo files are managed by ProfileController.
     avatar: {
       type: String,
       default: null,
+      trim: true,
+    },
+
+    bio: {
+      type: String,
+      trim: true,
+      maxlength: [500, 'Bio cannot exceed 500 characters'],
+      default: '',
     },
 
     role: {
@@ -138,20 +148,22 @@ const UserSchema = new mongoose.Schema(
     },
 
     notificationPreferences: {
-      email: { type: Boolean, default: true },
-      mentions: { type: Boolean, default: true },
-      documentUpdates: { type: Boolean, default: true },
-      workspaceActivity: { type: Boolean, default: true },
-    },
-
-    createdAt: {
-      type: Date,
-      default: Date.now,
-    },
-
-    updatedAt: {
-      type: Date,
-      default: Date.now,
+      email: {
+        type: Boolean,
+        default: true,
+      },
+      mentions: {
+        type: Boolean,
+        default: true,
+      },
+      documentUpdates: {
+        type: Boolean,
+        default: true,
+      },
+      workspaceActivity: {
+        type: Boolean,
+        default: true,
+      },
     },
 
     deletedAt: {
@@ -161,9 +173,11 @@ const UserSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+
     toJSON: {
       virtuals: true,
     },
+
     toObject: {
       virtuals: true,
     },
@@ -174,39 +188,31 @@ const UserSchema = new mongoose.Schema(
 // INDEXES
 // ============================================================
 
-UserSchema.index({ email: 1 });
-UserSchema.index({ username: 1 });
+// `unique: true` already creates unique indexes for these fields.
+// Do not add duplicate non-unique indexes for the same fields.
+
 UserSchema.index({ 'activeSessions.documentId': 1 });
 UserSchema.index({ role: 1 });
 
 // ============================================================
-// PRE-SAVE HOOK
+// PRE-SAVE HOOK: PASSWORD HASHING
 // ============================================================
 
-UserSchema.pre('save', async function (next) {
-  try {
-    if (!this.isModified('password')) {
-      return next();
-    }
-
-    const salt = await bcrypt.genSalt(10);
-
-    this.password = await bcrypt.hash(this.password, salt);
-    this.updatedAt = new Date();
-
-    next();
-  } catch (error) {
-    next(error);
+UserSchema.pre('save', async function () {
+  if (!this.isModified('password')) {
+    return;
   }
+
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
 });
 
 // ============================================================
-// PRE FIND-ONE-AND-UPDATE
+// PRE-UPDATE HOOK
 // ============================================================
 
-UserSchema.pre('findOneAndUpdate', function (next) {
+UserSchema.pre('findOneAndUpdate', function () {
   this.set({ updatedAt: new Date() });
-  next();
 });
 
 // ============================================================
@@ -214,9 +220,8 @@ UserSchema.pre('findOneAndUpdate', function (next) {
 // ============================================================
 
 UserSchema.virtual('isOnline').get(function () {
-  const sessions = this.activeSessions || [];
-
-  return sessions.length > 0;
+  return Array.isArray(this.activeSessions) &&
+    this.activeSessions.length > 0;
 });
 
 UserSchema.virtual('documentCount', {
@@ -231,10 +236,20 @@ UserSchema.virtual('documentCount', {
 // ============================================================
 
 UserSchema.methods.comparePassword = async function (candidatePassword) {
+  if (!this.password) {
+    throw new Error(
+      'Password is not selected. Query the user with .select("+password").'
+    );
+  }
+
   return bcrypt.compare(candidatePassword, this.password);
 };
 
 UserSchema.methods.generateAuthToken = function () {
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET is not configured.');
+  }
+
   return jwt.sign(
     {
       id: this._id,
@@ -249,11 +264,18 @@ UserSchema.methods.generateAuthToken = function () {
 };
 
 UserSchema.methods.generateRefreshToken = function () {
+  const secret =
+    process.env.REFRESH_TOKEN_SECRET || process.env.JWT_SECRET;
+
+  if (!secret) {
+    throw new Error('Refresh token signing secret is not configured.');
+  }
+
   return jwt.sign(
     {
       id: this._id,
     },
-    process.env.REFRESH_TOKEN_SECRET || process.env.JWT_SECRET,
+    secret,
     {
       expiresIn: '30d',
     }
@@ -297,7 +319,7 @@ UserSchema.methods.removeSession = function (socketId) {
   return this.save();
 };
 
-UserSchema.methods.updateSession = function (socketId, data) {
+UserSchema.methods.updateSession = function (socketId, data = {}) {
   if (!Array.isArray(this.activeSessions)) {
     this.activeSessions = [];
   }
@@ -307,7 +329,20 @@ UserSchema.methods.updateSession = function (socketId, data) {
   );
 
   if (session) {
-    Object.assign(session, data);
+    // Only update supported session fields.
+    const allowedFields = [
+      'documentId',
+      'cursor',
+      'ipAddress',
+      'userAgent',
+    ];
+
+    for (const key of allowedFields) {
+      if (Object.prototype.hasOwnProperty.call(data, key)) {
+        session[key] = data[key];
+      }
+    }
+
     session.lastActive = new Date();
   }
 
@@ -323,6 +358,7 @@ UserSchema.methods.toJSON = function () {
 
   delete user.password;
   delete user.activeSessions;
+  delete user.__v;
 
   return user;
 };
@@ -335,7 +371,12 @@ UserSchema.statics.findByCredentials = async function (
   email,
   password
 ) {
-  const user = await this.findOne({ email }).select('+password');
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+
+  const user = await this.findOne({
+    email: normalizedEmail,
+    deletedAt: null,
+  }).select('+password');
 
   if (!user) {
     throw new Error('Invalid email or password');
@@ -351,19 +392,30 @@ UserSchema.statics.findByCredentials = async function (
 };
 
 UserSchema.statics.isEmailTaken = async function (email) {
-  const user = await this.findOne({ email });
+  const normalizedEmail = String(email || '').trim().toLowerCase();
 
-  return !!user;
+  return Boolean(
+    await this.exists({
+      email: normalizedEmail,
+      deletedAt: null,
+    })
+  );
 };
 
 UserSchema.statics.isUsernameTaken = async function (username) {
-  const user = await this.findOne({ username });
+  const normalizedUsername = String(username || '').trim();
 
-  return !!user;
+  return Boolean(
+    await this.exists({
+      username: normalizedUsername,
+      deletedAt: null,
+    })
+  );
 };
 
 // ============================================================
-// MODEL
+// MODEL EXPORT
 // ============================================================
 
-module.exports = mongoose.model('User', UserSchema);
+module.exports =
+  mongoose.models.User || mongoose.model('User', UserSchema);

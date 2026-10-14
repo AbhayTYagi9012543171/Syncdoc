@@ -1,27 +1,32 @@
 import "./pages-premium.css";
+import "./projects-premium.css";
 
 import React, {
   useCallback,
   useMemo,
   useState,
 } from "react";
-
+import { useNavigate } from "react-router-dom";
 import {
-  useNavigate,
-} from "react-router-dom";
-
-import {
-  FolderKanban,
-  Plus,
-  Search,
-  RefreshCw,
-  Users,
-  FileText,
-  CheckCircle2,
-  X,
+  ArrowDownAZ,
   ArrowUpRight,
+  CheckCircle2,
   Clock3,
+  FileText,
+  FolderKanban,
+  LayoutGrid,
+  ListFilter,
+  LoaderCircle,
+  Plus,
+  RefreshCw,
+  Search,
+  Sparkles,
+  Users,
+  X,
   AlertCircle,
+  CalendarDays,
+  ChevronDown,
+  Layers3,
 } from "lucide-react";
 
 import Button from "../components/common/Button";
@@ -29,285 +34,207 @@ import Card from "../components/common/Card";
 import useWorkspace from "../hooks/useWorkspace";
 
 /* ============================================================
-   CONSTANTS
+   CONFIGURATION
 ============================================================ */
 
-const DEFAULT_WORKSPACE_NAME =
-  "Untitled workspace";
-
-const DEFAULT_DESCRIPTION =
-  "No workspace description yet.";
-
+const DEFAULT_NAME = "Untitled workspace";
+const DEFAULT_DESCRIPTION = "A place for your team's work.";
 const DEFAULT_SORT = "updated";
+const MAX_NAME_LENGTH = 100;
+const MAX_DESCRIPTION_LENGTH = 500;
+
+const SORT_OPTIONS = [
+  { value: "updated", label: "Recently updated" },
+  { value: "created", label: "Recently created" },
+  { value: "name", label: "Name: A to Z" },
+  { value: "documents", label: "Most documents" },
+  { value: "members", label: "Most members" },
+];
+
+const FILTER_OPTIONS = [
+  { value: "all", label: "All projects" },
+  { value: "active", label: "Active" },
+  { value: "recent", label: "Recently active" },
+  { value: "quiet", label: "Quiet" },
+];
 
 /* ============================================================
-   HELPERS
+   DATA HELPERS
 ============================================================ */
 
-/**
- * Safely extract workspace ID.
- */
 function getId(workspace) {
-  if (
-    !workspace ||
-    typeof workspace !== "object"
-  ) {
-    return "";
-  }
+  if (!workspace || typeof workspace !== "object") return "";
 
   return String(
-    workspace.id ||
-      workspace._id ||
-      workspace.workspaceId ||
+    workspace._id ??
+      workspace.id ??
+      workspace.workspaceId ??
       ""
   ).trim();
 }
 
-/**
- * Safely extract workspace name.
- */
 function getName(workspace) {
-  if (
-    !workspace ||
-    typeof workspace !== "object"
-  ) {
-    return DEFAULT_WORKSPACE_NAME;
+  if (!workspace || typeof workspace !== "object") {
+    return DEFAULT_NAME;
   }
 
   return String(
-    workspace.name ||
-      workspace.title ||
-      DEFAULT_WORKSPACE_NAME
-  ).trim();
+    workspace.name ??
+      workspace.title ??
+      DEFAULT_NAME
+  ).trim() || DEFAULT_NAME;
 }
 
-/**
- * Safely extract workspace description.
- */
 function getDescription(workspace) {
-  if (
-    !workspace ||
-    typeof workspace !== "object"
-  ) {
+  if (!workspace || typeof workspace !== "object") {
     return DEFAULT_DESCRIPTION;
   }
 
   return String(
-    workspace.description ||
-      workspace.summary ||
+    workspace.description ??
+      workspace.summary ??
       DEFAULT_DESCRIPTION
-  ).trim();
+  ).trim() || DEFAULT_DESCRIPTION;
 }
 
-/**
- * Safely calculate document count.
- */
 function getDocuments(workspace) {
-  if (
-    !workspace ||
-    typeof workspace !== "object"
-  ) {
-    return 0;
-  }
-
-  const count =
-    workspace.documentCount ??
-    workspace.documentsCount ??
-    workspace.documents?.length ??
-    workspace.documents ??
-    0;
-
-  const numericCount =
-    Number(count);
-
-  return Number.isFinite(
-    numericCount
-  )
-    ? Math.max(
-        numericCount,
-        0
-      )
-    : 0;
-}
-
-/**
- * Safely calculate member count.
- */
-function getMembers(workspace) {
-  if (
-    !workspace ||
-    typeof workspace !== "object"
-  ) {
-    return 0;
-  }
-
-  const explicitCount =
-    workspace.memberCount ??
-    workspace.membersCount;
-
-  if (
-    explicitCount !== undefined &&
-    explicitCount !== null
-  ) {
-    const count =
-      Number(explicitCount);
-
-    return Number.isFinite(count)
-      ? Math.max(count, 0)
-      : 0;
-  }
-
-  const members =
-    Array.isArray(
-      workspace.members
-    )
-      ? workspace.members.length
-      : 0;
-
-  const hasOwner =
-    Boolean(workspace.owner);
-
-  return (
-    members +
-    (hasOwner ? 1 : 0)
-  );
-}
-
-/**
- * Safely convert API date.
- */
-function getTimestamp(workspace) {
-  if (
-    !workspace ||
-    typeof workspace !== "object"
-  ) {
-    return 0;
-  }
+  if (!workspace || typeof workspace !== "object") return 0;
 
   const value =
-    workspace.updatedAt ||
-    workspace.updated_at ||
-    workspace.modifiedAt ||
-    workspace.createdAt ||
-    workspace.created_at;
+    workspace.documentCount ??
+    workspace.documentsCount ??
+    (Array.isArray(workspace.documents)
+      ? workspace.documents.length
+      : workspace.documents) ??
+    0;
 
-  if (!value) {
-    return 0;
-  }
-
-  const timestamp =
-    new Date(value).getTime();
-
-  return Number.isNaN(timestamp)
-    ? 0
-    : timestamp;
+  const count = Number(value);
+  return Number.isFinite(count) ? Math.max(0, count) : 0;
 }
 
-/**
- * Calculate workspace activity status.
- */
-function getStatus(workspace) {
-  const timestamp =
-    getTimestamp(workspace);
+function getMembers(workspace) {
+  if (!workspace || typeof workspace !== "object") return 0;
 
-  if (!timestamp) {
-    return "Active";
+  const explicit =
+    workspace.memberCount ??
+    workspace.membersCount ??
+    workspace.membersCountTotal;
+
+  if (explicit !== undefined && explicit !== null) {
+    const count = Number(explicit);
+    return Number.isFinite(count) ? Math.max(0, count) : 0;
   }
 
-  const ageInDays =
-    Math.max(
-      0,
-      (Date.now() - timestamp) /
-        86400000
-    );
+  const members = Array.isArray(workspace.members)
+    ? workspace.members.length
+    : 0;
 
-  if (ageInDays < 1) {
-    return "Active";
-  }
+  // Avoid double-counting an owner if they are already in members.
+  const ownerId =
+    typeof workspace.owner === "object"
+      ? String(workspace.owner?._id ?? workspace.owner?.id ?? "")
+      : String(workspace.owner ?? "");
 
-  if (ageInDays < 7) {
-    return "Recent";
-  }
+  const ownerIncluded =
+    ownerId &&
+    Array.isArray(workspace.members) &&
+    workspace.members.some((member) => {
+      const memberId =
+        typeof member === "object"
+          ? String(member?._id ?? member?.id ?? member?.user?._id ?? "")
+          : String(member ?? "");
 
-  return "Quiet";
+      return memberId && memberId === ownerId;
+    });
+
+  return members + (ownerId && !ownerIncluded ? 1 : 0);
 }
 
-/**
- * Human-readable last activity.
- */
-function getActivityLabel(workspace) {
-  const timestamp =
-    getTimestamp(workspace);
+function getDateValue(workspace, kind = "updated") {
+  if (!workspace || typeof workspace !== "object") return 0;
 
-  if (!timestamp) {
-    return "No recent activity";
-  }
+  const value =
+    kind === "created"
+      ? workspace.createdAt ?? workspace.created_at
+      : workspace.updatedAt ??
+        workspace.updated_at ??
+        workspace.modifiedAt ??
+        workspace.createdAt ??
+        workspace.created_at;
 
-  const diff =
-    Math.max(
-      0,
-      Date.now() - timestamp
-    );
+  if (!value) return 0;
 
-  const minutes =
-    Math.floor(
-      diff / 60000
-    );
-
-  if (minutes < 1) {
-    return "Updated just now";
-  }
-
-  if (minutes < 60) {
-    return `Updated ${minutes}m ago`;
-  }
-
-  const hours =
-    Math.floor(
-      minutes / 60
-    );
-
-  if (hours < 24) {
-    return `Updated ${hours}h ago`;
-  }
-
-  const days =
-    Math.floor(
-      hours / 24
-    );
-
-  if (days < 7) {
-    return `Updated ${days}d ago`;
-  }
-
-  return `Updated ${Math.floor(
-    days / 7
-  )}w ago`;
+  const timestamp = new Date(value).getTime();
+  return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
-/**
- * Extract readable error message.
- */
+function getStatus(workspace, now = Date.now()) {
+  const timestamp = getDateValue(workspace);
+  if (!timestamp) return "quiet";
+
+  const age = Math.max(0, now - timestamp);
+
+  if (age < 24 * 60 * 60 * 1000) return "active";
+  if (age < 7 * 24 * 60 * 60 * 1000) return "recent";
+
+  return "quiet";
+}
+
+function getRelativeActivity(workspace) {
+  const timestamp = getDateValue(workspace);
+
+  if (!timestamp) return "Activity unavailable";
+
+  const difference = Math.max(0, Date.now() - timestamp);
+  const minute = 60 * 1000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+
+  if (difference < minute) return "Updated just now";
+  if (difference < hour) {
+    const count = Math.floor(difference / minute);
+    return `Updated ${count}m ago`;
+  }
+
+  if (difference < day) {
+    const count = Math.floor(difference / hour);
+    return `Updated ${count}h ago`;
+  }
+
+  if (difference < 7 * day) {
+    const count = Math.floor(difference / day);
+    return `Updated ${count}d ago`;
+  }
+
+  return `Updated ${new Date(timestamp).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year:
+      new Date(timestamp).getFullYear() !==
+      new Date().getFullYear()
+        ? "numeric"
+        : undefined,
+  })}`;
+}
+
 function getErrorMessage(error) {
   return (
     error?.response?.data?.message ||
     error?.response?.data?.error ||
     error?.message ||
-    "Unable to load your projects."
+    "Something went wrong. Please try again."
   );
 }
 
-/**
- * Build workspace URL.
- */
 function getWorkspacePath(id) {
-  if (!id) {
-    return "/workspace";
-  }
+  if (!id) return "/workspace";
+  return `/workspace?workspace=${encodeURIComponent(id)}`;
+}
 
-  return `/workspace?workspace=${encodeURIComponent(
-    id
-  )}`;
+function normalizeWorkspaceResponse(response) {
+  if (!response) return null;
+  return response.data?.workspace ?? response.data?.data?.workspace ??
+    response.workspace ?? response.data?.data ?? response.data ?? response;
 }
 
 /* ============================================================
@@ -316,139 +243,58 @@ function getWorkspacePath(id) {
 
 function ProjectSkeleton() {
   return (
-    <article
-      className="project-card project-card-skeleton"
-      aria-hidden="true"
-    >
-      <div className="project-card-top">
-        <span className="project-skeleton-icon" />
-        <span className="project-skeleton-status" />
+    <article className="premium-project-card premium-project-skeleton" aria-hidden="true">
+      <div className="premium-project-top">
+        <span className="premium-skeleton-block premium-skeleton-icon" />
+        <span className="premium-skeleton-block premium-skeleton-pill" />
       </div>
-
-      <span className="project-skeleton-title" />
-
-      <span className="project-skeleton-line" />
-      <span className="project-skeleton-line project-skeleton-line-short" />
-
-      <div className="project-card-meta">
-        <span className="project-skeleton-meta" />
-        <span className="project-skeleton-meta" />
+      <span className="premium-skeleton-block premium-skeleton-title" />
+      <span className="premium-skeleton-block premium-skeleton-line" />
+      <span className="premium-skeleton-block premium-skeleton-line premium-skeleton-short" />
+      <div className="premium-skeleton-meta">
+        <span className="premium-skeleton-block" />
+        <span className="premium-skeleton-block" />
       </div>
-
-      <span className="project-skeleton-button" />
+      <span className="premium-skeleton-block premium-skeleton-button" />
     </article>
   );
 }
 
 /* ============================================================
-   SUMMARY CARD
+   SUMMARY METRIC
 ============================================================ */
 
-function SummaryCard({
-  icon,
-  value,
-  label,
-  className = "",
-}) {
+function SummaryCard({ icon, label, value, tone = "violet" }) {
   return (
-    <div
-      className={[
-        "project-summary-card",
-        className,
-      ]
-        .filter(Boolean)
-        .join(" ")}
-    >
-      <div
-        className="project-summary-icon"
-        aria-hidden="true"
-      >
+    <article className={`premium-summary-card premium-tone-${tone}`}>
+      <div className="premium-summary-icon" aria-hidden="true">
         {icon}
       </div>
-
-      <div className="project-summary-content">
-        <strong>
-          {Number(
-            value || 0
-          ).toLocaleString()}
-        </strong>
-
+      <div className="premium-summary-copy">
         <span>{label}</span>
+        <strong>{Number(value || 0).toLocaleString()}</strong>
       </div>
-    </div>
+      <div className="premium-summary-decoration" aria-hidden="true" />
+    </article>
   );
 }
 
 /* ============================================================
-   EMPTY STATE
+   STATUS PILL
 ============================================================ */
 
-function ProjectsEmptyState({
-  searching,
-  onClear,
-  onCreate,
-}) {
-  if (searching) {
-    return (
-      <Card className="projects-empty-state">
-        <div
-          className="projects-empty-icon"
-          aria-hidden="true"
-        >
-          <Search size={30} />
-        </div>
-
-        <h2>
-          No projects found
-        </h2>
-
-        <p>
-          We couldn't find any projects
-          matching your search.
-        </p>
-
-        <Button
-          variant="secondary"
-          onClick={onClear}
-        >
-          <X size={16} />
-          Clear search
-        </Button>
-      </Card>
-    );
-  }
+function StatusPill({ status }) {
+  const labels = {
+    active: "Active",
+    recent: "Recent",
+    quiet: "Quiet",
+  };
 
   return (
-    <Card className="projects-empty-state">
-      <div
-        className="projects-empty-icon"
-        aria-hidden="true"
-      >
-        <FolderKanban size={32} />
-      </div>
-
-      <span className="eyebrow">
-        GET STARTED
-      </span>
-
-      <h2>
-        Create your first project
-      </h2>
-
-      <p>
-        Projects give your team a focused
-        workspace for documents,
-        collaborators and ongoing work.
-      </p>
-
-      <Button
-        variant="primary"
-        onClick={onCreate}
-      >
-        <Plus size={16} />
-        Create project
-      </Button>
-    </Card>
+    <span className={`premium-status premium-status-${status}`}>
+      <span className="premium-status-dot" aria-hidden="true" />
+      {labels[status] ?? "Unknown"}
+    </span>
   );
 }
 
@@ -456,133 +302,282 @@ function ProjectsEmptyState({
    PROJECT CARD
 ============================================================ */
 
-function ProjectCard({
-  workspace,
-  onOpen,
-}) {
-  const id =
-    getId(workspace);
+function ProjectCard({ workspace, index, onOpen }) {
+  const id = getId(workspace);
+  const name = getName(workspace);
+  const description = getDescription(workspace);
+  const documents = getDocuments(workspace);
+  const members = getMembers(workspace);
+  const status = getStatus(workspace);
+  const createdAt = getDateValue(workspace, "created");
 
-  const name =
-    getName(workspace);
-
-  const description =
-    getDescription(workspace);
-
-  const documents =
-    getDocuments(workspace);
-
-  const members =
-    getMembers(workspace);
-
-  const status =
-    getStatus(workspace);
-
-  const activity =
-    getActivityLabel(workspace);
+  const initial = name.charAt(0).toUpperCase();
+  const palette = ["violet", "blue", "mint", "amber"];
+  const tone = palette[index % palette.length];
 
   return (
     <article
-      className="project-card"
+      className={`premium-project-card premium-project-${tone}`}
       data-project-id={id || undefined}
     >
-      <div className="project-card-top">
-        <div
-          className="project-icon"
-          aria-hidden="true"
-        >
-          <FolderKanban
-            size={19}
-          />
+      <button
+        type="button"
+        className="premium-project-card-open"
+        onClick={() => onOpen(workspace)}
+        disabled={!id}
+        aria-label={`Open ${name}`}
+      >
+        <span className="premium-project-open-label">
+          Open workspace <ArrowUpRight size={15} />
+        </span>
+      </button>
+
+      <div className="premium-project-top">
+        <div className={`premium-project-mark premium-mark-${tone}`} aria-hidden="true">
+          <span>{initial}</span>
+          <div className="premium-project-mark-glow" />
+        </div>
+        <StatusPill status={status} />
+      </div>
+
+      <div className="premium-project-title-row">
+        <h2 title={name}>{name}</h2>
+        <span className="premium-project-arrow" aria-hidden="true">
+          <ArrowUpRight size={18} />
+        </span>
+      </div>
+
+      <p className="premium-project-description">{description}</p>
+
+      <div className="premium-project-stats">
+        <div className="premium-project-stat">
+          <span className="premium-stat-icon">
+            <FileText size={15} />
+          </span>
+          <span>
+            <strong>{documents.toLocaleString()}</strong>
+            <small>{documents === 1 ? "document" : "documents"}</small>
+          </span>
         </div>
 
-        <span
-          className={[
-            "project-status",
-            `project-status-${status.toLowerCase()}`,
-          ].join(" ")}
-        >
-          <span
-            className="project-status-dot"
-            aria-hidden="true"
-          />
-
-          {status}
-        </span>
+        <div className="premium-project-stat">
+          <span className="premium-stat-icon premium-stat-icon-blue">
+            <Users size={15} />
+          </span>
+          <span>
+            <strong>{members.toLocaleString()}</strong>
+            <small>{members === 1 ? "member" : "members"}</small>
+          </span>
+        </div>
       </div>
 
-      <div className="project-card-heading">
-        <h2 title={name}>
-          {name}
-        </h2>
+      <div className="premium-project-divider" />
 
-        <span
-          className="project-card-arrow"
-          aria-hidden="true"
-        >
-          <ArrowUpRight
-            size={17}
-          />
+      <div className="premium-project-footer">
+        <span className="premium-project-activity">
+          <Clock3 size={14} aria-hidden="true" />
+          {getRelativeActivity(workspace)}
         </span>
-      </div>
-
-      <p className="project-card-description">
-        {description}
-      </p>
-
-      <div className="project-card-meta">
-        <span>
-          <FileText
-            size={14}
-            aria-hidden="true"
-          />
-
-          {documents.toLocaleString()}{" "}
-          {documents === 1
-            ? "document"
-            : "documents"}
-        </span>
-
-        <span>
-          <Users
-            size={14}
-            aria-hidden="true"
-          />
-
-          {members.toLocaleString()}{" "}
-          {members === 1
-            ? "member"
-            : "members"}
-        </span>
-      </div>
-
-      <div className="project-card-footer">
-        <span className="project-card-activity">
-          <Clock3
-            size={13}
-            aria-hidden="true"
-          />
-
-          {activity}
-        </span>
-
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() =>
-            onOpen(workspace)
-          }
-          disabled={!id}
-          aria-label={`Open ${name}`}
-        >
-          Open workspace
-          <ArrowUpRight
-            size={14}
-            aria-hidden="true"
-          />
-        </Button>
+        {createdAt > 0 && (
+          <span className="premium-project-created" title="Creation date">
+            <CalendarDays size={13} aria-hidden="true" />
+            {new Date(createdAt).toLocaleDateString(undefined, {
+              month: "short",
+              day: "numeric",
+            })}
+          </span>
+        )}
       </div>
     </article>
+  );
+}
+
+/* ============================================================
+   EMPTY STATE
+============================================================ */
+
+function EmptyState({ searching, onClear, onCreate }) {
+  return (
+    <section className="premium-project-empty">
+      <div className="premium-empty-art" aria-hidden="true">
+        <div className="premium-empty-art-circle premium-empty-art-circle-one" />
+        <div className="premium-empty-art-circle premium-empty-art-circle-two" />
+        <div className="premium-empty-art-icon">
+          {searching ? <Search size={31} /> : <Layers3 size={34} />}
+        </div>
+        <Sparkles className="premium-empty-sparkle" size={21} />
+      </div>
+
+      <span className="premium-section-kicker">
+        {searching ? "SEARCH RESULTS" : "YOUR WORKSPACE STARTS HERE"}
+      </span>
+
+      <h2>{searching ? "No matching projects" : "Make room for great work."}</h2>
+
+      <p>
+        {searching
+          ? "Try another name or description, or clear your filters to see all your projects."
+          : "Create a workspace to bring your documents, teammates, and ideas together in one organized place."}
+      </p>
+
+      <div className="premium-empty-actions">
+        {searching ? (
+          <Button variant="secondary" onClick={onClear}>
+            <X size={16} /> Clear filters
+          </Button>
+        ) : (
+          <Button variant="primary" onClick={onCreate}>
+            <Plus size={17} /> Create a workspace
+          </Button>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/* ============================================================
+   CREATE WORKSPACE MODAL
+============================================================ */
+
+function CreateWorkspaceModal({
+  open,
+  creating,
+  error,
+  onClose,
+  onSubmit,
+}) {
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+
+  React.useEffect(() => {
+    if (open) {
+      setName("");
+      setDescription("");
+    }
+  }, [open]);
+
+  React.useEffect(() => {
+    if (!open) return undefined;
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape" && !creating) onClose();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [open, creating, onClose]);
+
+  if (!open) return null;
+
+  const submit = (event) => {
+    event.preventDefault();
+    onSubmit({
+      name: name.trim(),
+      description: description.trim(),
+    });
+  };
+
+  return (
+    <div
+      className="premium-modal-backdrop"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !creating) onClose();
+      }}
+    >
+      <section
+        className="premium-create-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="premium-create-title"
+      >
+        <div className="premium-modal-top">
+          <div className="premium-modal-icon">
+            <FolderKanban size={22} />
+          </div>
+          <button
+            type="button"
+            className="premium-modal-close"
+            onClick={onClose}
+            disabled={creating}
+            aria-label="Close dialog"
+          >
+            <X size={19} />
+          </button>
+        </div>
+
+        <span className="premium-section-kicker">NEW WORKSPACE</span>
+        <h2 id="premium-create-title">Start something brilliant.</h2>
+        <p className="premium-modal-description">
+          Give your team a dedicated space to collaborate and create.
+        </p>
+
+        {error && (
+          <div className="premium-inline-error" role="alert">
+            <AlertCircle size={16} />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <form onSubmit={submit}>
+          <label className="premium-form-field">
+            <span>Workspace name <b>*</b></span>
+            <input
+              autoFocus
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="e.g. Product launch"
+              maxLength={MAX_NAME_LENGTH}
+              required
+              minLength={1}
+              disabled={creating}
+            />
+            <small>{name.length}/{MAX_NAME_LENGTH}</small>
+          </label>
+
+          <label className="premium-form-field">
+            <span>Description <em>Optional</em></span>
+            <textarea
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder="What will your team work on here?"
+              maxLength={MAX_DESCRIPTION_LENGTH}
+              rows={3}
+              disabled={creating}
+            />
+            <small>{description.length}/{MAX_DESCRIPTION_LENGTH}</small>
+          </label>
+
+          <div className="premium-modal-actions">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onClose}
+              disabled={creating}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={creating || !name.trim()}
+            >
+              {creating ? (
+                <>
+                  <LoaderCircle className="premium-spin" size={16} />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Plus size={16} />
+                  Create workspace
+                </>
+              )}
+            </Button>
+          </div>
+        </form>
+      </section>
+    </div>
   );
 }
 
@@ -591,8 +586,7 @@ function ProjectCard({
 ============================================================ */
 
 export default function Projects() {
-  const navigate =
-    useNavigate();
+  const navigate = useNavigate();
 
   const {
     workspaces = [],
@@ -602,767 +596,446 @@ export default function Projects() {
     createWorkspace,
   } = useWorkspace();
 
-  /* ==========================================================
-     STATE
-  ========================================================== */
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState(DEFAULT_SORT);
+  const [filter, setFilter] = useState("all");
+  const [creating, setCreating] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [actionError, setActionError] = useState("");
+  const [notice, setNotice] = useState("");
 
-  const [
-    query,
-    setQuery,
-  ] = useState("");
+  const normalizedWorkspaces = useMemo(() => {
+    if (!Array.isArray(workspaces)) return [];
+    return workspaces.filter(
+      (workspace) => workspace && typeof workspace === "object"
+    );
+  }, [workspaces]);
 
-  const [
-    sort,
-    setSort,
-  ] = useState(DEFAULT_SORT);
+  const summary = useMemo(() => {
+    const now = Date.now();
 
-  const [
-    creating,
-    setCreating,
-  ] = useState(false);
+    return {
+      projects: normalizedWorkspaces.length,
+      documents: normalizedWorkspaces.reduce(
+        (total, workspace) => total + getDocuments(workspace),
+        0
+      ),
+      members: normalizedWorkspaces.reduce(
+        (total, workspace) => total + getMembers(workspace),
+        0
+      ),
+      active: normalizedWorkspaces.filter(
+        (workspace) => getStatus(workspace, now) === "active"
+      ).length,
+    };
+  }, [normalizedWorkspaces]);
 
-  const [
-    refreshing,
-    setRefreshing,
-  ] = useState(false);
+  const projects = useMemo(() => {
+    const search = query.trim().toLocaleLowerCase();
 
-  const [
-    actionError,
-    setActionError,
-  ] = useState("");
+    let result = normalizedWorkspaces.filter((workspace) => {
+      const status = getStatus(workspace);
 
-  /* ==========================================================
-     NORMALIZE WORKSPACES
-  ========================================================== */
+      if (filter !== "all" && status !== filter) return false;
+      if (!search) return true;
 
-  const normalizedWorkspaces =
-    useMemo(() => {
-      if (
-        !Array.isArray(
-          workspaces
-        )
-      ) {
-        return [];
+      const owner = workspace.owner;
+      const ownerName =
+        typeof owner === "object"
+          ? owner?.name ?? owner?.displayName ?? owner?.username
+          : owner;
+
+      const searchable = [
+        getName(workspace),
+        getDescription(workspace),
+        ownerName,
+        owner?.email,
+        ...(Array.isArray(workspace.tags) ? workspace.tags : []),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLocaleLowerCase();
+
+      return searchable.includes(search);
+    });
+
+    result = [...result].sort((first, second) => {
+      switch (sort) {
+        case "name":
+          return getName(first).localeCompare(getName(second), undefined, {
+            sensitivity: "base",
+          });
+        case "documents":
+          return getDocuments(second) - getDocuments(first);
+        case "members":
+          return getMembers(second) - getMembers(first);
+        case "created":
+          return getDateValue(second, "created") - getDateValue(first, "created");
+        case "updated":
+        default:
+          return getDateValue(second) - getDateValue(first);
+      }
+    });
+
+    return result;
+  }, [normalizedWorkspaces, query, sort, filter]);
+
+  const handleOpen = useCallback(
+    (workspace) => {
+      const id = getId(workspace);
+
+      if (!id) {
+        setActionError("This workspace is missing its ID and cannot be opened.");
+        return;
       }
 
-      return workspaces.filter(
-        (workspace) =>
-          workspace &&
-          typeof workspace ===
-            "object"
-      );
-    }, [workspaces]);
+      navigate(getWorkspacePath(id));
+    },
+    [navigate]
+  );
 
-  /* ==========================================================
-     SUMMARY
-  ========================================================== */
+  const handleRefresh = useCallback(async () => {
+    if (refreshing || loading || typeof loadWorkspaces !== "function") return;
 
-  const summary =
-    useMemo(() => {
-      const projects =
-        normalizedWorkspaces.length;
+    setActionError("");
+    setNotice("");
+    setRefreshing(true);
 
-      const documents =
-        normalizedWorkspaces.reduce(
-          (
-            total,
-            workspace
-          ) =>
-            total +
-            getDocuments(
-              workspace
-            ),
-          0
-        );
+    try {
+      await loadWorkspaces();
+      setNotice("Your workspaces are up to date.");
+    } catch (refreshError) {
+      setActionError(getErrorMessage(refreshError));
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshing, loading, loadWorkspaces]);
 
-      const members =
-        normalizedWorkspaces.reduce(
-          (
-            total,
-            workspace
-          ) =>
-            total +
-            getMembers(
-              workspace
-            ),
-          0
-        );
-
-      const active =
-        normalizedWorkspaces.filter(
-          (workspace) =>
-            getStatus(
-              workspace
-            ) === "Active"
-        ).length;
-
-      return {
-        projects,
-        documents,
-        members,
-        active,
-      };
-    }, [
-      normalizedWorkspaces,
-    ]);
-
-  /* ==========================================================
-     FILTER + SORT
-  ========================================================== */
-
-  const projects =
-    useMemo(() => {
-      const search =
-        query
-          .trim()
-          .toLowerCase();
-
-      let result =
-        normalizedWorkspaces;
-
-      if (search) {
-        result =
-          normalizedWorkspaces.filter(
-            (workspace) => {
-              const searchableText =
-                [
-                  getName(
-                    workspace
-                  ),
-                  getDescription(
-                    workspace
-                  ),
-                  workspace.owner
-                    ?.name,
-                  workspace.owner
-                    ?.email,
-                ]
-                  .filter(Boolean)
-                  .join(" ")
-                  .toLowerCase();
-
-              return searchableText.includes(
-                search
-              );
-            }
-          );
+  const handleCreate = useCallback(
+    async (payload) => {
+      if (creating || typeof createWorkspace !== "function") {
+        setActionError("Workspace creation is not available right now.");
+        return;
       }
 
-      return [...result].sort(
-        (first, second) => {
-          switch (sort) {
-            case "name":
-              return getName(
-                first
-              ).localeCompare(
-                getName(
-                  second
-                ),
-                undefined,
-                {
-                  sensitivity:
-                    "base",
-                }
-              );
+      if (!payload.name || payload.name.length > MAX_NAME_LENGTH) {
+        setActionError(`Workspace name must be between 1 and ${MAX_NAME_LENGTH} characters.`);
+        return;
+      }
 
-            case "documents":
-              return (
-                getDocuments(
-                  second
-                ) -
-                getDocuments(
-                  first
-                )
-              );
+      setCreating(true);
+      setActionError("");
+      setNotice("");
 
-            case "members":
-              return (
-                getMembers(
-                  second
-                ) -
-                getMembers(
-                  first
-                )
-              );
+      try {
+        const response = await createWorkspace({
+          name: payload.name,
+          description: payload.description,
+        });
 
-            case "updated":
-            default:
-              return (
-                getTimestamp(
-                  second
-                ) -
-                getTimestamp(
-                  first
-                )
-              );
-          }
-        }
-      );
-    }, [
-      normalizedWorkspaces,
-      query,
-      sort,
-    ]);
+        const created = normalizeWorkspaceResponse(response);
+        const id = getId(created);
 
-  /* ==========================================================
-     CREATE PROJECT
-  ========================================================== */
+        setModalOpen(false);
 
-  const handleCreate =
-    useCallback(
-      async () => {
-        if (
-          creating ||
-          typeof createWorkspace !==
-            "function"
-        ) {
-          return;
-        }
-
-        setActionError("");
-
-        const name =
-          window.prompt(
-            "Enter project name"
-          );
-
-        const trimmedName =
-          name?.trim();
-
-        if (!trimmedName) {
-          return;
-        }
-
-        if (
-          trimmedName.length >
-          100
-        ) {
-          setActionError(
-            "Project name must be 100 characters or fewer."
-          );
-
-          return;
-        }
-
-        setCreating(true);
-
-        try {
-          const created =
-            await createWorkspace({
-              name: trimmedName,
-            });
-
-          const id =
-            getId(created);
-
-          /*
-           * Prefer opening the newly-created
-           * project immediately.
-           */
-          if (id) {
-            navigate(
-              getWorkspacePath(
-                id
-              )
-            );
-          }
-
-          /*
-           * Refresh only after creation.
-           * This keeps the project list accurate
-           * when the user stays on this page.
-           */
-          if (
-            typeof loadWorkspaces ===
-            "function"
-          ) {
+        if (typeof loadWorkspaces === "function") {
+          try {
             await loadWorkspaces();
+          } catch {
+            // Creation succeeded; a refresh failure should not hide that success.
           }
-        } catch (createError) {
-          console.error(
-            "SyncDoc: create workspace failed:",
-            createError
-          );
-
-          setActionError(
-            getErrorMessage(
-              createError
-            )
-          );
-        } finally {
-          setCreating(false);
-        }
-      },
-      [
-        creating,
-        createWorkspace,
-        loadWorkspaces,
-        navigate,
-      ]
-    );
-
-  /* ==========================================================
-     OPEN PROJECT
-  ========================================================== */
-
-  const handleOpen =
-    useCallback(
-      (workspace) => {
-        const id =
-          getId(workspace);
-
-        if (!id) {
-          setActionError(
-            "This project cannot be opened because its ID is missing."
-          );
-
-          return;
         }
 
-        navigate(
-          getWorkspacePath(id)
-        );
-      },
-      [navigate]
-    );
-
-  /* ==========================================================
-     REFRESH
-  ========================================================== */
-
-  const handleRefresh =
-    useCallback(
-      async () => {
-        if (
-          refreshing ||
-          typeof loadWorkspaces !==
-            "function"
-        ) {
-          return;
+        if (id) {
+          navigate(getWorkspacePath(id));
+        } else {
+          setNotice(`“${payload.name}” was created. Your project list will refresh shortly.`);
         }
+      } catch (createError) {
+        setActionError(getErrorMessage(createError));
+      } finally {
+        setCreating(false);
+      }
+    },
+    [creating, createWorkspace, loadWorkspaces, navigate]
+  );
 
-        setActionError("");
-        setRefreshing(true);
+  const clearFilters = useCallback(() => {
+    setQuery("");
+    setFilter("all");
+    setSort(DEFAULT_SORT);
+  }, []);
 
-        try {
-          await loadWorkspaces();
-        } catch (refreshError) {
-          console.error(
-            "SyncDoc: refresh workspaces failed:",
-            refreshError
-          );
-
-          setActionError(
-            getErrorMessage(
-              refreshError
-            )
-          );
-        } finally {
-          setRefreshing(false);
-        }
-      },
-      [
-        refreshing,
-        loadWorkspaces,
-      ]
-    );
-
-  /* ==========================================================
-     CLEAR SEARCH
-  ========================================================== */
-
-  const handleClearSearch =
-    useCallback(() => {
-      setQuery("");
-    }, []);
-
-  const hasSearch =
-    Boolean(
-      query.trim()
-    );
-
-  const displayError =
-    actionError ||
-    (error
-      ? getErrorMessage(error)
-      : "");
-
-  /* ==========================================================
-     RENDER
-  ========================================================== */
+  const hasFilters = Boolean(query.trim()) || filter !== "all";
+  const displayError = actionError || (error ? getErrorMessage(error) : "");
 
   return (
-    <main
-      className="page projects-page"
-      aria-labelledby="projects-title"
-    >
-      {/* ======================================================
-          HEADER
-      ====================================================== */}
+    <main className="page projects-page premium-projects-page" aria-labelledby="projects-title">
+      <div className="premium-projects-ambient" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+      </div>
 
-      <header className="page-heading projects-header">
-        <div className="page-heading-content">
-          <div className="eyebrow-row">
-            <span className="eyebrow">
-              WORKSPACES
+      <header className="premium-projects-header">
+        <div className="premium-heading-copy">
+          <div className="premium-heading-eyebrow">
+            <span className="premium-eyebrow-icon">
+              <Layers3 size={14} />
             </span>
-
-            {summary.active >
-              0 && (
-              <span className="projects-live-badge">
-                <span
-                  className="status-dot"
-                  aria-hidden="true"
-                />
-
-                {summary.active}{" "}
-                active today
-              </span>
-            )}
+            <span>YOUR WORKSPACE</span>
+            <span className="premium-eyebrow-divider" />
+            <span className="premium-heading-subtle">SyncDoc projects</span>
           </div>
 
           <h1 id="projects-title">
-            Projects
+            Make space for
+            <span> great work.</span>
           </h1>
 
           <p>
-            Organize documents,
-            collaborators and ongoing
-            work in focused SyncDoc
-            workspaces.
+            Your team’s documents, ideas, and momentum — all in one beautifully
+            organized place.
           </p>
+
+          <div className="premium-header-trust">
+            <span><CheckCircle2 size={15} /> Built for collaboration</span>
+            <span><Sparkles size={15} /> Made to stay organized</span>
+          </div>
         </div>
 
-        <div className="page-heading-actions">
+        <div className="premium-header-actions">
           <Button
             variant="secondary"
             size="md"
-            onClick={
-              handleRefresh
-            }
-            disabled={
-              loading ||
-              refreshing
-            }
-            aria-label="Refresh projects"
+            onClick={handleRefresh}
+            disabled={loading || refreshing}
+            aria-label="Refresh workspaces"
           >
             <RefreshCw
               size={15}
-              className={
-                loading ||
-                refreshing
-                  ? "is-spinning"
-                  : ""
-              }
-              aria-hidden="true"
+              className={loading || refreshing ? "premium-spin" : ""}
             />
-
-            {refreshing
-              ? "Refreshing..."
-              : "Refresh"}
+            {refreshing ? "Refreshing..." : "Refresh"}
           </Button>
 
           <Button
             variant="primary"
             size="md"
-            onClick={
-              handleCreate
-            }
+            onClick={() => {
+              setActionError("");
+              setModalOpen(true);
+            }}
             disabled={creating}
           >
-            <Plus
-              size={16}
-              aria-hidden="true"
-            />
-
-            {creating
-              ? "Creating..."
-              : "New project"}
+            <Plus size={17} />
+            New workspace
           </Button>
         </div>
       </header>
 
-      {/* ======================================================
-          ERROR
-      ====================================================== */}
-
       {displayError && (
-        <div
-          className="page-alert"
-          role="alert"
-        >
-          <AlertCircle
-            size={17}
-            aria-hidden="true"
-          />
-
-          <span>
-            {displayError}
-          </span>
-
+        <div className="premium-page-alert" role="alert">
+          <AlertCircle size={17} />
+          <span>{displayError}</span>
           <button
             type="button"
-            className="page-alert-dismiss"
-            onClick={() =>
-              setActionError("")
-            }
+            onClick={() => setActionError("")}
             aria-label="Dismiss error"
           >
-            <X
-              size={16}
-              aria-hidden="true"
-            />
+            <X size={16} />
           </button>
         </div>
       )}
 
-      {/* ======================================================
-          SUMMARY
-      ====================================================== */}
+      {notice && !displayError && (
+        <div className="premium-page-notice" role="status">
+          <CheckCircle2 size={17} />
+          <span>{notice}</span>
+          <button type="button" onClick={() => setNotice("")} aria-label="Dismiss message">
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
-      <section
-        className="project-summary"
-        aria-label="Project overview"
-      >
+      <section className="premium-summary-grid" aria-label="Workspace overview">
         <SummaryCard
-          icon={
-            <FolderKanban
-              size={19}
-            />
-          }
-          value={
-            summary.projects
-          }
-          label="Projects"
+          icon={<FolderKanban size={20} />}
+          value={summary.projects}
+          label="Total workspaces"
+          tone="violet"
         />
-
         <SummaryCard
-          icon={
-            <FileText
-              size={19}
-            />
-          }
-          value={
-            summary.documents
-          }
-          label="Documents"
+          icon={<FileText size={20} />}
+          value={summary.documents}
+          label="Total documents"
+          tone="blue"
         />
-
         <SummaryCard
-          icon={
-            <Users
-              size={19}
-            />
-          }
-          value={
-            summary.members
-          }
-          label="Members"
+          icon={<Users size={20} />}
+          value={summary.members}
+          label="Team members"
+          tone="mint"
         />
-
         <SummaryCard
-          icon={
-            <CheckCircle2
-              size={19}
-            />
-          }
-          value={
-            summary.active
-          }
+          icon={<CheckCircle2 size={20} />}
+          value={summary.active}
           label="Active today"
+          tone="amber"
         />
       </section>
 
-      {/* ======================================================
-          TOOLBAR
-      ====================================================== */}
-
-      <Card className="projects-toolbar-card">
-        <div className="projects-toolbar">
-          <div className="project-search">
-            <Search
-              size={16}
-              aria-hidden="true"
-            />
-
-            <input
-              type="search"
-              value={query}
-              onChange={(event) =>
-                setQuery(
-                  event.target.value
-                )
-              }
-              placeholder="Search projects..."
-              aria-label="Search projects"
-            />
-
-            {hasSearch && (
-              <button
-                type="button"
-                className="project-search-clear"
-                onClick={
-                  handleClearSearch
-                }
-                aria-label="Clear project search"
-              >
-                <X
-                  size={15}
-                  aria-hidden="true"
-                />
-              </button>
-            )}
+      <section className="premium-projects-content" aria-label="Your projects">
+        <div className="premium-section-heading">
+          <div>
+            <span className="premium-section-kicker">YOUR COLLECTION</span>
+            <h2>All workspaces <span>{projects.length}</span></h2>
+            <p>Pick up where your team left off.</p>
           </div>
 
-          <div className="project-toolbar-right">
-            {hasSearch && (
-              <span className="project-result-count">
-                {projects.length}{" "}
-                {projects.length ===
-                1
-                  ? "result"
-                  : "results"}
-              </span>
-            )}
-
-            <label className="project-control">
-              <span>
-                Sort
-              </span>
-
-              <select
-                value={sort}
-                onChange={(
-                  event
-                ) =>
-                  setSort(
-                    event.target
-                      .value
-                  )
-                }
-                aria-label="Sort projects"
-              >
-                <option value="updated">
-                  Recently updated
-                </option>
-
-                <option value="name">
-                  Name
-                </option>
-
-                <option value="documents">
-                  Documents
-                </option>
-
-                <option value="members">
-                  Members
-                </option>
-              </select>
-            </label>
+          <div className="premium-view-label">
+            <LayoutGrid size={16} />
+            <span>Grid view</span>
           </div>
         </div>
-      </Card>
 
-      {/* ======================================================
-          CONTENT
-      ====================================================== */}
+        <Card className="premium-project-toolbar-card">
+          <div className="premium-project-toolbar">
+            <label className="premium-project-search">
+              <Search size={18} aria-hidden="true" />
+              <input
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search by workspace, description, or owner..."
+                aria-label="Search workspaces"
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  aria-label="Clear search"
+                >
+                  <X size={15} />
+                </button>
+              )}
+              <kbd>⌘ K</kbd>
+            </label>
 
-      {loading &&
-      !normalizedWorkspaces.length ? (
-        <section
-          className="project-grid"
-          aria-label="Loading projects"
-          aria-busy="true"
-        >
-          <ProjectSkeleton />
-          <ProjectSkeleton />
-          <ProjectSkeleton />
-          <ProjectSkeleton />
-        </section>
-      ) : !projects.length ? (
-        <ProjectsEmptyState
-          searching={hasSearch}
-          onClear={
-            handleClearSearch
-          }
-          onCreate={
-            handleCreate
-          }
-        />
-      ) : (
-        <section
-          className="project-grid"
-          aria-label="Projects"
-        >
-          {projects.map(
-            (workspace, index) => {
-              const id =
-                getId(
-                  workspace
-                );
+            <div className="premium-project-toolbar-controls">
+              <label className="premium-select-control">
+                <ListFilter size={15} aria-hidden="true" />
+                <select
+                  value={filter}
+                  onChange={(event) => setFilter(event.target.value)}
+                  aria-label="Filter by activity"
+                >
+                  {FILTER_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={14} aria-hidden="true" />
+              </label>
 
-              /*
-               * API records should always have
-               * an ID. The index fallback prevents
-               * React warnings if malformed data
-               * reaches the UI.
-               */
-              const key =
-                id ||
-                `workspace-${index}`;
-
-              return (
-                <ProjectCard
-                  key={key}
-                  workspace={
-                    workspace
-                  }
-                  onOpen={
-                    handleOpen
-                  }
-                />
-              );
-            }
-          )}
-        </section>
-      )}
-
-      {/* ======================================================
-          FOOTER STATUS
-      ====================================================== */}
-
-      {!loading &&
-        normalizedWorkspaces.length >
-          0 && (
-          <div className="projects-footer-summary">
-            <span>
-              Showing{" "}
-              <strong>
-                {projects.length}
-              </strong>{" "}
-              of{" "}
-              <strong>
-                {
-                  normalizedWorkspaces.length
-                }
-              </strong>{" "}
-              projects
-            </span>
-
-            {hasSearch && (
-              <button
-                type="button"
-                className="projects-clear-filter"
-                onClick={
-                  handleClearSearch
-                }
-              >
-                Clear search
-              </button>
-            )}
+              <label className="premium-select-control">
+                <ArrowDownAZ size={15} aria-hidden="true" />
+                <select
+                  value={sort}
+                  onChange={(event) => setSort(event.target.value)}
+                  aria-label="Sort workspaces"
+                >
+                  {SORT_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={14} aria-hidden="true" />
+              </label>
+            </div>
           </div>
+
+          {(hasFilters || projects.length > 0) && (
+            <div className="premium-toolbar-bottom">
+              <span>
+                {hasFilters ? (
+                  <>
+                    <strong>{projects.length}</strong> matching{" "}
+                    {projects.length === 1 ? "workspace" : "workspaces"}
+                  </>
+                ) : (
+                  <>
+                    Showing <strong>{projects.length}</strong>{" "}
+                    {projects.length === 1 ? "workspace" : "workspaces"}
+                  </>
+                )}
+              </span>
+              {hasFilters && (
+                <button type="button" onClick={clearFilters}>
+                  Clear filters <X size={13} />
+                </button>
+              )}
+            </div>
+          )}
+        </Card>
+
+        {loading && normalizedWorkspaces.length === 0 ? (
+          <section className="premium-project-grid" aria-label="Loading workspaces" aria-busy="true">
+            {Array.from({ length: 6 }, (_, index) => (
+              <ProjectSkeleton key={`skeleton-${index}`} />
+            ))}
+          </section>
+        ) : projects.length === 0 ? (
+          <EmptyState
+            searching={hasFilters}
+            onClear={clearFilters}
+            onCreate={() => {
+              setActionError("");
+              setModalOpen(true);
+            }}
+          />
+        ) : (
+          <section className="premium-project-grid" aria-label="Workspace list">
+            {projects.map((workspace, index) => (
+              <ProjectCard
+                key={getId(workspace) || `workspace-${index}`}
+                workspace={workspace}
+                index={index}
+                onOpen={handleOpen}
+              />
+            ))}
+          </section>
         )}
+
+        {!loading && normalizedWorkspaces.length > 0 && (
+          <footer className="premium-projects-footer">
+            <span>
+              <span className="premium-footer-status-dot" />
+              All changes are synced with your workspace
+            </span>
+            <span>
+              {projects.length} of {normalizedWorkspaces.length}{" "}
+              {normalizedWorkspaces.length === 1 ? "workspace" : "workspaces"}
+            </span>
+          </footer>
+        )}
+      </section>
+
+      <CreateWorkspaceModal
+        open={modalOpen}
+        creating={creating}
+        error={actionError}
+        onClose={() => {
+          if (!creating) {
+            setModalOpen(false);
+            setActionError("");
+          }
+        }}
+        onSubmit={handleCreate}
+      />
     </main>
   );
 }
-

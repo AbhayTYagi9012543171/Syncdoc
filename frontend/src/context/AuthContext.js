@@ -1,3 +1,4 @@
+
 import React, {
   createContext,
   useCallback,
@@ -9,32 +10,64 @@ import React, {
 
 import api from "../services/api";
 
-/* ============================================================
-   AUTH CONTEXT
-============================================================ */
+// ============================================================
+// AUTH CONTEXT
+// ============================================================
 
 const AuthContext = createContext(null);
 
-/* ============================================================
-   STORAGE KEYS
-============================================================ */
+// ============================================================
+// STORAGE KEYS
+// ============================================================
 
 const STORAGE_KEY = "syncdoc_user";
 const TOKEN_KEY = "syncdoc_token";
 const WORKSPACE_KEY = "syncdoc_active_workspace";
 
-/* ============================================================
-   STORAGE HELPERS
-============================================================ */
+// ============================================================
+// SHARED SESSION REQUEST
+//
+// Reuse an in-flight /auth/me request when StrictMode replays
+// an effect. The request is shared only for the same token.
+// ============================================================
 
-/**
- * Safely read localStorage.
- */
+let sessionRestorePromise = null;
+let sessionRestoreToken = null;
+
+function getCurrentUserOnce(token) {
+  if (
+    sessionRestorePromise &&
+    sessionRestoreToken === token
+  ) {
+    return sessionRestorePromise;
+  }
+
+  sessionRestoreToken = token;
+
+  const request = api.get("/auth/me");
+
+  const sharedRequest = request.finally(() => {
+    if (sessionRestorePromise === sharedRequest) {
+      sessionRestorePromise = null;
+      sessionRestoreToken = null;
+    }
+  });
+
+  sessionRestorePromise = sharedRequest;
+
+  return sharedRequest;
+}
+
+// ============================================================
+// STORAGE HELPERS
+// ============================================================
+
 function getStorageItem(key) {
   try {
-    if (typeof window === "undefined" || !window.localStorage) {
+    if (typeof window === "undefined") {
       return null;
     }
+
     return window.localStorage.getItem(key);
   } catch (error) {
     console.warn(
@@ -46,14 +79,12 @@ function getStorageItem(key) {
   }
 }
 
-/**
- * Safely write localStorage.
- */
 function setStorageItem(key, value) {
   try {
-    if (typeof window === "undefined" || !window.localStorage) {
+    if (typeof window === "undefined") {
       return false;
     }
+
     window.localStorage.setItem(key, value);
     return true;
   } catch (error) {
@@ -66,14 +97,12 @@ function setStorageItem(key, value) {
   }
 }
 
-/**
- * Safely remove localStorage item.
- */
 function removeStorageItem(key) {
   try {
-    if (typeof window === "undefined" || !window.localStorage) {
+    if (typeof window === "undefined") {
       return;
     }
+
     window.localStorage.removeItem(key);
   } catch (error) {
     console.warn(
@@ -83,24 +112,19 @@ function removeStorageItem(key) {
   }
 }
 
-/* ============================================================
-   USER STORAGE
-============================================================ */
+// ============================================================
+// USER STORAGE
+// ============================================================
 
-/**
- * Safely parse cached authenticated user.
- */
 function getStoredUser() {
-  const storedUser =
-    getStorageItem(STORAGE_KEY);
+  const storedUser = getStorageItem(STORAGE_KEY);
 
   if (!storedUser) {
     return null;
   }
 
   try {
-    const parsedUser =
-      JSON.parse(storedUser);
+    const parsedUser = JSON.parse(storedUser);
 
     if (
       parsedUser &&
@@ -111,7 +135,6 @@ function getStoredUser() {
     }
 
     removeStorageItem(STORAGE_KEY);
-
     return null;
   } catch (error) {
     console.warn(
@@ -120,38 +143,20 @@ function getStoredUser() {
     );
 
     removeStorageItem(STORAGE_KEY);
-
     return null;
   }
 }
 
-/* ============================================================
-   API RESPONSE HELPERS
-============================================================ */
+function hasStoredToken() {
+  const token = getStorageItem(TOKEN_KEY);
 
-/**
- * Extract user from common backend response structures.
- *
- * Supported:
- *
- * {
- *   user: {...}
- * }
- *
- * {
- *   data: {
- *     user: {...}
- *   }
- * }
- *
- * {
- *   data: {
- *     data: {
- *       user: {...}
- *     }
- *   }
- * }
- */
+  return Boolean(token && token.trim());
+}
+
+// ============================================================
+// API RESPONSE HELPERS
+// ============================================================
+
 function extractUser(data) {
   if (!data || typeof data !== "object") {
     return null;
@@ -173,9 +178,7 @@ function extractUser(data) {
     }
   }
 
-  /*
-   * Some APIs return the user object directly.
-   */
+  // Support APIs that return the user object directly.
   if (
     !data.success &&
     !data.message &&
@@ -189,9 +192,6 @@ function extractUser(data) {
   return null;
 }
 
-/**
- * Extract JWT/access token.
- */
 function extractToken(data) {
   if (!data || typeof data !== "object") {
     return null;
@@ -218,37 +218,26 @@ function extractToken(data) {
   return null;
 }
 
-/* ============================================================
-   ERROR HELPERS
-============================================================ */
+// ============================================================
+// ERROR HELPERS
+// ============================================================
 
-/**
- * Extract a useful API error message.
- */
 function getAuthErrorMessage(
   error,
   fallback = "Something went wrong. Please try again."
 ) {
-  const responseData =
-    error?.response?.data;
+  const responseData = error?.response?.data;
 
-  if (
-    typeof responseData?.message ===
-    "string"
-  ) {
+  if (typeof responseData?.message === "string") {
     return responseData.message;
   }
 
-  if (
-    typeof responseData?.error ===
-    "string"
-  ) {
+  if (typeof responseData?.error === "string") {
     return responseData.error;
   }
 
   if (
-    typeof error?.message ===
-    "string" &&
+    typeof error?.message === "string" &&
     error.message.trim()
   ) {
     return error.message;
@@ -257,199 +246,149 @@ function getAuthErrorMessage(
   return fallback;
 }
 
-/* ============================================================
-   AUTH STORAGE
-============================================================ */
+// ============================================================
+// AUTH STORAGE
+// ============================================================
 
-/**
- * Clear all SyncDoc authentication data.
- */
 function clearAuthStorage() {
   removeStorageItem(TOKEN_KEY);
   removeStorageItem(STORAGE_KEY);
   removeStorageItem(WORKSPACE_KEY);
 }
 
-/**
- * Check whether a token currently exists.
- */
-function hasStoredToken() {
-  const token =
-    getStorageItem(TOKEN_KEY);
+// ============================================================
+// AUTH PROVIDER
+// ============================================================
 
-  return Boolean(
-    typeof token === "string" &&
-    token.trim()
-  );
-}
+export function AuthProvider({ children }) {
+  const [user, setUserState] = useState(getStoredUser);
+  const [loading, setLoading] = useState(true);
 
-/* ============================================================
-   AUTH PROVIDER
-============================================================ */
+  // ----------------------------------------------------------
+  // SET AUTHENTICATED USER
+  // ----------------------------------------------------------
 
-export function AuthProvider({
-  children,
-}) {
-  /* ==========================================================
-     STATE
-  ========================================================== */
+  const setAuthenticatedUser = useCallback((nextUser) => {
+    if (
+      nextUser &&
+      typeof nextUser === "object" &&
+      !Array.isArray(nextUser)
+    ) {
+      setStorageItem(
+        STORAGE_KEY,
+        JSON.stringify(nextUser)
+      );
 
-  const [user, setUserState] =
-    useState(getStoredUser);
+      setUserState(nextUser);
+      return;
+    }
 
-  const [loading, setLoading] =
-    useState(true);
+    removeStorageItem(STORAGE_KEY);
+    setUserState(null);
+  }, []);
 
-  /* ==========================================================
-     AUTHENTICATED USER
-  ========================================================== */
+  // ----------------------------------------------------------
+  // CLEAR SESSION
+  // ----------------------------------------------------------
 
-  const setAuthenticatedUser =
-    useCallback((nextUser) => {
-      if (
-        nextUser &&
-        typeof nextUser === "object" &&
-        !Array.isArray(nextUser)
-      ) {
-        setUserState(nextUser);
+  const clearSession = useCallback(() => {
+    clearAuthStorage();
+    setUserState(null);
+  }, []);
 
-        setStorageItem(
-          STORAGE_KEY,
-          JSON.stringify(nextUser)
-        );
+  // ----------------------------------------------------------
+  // RESTORE SESSION
+  // ----------------------------------------------------------
+
+  useEffect(() => {
+    let active = true;
+
+    async function restoreSession() {
+      const token = getStorageItem(TOKEN_KEY);
+
+      if (!token || !token.trim()) {
+        if (active) {
+          setUserState(null);
+          setLoading(false);
+        }
 
         return;
       }
 
-      setUserState(null);
-      removeStorageItem(STORAGE_KEY);
-    }, []);
+      try {
+        const response = await getCurrentUserOnce(
+          token.trim()
+        );
 
-  /* ==========================================================
-     CLEAR SESSION
-  ========================================================== */
-
-  const clearSession =
-    useCallback(() => {
-      clearAuthStorage();
-      setUserState(null);
-    }, []);
-
-  /* ==========================================================
-     RESTORE SESSION
-  ========================================================== */
-
-  useEffect(() => {
-    let mounted = true;
-
-    const restoreSession =
-      async () => {
-        const token =
-          getStorageItem(TOKEN_KEY);
-
-        /*
-         * No token means there is no
-         * authenticated session.
-         */
-        if (!token) {
-          if (mounted) {
-            setUserState(null);
-            setLoading(false);
-          }
-
+        if (!active) {
           return;
         }
 
-        try {
-          /*
-           * /auth/me should be protected by
-           * the JWT middleware on the backend.
-           */
-          const response =
-            await api.get("/auth/me");
-
-          if (!mounted) {
-            return;
-          }
-
-          const data =
-            response?.data || {};
-
-          const authenticatedUser =
-            extractUser(data);
-
-          if (
-            authenticatedUser &&
-            typeof authenticatedUser ===
-            "object"
-          ) {
-            setAuthenticatedUser(
-              authenticatedUser
-            );
-          } else {
-            /*
-             * Token exists but backend did not
-             * return a valid user.
-             *
-             * Keep the token because this may
-             * be a backend response-shape issue.
-             */
-            console.warn(
-              "SyncDoc: /auth/me returned no valid user."
-            );
-          }
-        } catch (error) {
-          if (!mounted) {
-            return;
-          }
-
-          const status =
-            error?.response?.status;
-
-          /*
-           * 401 means the token is invalid,
-           * expired, or unauthorized.
-           */
-          if (status === 401) {
-            console.warn(
-              "SyncDoc: authentication token is invalid or expired."
-            );
-
-            clearSession();
-          } else {
-            /*
-             * Do not destroy a potentially valid
-             * session because of a temporary
-             * network/server error.
-             */
-            console.warn(
-              "SyncDoc: unable to verify session.",
-              getAuthErrorMessage(
-                error,
-                "Authentication server unavailable."
-              )
-            );
-          }
-        } finally {
-          if (mounted) {
-            setLoading(false);
-          }
+        // Ignore a response if the session changed while
+        // the request was in progress.
+        if (getStorageItem(TOKEN_KEY) !== token) {
+          setUserState(getStoredUser());
+          return;
         }
-      };
+
+        const authenticatedUser = extractUser(
+          response?.data
+        );
+
+        if (authenticatedUser) {
+          setAuthenticatedUser(authenticatedUser);
+        } else {
+          console.warn(
+            "SyncDoc: /auth/me returned no valid user."
+          );
+        }
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+
+        // Do not clear a newer session because an older
+        // request returned an authentication error.
+        if (getStorageItem(TOKEN_KEY) !== token) {
+          return;
+        }
+
+        const status = error?.response?.status;
+
+        if (status === 401) {
+          console.warn(
+            "SyncDoc: authentication token is invalid or expired."
+          );
+
+          clearSession();
+        } else {
+          // Keep the session intact during temporary
+          // network errors or server failures.
+          console.warn(
+            "SyncDoc: unable to verify session.",
+            getAuthErrorMessage(
+              error,
+              "Authentication server unavailable."
+            )
+          );
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    }
 
     restoreSession();
 
     return () => {
-      mounted = false;
+      active = false;
     };
-  }, [
-    clearSession,
-    setAuthenticatedUser,
-  ]);
+  }, [clearSession, setAuthenticatedUser]);
 
-  /* ==========================================================
-     LOGIN
-  ========================================================== */
+  // ----------------------------------------------------------
+  // LOGIN
+  // ----------------------------------------------------------
 
   const login = useCallback(
     async (credentials) => {
@@ -462,201 +401,106 @@ export function AuthProvider({
         );
       }
 
-      try {
-        const response =
-          await api.post(
-            "/auth/login",
-            credentials
-          );
+      const response = await api.post(
+        "/auth/login",
+        credentials
+      );
 
-        const data =
-          response?.data || {};
+      const data = response?.data || {};
+      const token = extractToken(data);
+      const authenticatedUser = extractUser(data);
 
-        const token =
-          extractToken(data);
-
-        const authenticatedUser =
-          extractUser(data);
-
-        /*
-         * JWT token is mandatory.
-         */
-        if (!token) {
-          throw new Error(
-            "Login succeeded but no authentication token was returned by the server."
-          );
-        }
-
-        /*
-         * Save token first.
-         */
-        setStorageItem(
-          TOKEN_KEY,
-          token
+      if (!token) {
+        throw new Error(
+          "Login response did not contain an authentication token."
         );
-
-        /*
-         * Save user if returned.
-         */
-        if (
-          authenticatedUser &&
-          typeof authenticatedUser ===
-          "object"
-        ) {
-          setAuthenticatedUser(
-            authenticatedUser
-          );
-        } else {
-          /*
-           * Token exists but user wasn't returned.
-           *
-           * The /auth/me request on the next
-           * application load can recover it.
-           */
-          setUserState(null);
-          removeStorageItem(STORAGE_KEY);
-        }
-
-        return response;
-      } catch (error) {
-        /*
-         * Do not leave half-authenticated
-         * state after a failed login.
-         */
-        if (
-          !extractToken(
-            error?.response?.data
-          )
-        ) {
-          removeStorageItem(TOKEN_KEY);
-        }
-
-        console.error(
-          "SyncDoc login failed:",
-          getAuthErrorMessage(
-            error,
-            "Unable to sign in."
-          )
-        );
-
-        throw error;
       }
+
+      // Persist the token only after successful login.
+      setStorageItem(TOKEN_KEY, token);
+
+      if (authenticatedUser) {
+        setAuthenticatedUser(authenticatedUser);
+      } else {
+        setUserState(null);
+        removeStorageItem(STORAGE_KEY);
+      }
+
+      return response;
     },
     [setAuthenticatedUser]
   );
 
-  /* ==========================================================
-     REGISTER
-  ========================================================== */
+  // ----------------------------------------------------------
+  // REGISTER
+  // ----------------------------------------------------------
 
-  const register = useCallback(
-    async (payload) => {
+  const register = useCallback(async (payload) => {
+    if (
+      !payload ||
+      typeof payload !== "object"
+    ) {
+      throw new Error(
+        "Registration information is required."
+      );
+    }
+
+    return api.post("/auth/register", payload);
+  }, []);
+
+  // ----------------------------------------------------------
+  // LOGOUT
+  // ----------------------------------------------------------
+
+  const logout = useCallback(async () => {
+    // Clear the local session immediately.
+    clearSession();
+  }, [clearSession]);
+
+  // ----------------------------------------------------------
+  // UPDATE USER
+  // ----------------------------------------------------------
+
+  const updateUser = useCallback((updates) => {
+    setUserState((currentUser) => {
       if (
-        !payload ||
-        typeof payload !== "object"
+        !currentUser ||
+        typeof currentUser !== "object"
       ) {
-        throw new Error(
-          "Registration information is required."
-        );
+        return currentUser;
       }
 
-      try {
-        const response =
-          await api.post(
-            "/auth/register",
-            payload
-          );
+      const nextUser = {
+        ...currentUser,
+        ...(updates || {}),
+      };
 
-        return response;
-      } catch (error) {
-        console.error(
-          "SyncDoc registration failed:",
-          getAuthErrorMessage(
-            error,
-            "Unable to create your account."
-          )
-        );
+      setStorageItem(
+        STORAGE_KEY,
+        JSON.stringify(nextUser)
+      );
 
-        throw error;
-      }
-    },
-    []
+      return nextUser;
+    });
+  }, []);
+
+  // ----------------------------------------------------------
+  // AUTHENTICATION STATUS
+  // ----------------------------------------------------------
+
+  const isAuthenticated = Boolean(
+    user && hasStoredToken()
   );
 
-  /* ==========================================================
-     LOGOUT
-  ========================================================== */
-
-  const logout = useCallback(
-    async () => {
-      /*
-       * Clear local session immediately so
-       * protected UI disappears without delay.
-       */
-      clearSession();
-
-      /*
-       * If your backend later provides
-       * POST /auth/logout, it can be called
-       * here without affecting local logout.
-       */
-    },
-    [clearSession]
-  );
-
-  /* ==========================================================
-     UPDATE USER
-  ========================================================== */
-
-  const updateUser =
-    useCallback(
-      (updates) => {
-        setUserState(
-          (currentUser) => {
-            if (
-              !currentUser ||
-              typeof currentUser !==
-              "object"
-            ) {
-              return currentUser;
-            }
-
-            const nextUser = {
-              ...currentUser,
-              ...(updates || {}),
-            };
-
-            setStorageItem(
-              STORAGE_KEY,
-              JSON.stringify(nextUser)
-            );
-
-            return nextUser;
-          }
-        );
-      },
-      []
-    );
-
-  /* ==========================================================
-     AUTHENTICATION STATUS
-  ========================================================== */
-
-  const isAuthenticated =
-    Boolean(
-      user && hasStoredToken()
-    );
-
-  // A small, explicit status makes auth-aware UI easier to render dynamically.
   const sessionStatus = loading
     ? "restoring"
     : isAuthenticated
       ? "authenticated"
       : "anonymous";
 
-  /* ==========================================================
-     CONTEXT VALUE
-  ========================================================== */
+  // ----------------------------------------------------------
+  // CONTEXT VALUE
+  // ----------------------------------------------------------
 
   const value = useMemo(
     () => ({
@@ -670,25 +514,10 @@ export function AuthProvider({
       register,
       logout,
 
-      /*
-       * Backward-compatible API.
-       *
-       * Existing components can still use:
-       *
-       * setUser(...)
-       */
-      setUser:
-        setAuthenticatedUser,
+      // Backward-compatible API.
+      setUser: setAuthenticatedUser,
 
-      /*
-       * More explicit API for partial
-       * user updates.
-       */
       updateUser,
-
-      /*
-       * Useful for manual session cleanup.
-       */
       clearSession,
     }),
     [
@@ -705,26 +534,19 @@ export function AuthProvider({
     ]
   );
 
-  /* ==========================================================
-     PROVIDER
-  ========================================================== */
-
   return (
-    <AuthContext.Provider
-      value={value}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-/* ============================================================
-   USE AUTH
-============================================================ */
+// ============================================================
+// USE AUTH
+// ============================================================
 
 export function useAuth() {
-  const context =
-    useContext(AuthContext);
+  const context = useContext(AuthContext);
 
   if (!context) {
     throw new Error(
@@ -735,8 +557,8 @@ export function useAuth() {
   return context;
 }
 
-/* ============================================================
-   DEFAULT EXPORT
-============================================================ */
+// ============================================================
+// DEFAULT EXPORT
+// ============================================================
 
 export default AuthContext;

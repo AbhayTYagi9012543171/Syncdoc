@@ -358,7 +358,8 @@ const isDocumentFavorite = (
   return Boolean(
     document.favorite ??
     document.isFavorite ??
-    document.starred
+    document.starred ??
+    document.isStarred
   );
 };
 

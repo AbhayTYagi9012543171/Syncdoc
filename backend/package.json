@@ -1,6 +1,6 @@
 {
   "name": "@syncdoc/backend",
-  "version": "6.0.0",
+  "version": "6.2.0",
   "description": "SyncDoc Backend Service - Collaborative Document Engine with AST Conflict Resolution",
   "main": "src/index.js",
   "scripts": {
@@ -28,6 +28,7 @@
     "joi": "^17.10.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^7.6.0",
+    "multer": "^2.4.0",
     "redis": "^4.6.10",
     "socket.io": "^4.7.2",
     "uuid": "^9.0.1",

@@ -1,4 +1,5 @@
 import "./pages-premium.css";
+import "./editor-experience.css";
 
 import React, {
   useCallback,
@@ -199,6 +200,20 @@ export default function EditorPage() {
     users,
     broadcast,
   } = useCollaboration(documentId);
+
+  const documentStats = React.useMemo(() => {
+    const plainText = String(content || "")
+      .replace(/<[^>]*>/g, " ")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&#39;|&apos;/g, "'")
+      .replace(/&quot;/g, '"')
+      .replace(/\s+/g, " ")
+      .trim();
+    const words = plainText ? plainText.split(" ").filter(Boolean).length : 0;
+    const characters = plainText.length;
+    return { words, characters, readingMinutes: Math.max(1, Math.ceil(words / 220)) };
+  }, [content]);
 
   /* ==========================================================
      MOUNT / UNMOUNT
@@ -1142,6 +1157,18 @@ export default function EditorPage() {
         documentId || ""
       }
     >
+      <section className="editor-hero" aria-label="Document overview">
+        <div className="editor-hero-copy">
+          <span className="editor-eyebrow"><span className="editor-eyebrow-dot" /> SYNCdoc WORKSPACE</span>
+          <h2>Make space for <span>great ideas.</span></h2>
+          <p>Your work, safely saved and ready to create — together.</p>
+        </div>
+        <div className="editor-metrics" aria-label="Document statistics">
+          <div className="editor-metric"><span className="editor-metric-icon">✎</span><span><strong>{documentStats.words.toLocaleString()}</strong><small>Words</small></span></div>
+          <div className="editor-metric"><span className="editor-metric-icon">◷</span><span><strong>{documentStats.readingMinutes} min</strong><small>Read time</small></span></div>
+          <div className="editor-metric"><span className="editor-metric-icon">◎</span><span><strong>{users?.length || 0}</strong><small>Collaborators</small></span></div>
+        </div>
+      </section>
       {/* ======================================================
           EDITOR HEADER
       ====================================================== */}
@@ -1209,11 +1236,16 @@ export default function EditorPage() {
         </div>
       </div>
 
+      <div className="editor-workspace-label">
+        <div><span className="editor-workspace-kicker">YOUR CANVAS</span><strong>Document editor</strong><span className="editor-workspace-hint">Changes save automatically</span></div>
+        <span className="editor-word-count">{documentStats.characters.toLocaleString()} characters</span>
+      </div>
+
       {/* ======================================================
           WORKSPACE
       ====================================================== */}
 
-      <div className="editor-workspace">
+      <div className="editor-workspace editor-workspace-premium">
         <main
           className="editor-main"
           aria-label="Document editor"

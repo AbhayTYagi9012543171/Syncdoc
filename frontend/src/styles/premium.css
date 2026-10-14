@@ -500,3 +500,17 @@ button, .btn, a, input, textarea, select, [role="button"] {
 }
 button:active:not(:disabled), .btn:active:not(:disabled), [role="button"]:active { transform: translateY(1px) scale(.99); }
 input:focus, textarea:focus, select:focus { outline: none; }
+
+
+/* SyncDoc 6.2 premium polish — motion, glass surfaces and responsive states */
+:root { --sd-ease: cubic-bezier(.2,.75,.25,1); --sd-glass: rgba(255,255,255,.78); }
+html { scroll-behavior: smooth; }
+body { text-rendering: optimizeLegibility; }
+button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
+button, [role="button"], a { transition: transform .2s var(--sd-ease), box-shadow .2s var(--sd-ease), color .2s ease, background-color .2s ease, border-color .2s ease; }
+button:not(:disabled):active, [role="button"]:active { transform: translateY(1px) scale(.99); }
+:focus-visible { outline: 3px solid rgba(99,102,241,.48); outline-offset: 3px; }
+.card, .stat-card, .dashboard-card, .panel, .modal-content { animation: sd-premium-enter .42s var(--sd-ease) both; }
+@keyframes sd-premium-enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
+@media (max-width: 768px) { .container, .page-container, .dashboard-container { width: 100%; max-width: 100%; padding-left: 16px; padding-right: 16px; } }

@@ -1,12 +1,9 @@
-'use strict';
-
-const express = require('express');
-const SettingsController = require('../controllers/SettingsController');
-const { auth } = require('../middleware/auth');
+const express = require("express");
+const { auth } = require("../middleware/auth");
+const controller = require("../controllers/SettingsController");
 
 const router = express.Router();
-
-router.get('/', auth, SettingsController.get);
-router.put('/', auth, SettingsController.update);
-
+router.use(auth);
+router.get("/", controller.getSettings);
+router.patch("/", controller.updateSettings);
 module.exports = router;

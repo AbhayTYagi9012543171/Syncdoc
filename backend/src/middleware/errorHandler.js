@@ -36,10 +36,26 @@ const notFoundHandler = (req, res, next) => {
 // ============================================================
 
 const errorHandler = (err, req, res, next) => {
-  const statusCode = err.statusCode || err.status || 500;
+  // Multer errors do not always expose `status`; map them explicitly so
+  // rejected uploads never become misleading 500 responses.
+  let statusCode = err.statusCode || err.status || 500;
+  let message = err.message || 'Internal server error';
 
-  const message =
-    err.message || 'Internal server error';
+  if (err.name === 'MulterError') {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      statusCode = 413;
+      message = 'Photo must be 5 MB or smaller.';
+    } else if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+      statusCode = 400;
+      message = 'Unexpected upload field. Use the field name "avatar".';
+    } else if (err.code && err.code.startsWith('LIMIT_')) {
+      statusCode = 400;
+      message = 'The upload contains too many files or fields.';
+    } else {
+      statusCode = 400;
+      message = 'The uploaded file could not be processed.';
+    }
+  }
 
   // Safe logger
   try {

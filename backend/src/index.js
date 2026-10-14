@@ -1060,6 +1060,10 @@ const start =
                 routes
             );
 
+            logger.info(
+                'API routes mounted at /api; profile endpoints: GET/PATCH /api/profile, POST/DELETE /api/profile/avatar'
+            );
+
             // ======================================================
             // ROOT
             // ======================================================
