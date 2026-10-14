@@ -9,3 +9,5 @@ build/
 dist/
 coverage/
 backend/logs/
+backend/logs/combined.log
+backend/logs/error.log
