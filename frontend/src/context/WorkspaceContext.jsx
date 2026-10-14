@@ -173,8 +173,11 @@ function extractWorkspace(response) {
  */
 function getStoredWorkspaceId() {
   try {
+    if (typeof window === "undefined" || !window.localStorage) {
+      return "";
+    }
     return (
-      localStorage.getItem(
+      window.localStorage.getItem(
         ACTIVE_WORKSPACE_KEY
       ) || ""
     );
@@ -193,13 +196,16 @@ function getStoredWorkspaceId() {
  */
 function saveWorkspaceId(workspaceId) {
   try {
+    if (typeof window === "undefined" || !window.localStorage) {
+      return;
+    }
     if (workspaceId) {
-      localStorage.setItem(
+      window.localStorage.setItem(
         ACTIVE_WORKSPACE_KEY,
         String(workspaceId)
       );
     } else {
-      localStorage.removeItem(
+      window.localStorage.removeItem(
         ACTIVE_WORKSPACE_KEY
       );
     }
@@ -216,7 +222,10 @@ function saveWorkspaceId(workspaceId) {
  */
 function clearStoredWorkspace() {
   try {
-    localStorage.removeItem(
+    if (typeof window === "undefined" || !window.localStorage) {
+      return;
+    }
+    window.localStorage.removeItem(
       ACTIVE_WORKSPACE_KEY
     );
   } catch (error) {
@@ -757,7 +766,10 @@ export function WorkspaceProvider({
       ------------------------------------------------------ */
 
       loading,
+      isLoading: loading,
       error,
+      hasError: Boolean(error),
+      isReady: !authLoading && !loading,
 
       /* ------------------------------------------------------
          Workspace actions
@@ -798,6 +810,7 @@ export function WorkspaceProvider({
       activeWorkspaceId,
       activeWorkspaceName,
       loading,
+      authLoading,
       error,
       loadWorkspaces,
       refreshWorkspaces,

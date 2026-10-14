@@ -1,3 +1,4 @@
+import "./pages-premium.css";
 import React, { useCallback, useEffect, useState } from "react";
 import { ArchiveRestore, FileText, RefreshCw, Trash2 } from "lucide-react";
 import Card from "../components/common/Card";

@@ -1,112 +1,98 @@
-/* ============================================================
-   SYNCDOC — COLLABORATION PROVIDER
-   Lightweight Socket.io collaboration adapter.
 
-   This adapter provides:
-   - Socket connection lifecycle
-   - Document room join / leave
-   - Presence updates
-   - Document update broadcasting
-   - Authentication token support
-   - Reconnection support
-   - Connection errors
-   - Safe cleanup
-   - Duplicate-event protection
+import { io } from 'socket.io-client';
 
-   IMPORTANT:
-   This is currently a Socket.io collaboration adapter.
-
-   When Yjs/CRDT is fully connected, this file can become the
-   bridge between the React editor and the Yjs provider.
-============================================================ */
-
-/* ============================================================
-   CONSTANTS
-============================================================ */
+/**
+ * SyncDoc Collaboration Provider
+ *
+ * Responsibilities:
+ * - Socket.IO connection management
+ * - Document room join / leave
+ * - Presence events
+ * - Document update events
+ * - Authentication token support
+ * - Automatic reconnection
+ * - Safe event listener cleanup
+ *
+ * Note:
+ * This adapter handles Socket.IO collaboration events.
+ * Actual Yjs CRDT synchronization requires a separate Yjs
+ * document and update synchronization implementation.
+ */
 
 const DEFAULT_SOCKET_URL = 'http://localhost:5000';
 
-const TOKEN_KEY = 'syncdoc_token';
+const TOKEN_KEYS = [
+  'syncdoc_token',
+  'token',
+  'accessToken',
+];
 
 const EVENTS = Object.freeze({
   JOIN: 'document:join',
   LEAVE: 'document:leave',
-
   UPDATE: 'document:update',
   PRESENCE: 'document:presence',
 
   CONNECT: 'connect',
   DISCONNECT: 'disconnect',
-
   CONNECT_ERROR: 'connect_error',
   ERROR: 'error',
 });
 
-/* ============================================================
-   HELPERS
-============================================================ */
+/* ---------------------------------------------------------
+   Helpers
+--------------------------------------------------------- */
 
-/**
- * Resolve Socket.io server URL.
- *
- * This project currently uses Create React App style
- * environment variables:
- *
- * REACT_APP_SOCKET_URL=http://localhost:5000
- */
 function getSocketUrl() {
-  if (
-    typeof process !== 'undefined' &&
-    process.env?.REACT_APP_SOCKET_URL
-  ) {
-    return process.env.REACT_APP_SOCKET_URL;
-  }
+  const configuredUrl =
+    typeof process !== 'undefined'
+      ? process.env?.REACT_APP_SOCKET_URL
+      : undefined;
 
-  return DEFAULT_SOCKET_URL;
+  const url = (
+    configuredUrl || DEFAULT_SOCKET_URL
+  ).trim();
+
+  return url.replace(/\/+$/, '');
 }
 
-/**
- * Safely read authentication token.
- */
 function getAuthToken() {
-  try {
-    return localStorage.getItem(TOKEN_KEY);
-  } catch (error) {
-    console.warn(
-      'SyncDoc collaboration: unable to read authentication token.',
-      error
-    );
-
+  if (typeof window === 'undefined') {
     return null;
   }
+
+  try {
+    for (const key of TOKEN_KEYS) {
+      const token = window.localStorage.getItem(key);
+
+      if (token) {
+        return token;
+      }
+    }
+  } catch (error) {
+    console.warn(
+      'SyncDoc: unable to read authentication token.',
+      error
+    );
+  }
+
+  return null;
 }
 
-/**
- * Validate document ID.
- */
 function normalizeDocumentId(documentId) {
-  if (
-    documentId === undefined ||
-    documentId === null
-  ) {
+  if (documentId === undefined || documentId === null) {
     return '';
   }
 
   return String(documentId).trim();
 }
 
-/**
- * Always expose collaborators as an array.
- */
 function normalizeUsers(users) {
   return Array.isArray(users)
     ? users.filter(Boolean)
     : [];
 }
 
-/**
- * Convert unknown errors to an Error instance.
- */
 function normalizeError(error) {
   if (error instanceof Error) {
     return error;
@@ -117,458 +103,314 @@ function normalizeError(error) {
   }
 
   return new Error(
-    error?.message ||
-    'Collaboration connection failed.'
+    error?.message || 'Collaboration connection failed.'
   );
 }
 
-/* ============================================================
-   SOCKET FACTORY
-============================================================ */
+/* ---------------------------------------------------------
+   Empty provider
+--------------------------------------------------------- */
 
-/**
- * Create a Socket.io instance.
- *
- * The current implementation supports window.io so the
- * application does not require socket.io-client to be imported
- * directly from this file.
- *
- * If you later install:
- *
- * npm install socket.io-client
- *
- * you can replace window.io with:
- *
- * import { io } from 'socket.io-client';
- */
-function createSocket(url, options) {
-  if (
-    typeof window === 'undefined'
-  ) {
-    return null;
-  }
-
-  if (
-    typeof window.io !== 'function'
-  ) {
-    console.warn(
-      'SyncDoc collaboration: Socket.io client is not available.'
-    );
-
-    return null;
-  }
-
-  return window.io(url, options);
+function createEmptyProvider(error = null) {
+  return {
+    broadcast: () => false,
+    connect: () => false,
+    reconnect: () => false,
+    disconnect: () => false,
+    destroy: () => {},
+    join: () => false,
+    leave: () => false,
+    isConnected: () => false,
+    getSocket: () => null,
+    getDocumentId: () => '',
+    error,
+  };
 }
 
-/* ============================================================
-   COLLABORATION PROVIDER
-============================================================ */
+/* ---------------------------------------------------------
+   Main provider
+--------------------------------------------------------- */
 
 export function createCollaborationProvider(
   documentId,
   callbacks = {}
 ) {
-  /* ==========================================================
-     DOCUMENT
-  ========================================================== */
-
   const normalizedDocumentId =
     normalizeDocumentId(documentId);
 
   if (!normalizedDocumentId) {
     const error = new Error(
-      'Document ID is required for collaboration.'
+      'A valid document ID is required for collaboration.'
     );
 
     callbacks.onError?.(error);
 
-    return createEmptyProvider();
+    return createEmptyProvider(error);
   }
 
-  /* ==========================================================
-     PROVIDER STATE
-  ========================================================== */
-
   let socket = null;
-
   let connected = false;
-  let destroyed = false;
   let joined = false;
+  let destroyed = false;
 
-  /* ==========================================================
-     CALLBACK HELPERS
-  ========================================================== */
+  /* -------------------------------------------------------
+     Callback helpers
+  ------------------------------------------------------- */
 
-  const notifyConnect = () => {
+  function notifyConnect() {
+    if (!destroyed) {
+      callbacks.onConnect?.();
+    }
+  }
+
+  function notifyDisconnect(reason) {
+    if (!destroyed) {
+      callbacks.onDisconnect?.(reason);
+    }
+  }
+
+  function notifyUsers(users) {
+    if (!destroyed) {
+      callbacks.onUsers?.(normalizeUsers(users));
+    }
+  }
+
+  function notifyMessage(payload) {
+    if (!destroyed) {
+      callbacks.onMessage?.(payload);
+    }
+  }
+
+  function notifyError(error) {
     if (destroyed) {
       return;
     }
 
-    callbacks.onConnect?.();
-  };
-
-  const notifyDisconnect = (
-    reason
-  ) => {
-    if (destroyed) {
-      return;
-    }
-
-    callbacks.onDisconnect?.(
-      reason
-    );
-  };
-
-  const notifyUsers = (
-    users
-  ) => {
-    if (destroyed) {
-      return;
-    }
-
-    callbacks.onUsers?.(
-      normalizeUsers(users)
-    );
-  };
-
-  const notifyMessage = (
-    payload
-  ) => {
-    if (destroyed) {
-      return;
-    }
-
-    callbacks.onMessage?.(
-      payload
-    );
-  };
-
-  const notifyError = (
-    error
-  ) => {
-    if (destroyed) {
-      return;
-    }
-
-    const normalized =
-      normalizeError(error);
+    const normalizedError = normalizeError(error);
 
     console.error(
       'SyncDoc collaboration error:',
-      normalized
+      normalizedError
     );
 
-    callbacks.onError?.(
-      normalized
-    );
-  };
+    callbacks.onError?.(normalizedError);
+  }
 
-  /* ==========================================================
-     JOIN DOCUMENT
-  ========================================================== */
+  /* -------------------------------------------------------
+     Join / leave document
+  ------------------------------------------------------- */
 
-  const joinDocument = () => {
+  function joinDocument() {
     if (
+      destroyed ||
       !socket ||
-      !connected ||
-      joined ||
-      destroyed
+      !socket.connected ||
+      joined
     ) {
       return false;
     }
 
-    socket.emit(
-      EVENTS.JOIN,
-      {
-        documentId:
-          normalizedDocumentId,
-      }
-    );
+    socket.emit(EVENTS.JOIN, {
+      documentId: normalizedDocumentId,
+    });
 
     joined = true;
 
     return true;
-  };
+  }
 
-  /* ==========================================================
-     LEAVE DOCUMENT
-  ========================================================== */
-
-  const leaveDocument = () => {
-    if (
-      !socket ||
-      !joined
-    ) {
+  function leaveDocument() {
+    if (!socket || !joined) {
       return false;
     }
 
     try {
-      socket.emit(
-        EVENTS.LEAVE,
-        {
-          documentId:
-            normalizedDocumentId,
-        }
-      );
+      if (socket.connected) {
+        socket.emit(EVENTS.LEAVE, {
+          documentId: normalizedDocumentId,
+        });
+      }
     } catch (error) {
       console.warn(
-        'SyncDoc collaboration: unable to leave document.',
+        'SyncDoc: unable to leave the document room.',
         error
       );
+    } finally {
+      joined = false;
     }
 
-    joined = false;
-
     return true;
-  };
+  }
 
-  /* ==========================================================
-     EVENT HANDLERS
-  ========================================================== */
+  /* -------------------------------------------------------
+     Socket event handlers
+  ------------------------------------------------------- */
 
-  const handleConnect = () => {
+  function handleConnect() {
     if (destroyed) {
       return;
     }
 
     connected = true;
-
-    /*
-     * Reconnection creates a new room membership,
-     * therefore allow the document to be joined again.
-     */
     joined = false;
 
+    // Join again after every successful reconnection.
     joinDocument();
 
     notifyConnect();
-  };
+  }
 
-  const handleDisconnect = (
-    reason
-  ) => {
+  function handleDisconnect(reason) {
     connected = false;
     joined = false;
 
-    /*
-     * Clear presence on disconnect so old users
-     * are not displayed as online.
-     */
     notifyUsers([]);
-
     notifyDisconnect(reason);
-  };
+  }
 
-  const handlePresence = (
-    users
-  ) => {
+  function handlePresence(users) {
     notifyUsers(users);
-  };
+  }
 
-  const handleDocumentUpdate = (
-    payload
-  ) => {
-    /*
-     * Ignore updates belonging to another
-     * document when the backend includes
-     * documentId in the payload.
-     */
+  function handleDocumentUpdate(payload) {
+    if (destroyed) {
+      return;
+    }
+
+    // Ignore updates explicitly belonging to another document.
     if (
-      payload?.documentId &&
-      String(payload.documentId) !==
-      normalizedDocumentId
+      payload?.documentId !== undefined &&
+      String(payload.documentId) !== normalizedDocumentId
     ) {
       return;
     }
 
     notifyMessage(payload);
-  };
+  }
 
-  const handleConnectError = (
-    error
-  ) => {
+  function handleConnectError(error) {
     connected = false;
     joined = false;
 
     notifyError(error);
-  };
+  }
 
-  const handleSocketError = (
-    error
-  ) => {
-    notifyError(error);
-  };
-
-  /* ==========================================================
-     CREATE SOCKET
-  ========================================================== */
-
-  try {
-    const socketUrl =
-      getSocketUrl();
-
-    const token =
-      getAuthToken();
-
-    socket = createSocket(
-      socketUrl,
-      {
-        transports: [
-          'websocket',
-          'polling',
-        ],
-
-        /*
-         * Allow Socket.io to reconnect automatically.
-         */
-        reconnection: true,
-
-        reconnectionAttempts: 10,
-
-        reconnectionDelay: 1000,
-
-        reconnectionDelayMax: 5000,
-
-        timeout: 10000,
-
-        withCredentials: true,
-
-        /*
-         * Backend Socket.io middleware can read:
-         *
-         * socket.handshake.auth.token
-         */
-        auth: token
-          ? {
-            token,
-          }
-          : {},
-      }
-    );
-
-    if (!socket) {
-      const error = new Error(
-        'Socket.io client is not available.'
-      );
-
-      notifyError(error);
-
-      return createEmptyProvider(
-        error
-      );
-    }
-
-    /* ========================================================
-       REGISTER EVENTS
-    ======================================================== */
-
-    socket.on(
-      EVENTS.CONNECT,
-      handleConnect
-    );
-
-    socket.on(
-      EVENTS.DISCONNECT,
-      handleDisconnect
-    );
-
-    socket.on(
-      EVENTS.PRESENCE,
-      handlePresence
-    );
-
-    socket.on(
-      EVENTS.UPDATE,
-      handleDocumentUpdate
-    );
-
-    socket.on(
-      EVENTS.CONNECT_ERROR,
-      handleConnectError
-    );
-
-    socket.on(
-      EVENTS.ERROR,
-      handleSocketError
-    );
-  } catch (error) {
-    socket = null;
-
+  function handleSocketError(error) {
     notifyError(error);
   }
 
-  /* ==========================================================
-     BROADCAST
-  ========================================================== */
+  /* -------------------------------------------------------
+     Create Socket.IO client
+  ------------------------------------------------------- */
 
-  const broadcast = (
-    payload
-  ) => {
+  try {
+    const socketUrl = getSocketUrl();
+    const token = getAuthToken();
+
+    socket = io(socketUrl, {
+      /**
+       * Start with HTTP long-polling, then attempt to upgrade
+       * to WebSocket. This supports servers where WebSocket
+       * upgrade may fail but polling is available.
+       */
+      transports: ['polling', 'websocket'],
+
+      upgrade: true,
+      rememberUpgrade: false,
+
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      randomizationFactor: 0.5,
+
+      timeout: 20000,
+      withCredentials: true,
+
+      /**
+       * Backend Socket.IO middleware can access:
+       * socket.handshake.auth.token
+       */
+      auth: token ? { token } : {},
+
+      /**
+       * Use a separate Manager for this provider so its
+       * cleanup does not disconnect another provider that
+       * shares the same server URL.
+       */
+      forceNew: true,
+      autoConnect: true,
+    });
+
+    socket.on(EVENTS.CONNECT, handleConnect);
+    socket.on(EVENTS.DISCONNECT, handleDisconnect);
+    socket.on(EVENTS.PRESENCE, handlePresence);
+    socket.on(EVENTS.UPDATE, handleDocumentUpdate);
+    socket.on(EVENTS.CONNECT_ERROR, handleConnectError);
+    socket.on(EVENTS.ERROR, handleSocketError);
+  } catch (error) {
+    socket = null;
+
+    const normalizedError = normalizeError(error);
+    callbacks.onError?.(normalizedError);
+
+    return createEmptyProvider(normalizedError);
+  }
+
+  /* -------------------------------------------------------
+     Broadcast an update
+  ------------------------------------------------------- */
+
+  function broadcast(payload) {
     if (
       destroyed ||
       !socket ||
-      !connected
+      !socket.connected
     ) {
       return false;
     }
 
-    if (
-      !payload ||
-      typeof payload !== 'object'
-    ) {
+    if (!payload || typeof payload !== 'object') {
       console.warn(
-        'SyncDoc collaboration: broadcast payload must be an object.'
+        'SyncDoc: broadcast payload must be an object.'
       );
 
       return false;
     }
 
     try {
-      socket.emit(
-        EVENTS.UPDATE,
-        {
-          ...payload,
+      socket.emit(EVENTS.UPDATE, {
+        ...payload,
 
-          /*
-           * Always control documentId here instead
-           * of trusting the caller.
-           */
-          documentId:
-            normalizedDocumentId,
-        }
-      );
+        // Always use this provider's document ID.
+        documentId: normalizedDocumentId,
+      });
 
       return true;
     } catch (error) {
       notifyError(error);
-
       return false;
     }
-  };
+  }
 
-  /* ==========================================================
-     CONNECT / RECONNECT
-  ========================================================== */
+  /* -------------------------------------------------------
+     Connect / reconnect
+  ------------------------------------------------------- */
 
-  const connect = () => {
-    if (
-      destroyed ||
-      !socket
-    ) {
+  function connect() {
+    if (destroyed || !socket) {
       return false;
     }
 
     if (socket.connected) {
       connected = true;
-
       joinDocument();
 
       return true;
     }
 
     try {
-      socket.connect?.();
+      socket.connect();
 
       return true;
     } catch (error) {
@@ -576,26 +418,23 @@ export function createCollaborationProvider(
 
       return false;
     }
-  };
+  }
 
-  /* ==========================================================
-     DISCONNECT
-  ========================================================== */
+  /* -------------------------------------------------------
+     Disconnect
+  ------------------------------------------------------- */
 
-  const disconnect = () => {
-    if (
-      destroyed ||
-      !socket
-    ) {
+  function disconnect() {
+    if (destroyed || !socket) {
       return false;
     }
 
     try {
       leaveDocument();
-
       socket.disconnect();
 
       connected = false;
+      joined = false;
 
       return true;
     } catch (error) {
@@ -603,20 +442,18 @@ export function createCollaborationProvider(
 
       return false;
     }
-  };
+  }
 
-  /* ==========================================================
-     DESTROY
-  ========================================================== */
+  /* -------------------------------------------------------
+     Destroy and clean up
+  ------------------------------------------------------- */
 
-  const destroy = () => {
+  function destroy() {
     if (destroyed) {
       return;
     }
 
-    /*
-     * Leave first while the socket is still available.
-     */
+    // Attempt to leave before removing the connection.
     leaveDocument();
 
     destroyed = true;
@@ -628,72 +465,43 @@ export function createCollaborationProvider(
     }
 
     try {
-      /* ------------------------------------------------------
-         Remove our listeners only.
-      ------------------------------------------------------ */
-
-      socket.off(
-        EVENTS.CONNECT,
-        handleConnect
-      );
-
-      socket.off(
-        EVENTS.DISCONNECT,
-        handleDisconnect
-      );
-
-      socket.off(
-        EVENTS.PRESENCE,
-        handlePresence
-      );
-
-      socket.off(
-        EVENTS.UPDATE,
-        handleDocumentUpdate
-      );
-
-      socket.off(
-        EVENTS.CONNECT_ERROR,
-        handleConnectError
-      );
-
-      socket.off(
-        EVENTS.ERROR,
-        handleSocketError
-      );
+      socket.off(EVENTS.CONNECT, handleConnect);
+      socket.off(EVENTS.DISCONNECT, handleDisconnect);
+      socket.off(EVENTS.PRESENCE, handlePresence);
+      socket.off(EVENTS.UPDATE, handleDocumentUpdate);
+      socket.off(EVENTS.CONNECT_ERROR, handleConnectError);
+      socket.off(EVENTS.ERROR, handleSocketError);
 
       socket.disconnect();
     } catch (error) {
       console.warn(
-        'SyncDoc collaboration cleanup failed:',
+        'SyncDoc: collaboration cleanup failed.',
         error
       );
+    } finally {
+      socket = null;
     }
+  }
 
-    socket = null;
-  };
-
-  /* ==========================================================
-     PROVIDER API
-  ========================================================== */
+  /* -------------------------------------------------------
+     Public provider API
+  ------------------------------------------------------- */
 
   return {
     broadcast,
 
     connect,
-
     reconnect: connect,
 
     disconnect,
-
     destroy,
 
     join: joinDocument,
-
     leave: leaveDocument,
 
     isConnected() {
       return Boolean(
+        !destroyed &&
         connected &&
         socket?.connected
       );
@@ -706,62 +514,6 @@ export function createCollaborationProvider(
     getDocumentId() {
       return normalizedDocumentId;
     },
-  };
-}
-
-/* ============================================================
-   EMPTY PROVIDER
-============================================================ */
-
-/**
- * Safe no-op provider.
- *
- * This prevents calling components from crashing when
- * Socket.io is unavailable or the document ID is invalid.
- */
-function createEmptyProvider(
-  error = null
-) {
-  return {
-    broadcast() {
-      return false;
-    },
-
-    connect() {
-      return false;
-    },
-
-    reconnect() {
-      return false;
-    },
-
-    disconnect() {
-      return false;
-    },
-
-    destroy() { },
-
-    join() {
-      return false;
-    },
-
-    leave() {
-      return false;
-    },
-
-    isConnected() {
-      return false;
-    },
-
-    getSocket() {
-      return null;
-    },
-
-    getDocumentId() {
-      return '';
-    },
-
-    error,
   };
 }
 

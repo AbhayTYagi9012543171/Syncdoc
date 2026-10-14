@@ -1980,3 +1980,32 @@ select {
    END — SYNCDOC RESPONSIVE SYSTEM
 ============================================================ */
 
+
+
+/* ============================================================
+   PREMIUM RESPONSIVE FINISH + MOTION ACCESSIBILITY
+============================================================ */
+* { box-sizing: border-box; }
+img, video, canvas, svg { max-width: 100%; }
+.card, .workspace-card, .document-card, .project-card, .settings-card { min-width: 0; }
+button, .btn, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+@media (max-width: 768px) {
+  .page-heading, .analytics-page-heading, .notifications-heading { gap: 14px; }
+  .page-heading h1, .dashboard-header h1, .analytics-page-heading h1 { font-size: clamp(1.55rem, 6vw, 2.1rem); line-height: 1.15; }
+  .card, .workspace-card, .document-card, .project-card { border-radius: 16px !important; }
+  .app-content { padding-bottom: max(22px, env(safe-area-inset-bottom)); }
+  .editor-page .editor-toolbar { top: var(--sd-topbar-mobile-height, 64px); }
+}
+@media (max-width: 480px) {
+  .btn, button { max-width: 100%; }
+  input, select, textarea { font-size: 16px; }
+  .page-heading-actions, .notification-header-actions { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+@media print {
+  .sidebar, .topbar, .mobile-menu, .sidebar-overlay { display: none !important; }
+  .app-main { margin: 0 !important; width: 100% !important; }
+  .card { box-shadow: none !important; break-inside: avoid; }
+}

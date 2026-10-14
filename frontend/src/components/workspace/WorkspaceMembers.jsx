@@ -1,3 +1,4 @@
+import "./WorkspacePremium.css";
 import React, { useCallback, useMemo } from "react";
 import Avatar from "../common/Avatar";
 

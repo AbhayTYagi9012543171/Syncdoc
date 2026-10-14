@@ -3794,3 +3794,25 @@ select:focus-visible {
       scale(1);
   }
 }
+
+/* ============================================================
+   SYNCDOC PREMIUM FOUNDATION — GLOBAL POLISH
+============================================================ */
+:root {
+  color-scheme: light;
+  --sd-brand: #5b5ce2;
+  --sd-brand-strong: #4647cf;
+  --sd-accent: #16a6c9;
+  --sd-ink: #172033;
+  --sd-muted: #68758b;
+  --sd-border: #e5eaf2;
+  --sd-canvas: #f5f7fc;
+  --sd-surface: #ffffff;
+  --sd-radius-card: 20px;
+  --sd-shadow-card: 0 10px 30px rgba(25, 36, 68, .055);
+  --sd-shadow-float: 0 20px 54px rgba(25, 36, 68, .13);
+  --sd-ease: cubic-bezier(.2,.75,.25,1);
+}
+
+:focus-visible { outline: 3px solid rgba(91,92,226,.38); outline-offset: 3px; }
+::selection { background: rgba(91,92,226,.18); color: var(--sd-ink); }

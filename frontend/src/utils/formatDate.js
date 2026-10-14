@@ -31,8 +31,15 @@ const WEEK = 7 * DAY;
  * Convert a supported value into a valid Date.
  */
 function toDate(value) {
-  if (!value) {
+  if (value === null || value === undefined || value === "") {
     return null;
+  }
+
+  // Numeric timestamps are accepted in both seconds and milliseconds.
+  if (typeof value === "number") {
+    const timestamp = Math.abs(value) < 1e12 ? value * 1000 : value;
+    const numericDate = new Date(timestamp);
+    return Number.isNaN(numericDate.getTime()) ? null : numericDate;
   }
 
   if (value instanceof Date) {
@@ -91,7 +98,7 @@ export function formatDate(
   value,
   options = {}
 ) {
-  if (!value) {
+  if (value === null || value === undefined || value === "") {
     return "";
   }
 
@@ -134,7 +141,7 @@ export function formatDateOnly(
   value,
   options = {}
 ) {
-  if (!value) {
+  if (value === null || value === undefined || value === "") {
     return "";
   }
 
@@ -175,7 +182,7 @@ export function formatTime(
   value,
   options = {}
 ) {
-  if (!value) {
+  if (value === null || value === undefined || value === "") {
     return "";
   }
 
@@ -221,7 +228,7 @@ export function formatRelativeDate(
   value,
   options = {}
 ) {
-  if (!value) {
+  if (value === null || value === undefined || value === "") {
     return "Recently";
   }
 
@@ -402,7 +409,7 @@ export function formatSmartDate(
   value,
   options = {}
 ) {
-  if (!value) {
+  if (value === null || value === undefined || value === "") {
     return "";
   }
 

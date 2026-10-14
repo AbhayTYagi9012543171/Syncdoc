@@ -1776,3 +1776,9 @@ html.reduced-motion *::after {
     margin-top: -3px;
   }
 }
+
+/* PREMIUM SETTINGS */
+.settings-page :is(input, textarea, select) { max-width: 100%; }
+.settings-page :is(input, textarea, select):focus { border-color: rgba(91,92,226,.55); box-shadow: 0 0 0 4px rgba(91,92,226,.08); }
+.settings-page .settings-sidebar a, .settings-page .settings-sidebar button { transition: background .18s ease, color .18s ease, transform .18s ease; }
+.settings-page .settings-sidebar a:hover, .settings-page .settings-sidebar button:hover { transform: translateX(2px); }

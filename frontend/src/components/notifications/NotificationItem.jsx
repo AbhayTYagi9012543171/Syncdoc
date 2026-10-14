@@ -1,193 +1,60 @@
-
-import React from 'react';
-
+import React, { useMemo } from 'react';
+import { AtSign, Bell, Check, FileText, MessageCircle, Share2, ShieldAlert, Sparkles, Trash2 } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 import Avatar from '../common/Avatar';
 
-const DEFAULT_NOTIFICATION = {
-  name: 'SyncDoc',
-  text: 'You have a new notification.',
-  time: 'Recently',
-  type: 'default',
-  read: false,
+const typeConfig = {
+  default: { icon: Bell, tone: 'neutral' }, info: { icon: Sparkles, tone: 'blue' },
+  success: { icon: Check, tone: 'green' }, warning: { icon: ShieldAlert, tone: 'amber' },
+  danger: { icon: ShieldAlert, tone: 'red' }, comment: { icon: MessageCircle, tone: 'violet' },
+  mention: { icon: AtSign, tone: 'violet' }, share: { icon: Share2, tone: 'cyan' },
+  document: { icon: FileText, tone: 'blue' },
 };
 
-function getNotificationValue(notification, key, fallback) {
-  const value = notification?.[key];
-
-  if (value === null || value === undefined) {
-    return fallback;
-  }
-
-  return value;
+function displayTime(notification) {
+  const raw = notification?.createdAt || notification?.created_at || notification?.time;
+  if (!raw) return 'Recently';
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return String(raw);
+  try { return formatDistanceToNow(date, { addSuffix: true }); }
+  catch { return date.toLocaleString(); }
 }
 
-function getUserName(notification) {
-  const user = notification?.user;
-
-  if (typeof notification?.name === 'string' && notification.name.trim()) {
-    return notification.name.trim();
-  }
-
-  if (typeof user === 'string' && user.trim()) {
-    return user.trim();
-  }
-
-  if (user && typeof user === 'object') {
-    return (
-      user.displayName ||
-      user.username ||
-      user.name ||
-      user.fullName ||
-      user.email ||
-      'User'
-    );
-  }
-
-  return 'SyncDoc';
+function displayName(notification) {
+  const actor = notification?.actor || notification?.user || notification?.sender;
+  if (typeof notification?.name === 'string' && notification.name.trim()) return notification.name.trim();
+  if (typeof actor === 'string' && actor.trim()) return actor.trim();
+  if (actor && typeof actor === 'object') return actor.displayName || actor.username || actor.name || actor.fullName || actor.email || 'A teammate';
+  return notification?.title || 'SyncDoc update';
 }
 
-function getAvatarSource(notification) {
-  const user = notification?.user;
-
-  if (notification?.avatar || notification?.avatarUrl) {
-    return notification.avatar || notification.avatarUrl;
-  }
-
-  if (user && typeof user === 'object') {
-    return (
-      user.avatar ||
-      user.avatarUrl ||
-      user.photoURL ||
-      user.photoUrl ||
-      user.profileImage ||
-      user.profilePicture ||
-      null
-    );
-  }
-
-  return null;
-}
-
-function getNotificationType(notification) {
-  const type = String(
-    notification?.type ||
-      notification?.category ||
-      'default'
-  ).toLowerCase();
-
-  const allowedTypes = [
-    'default',
-    'info',
-    'success',
-    'warning',
-    'danger',
-    'comment',
-    'mention',
-    'share',
-    'document',
-  ];
-
-  return allowedTypes.includes(type) ? type : 'default';
-}
-
-export default function NotificationItem({
-  notification = DEFAULT_NOTIFICATION,
-  onClick,
-  className = '',
-}) {
-  const name = getUserName(notification);
-
-  const text = getNotificationValue(
-    notification,
-    'text',
-    notification?.message || 'You have a new notification.'
-  );
-
-  const time = getNotificationValue(
-    notification,
-    'time',
-    notification?.createdAt || 'Recently'
-  );
-
-  const type = getNotificationType(notification);
-
-  const isRead =
-    notification?.read === true ||
-    notification?.isRead === true;
-
-  const avatarSource = getAvatarSource(notification);
-
-  const notificationId =
-    notification?.id ||
-    notification?._id ||
-    undefined;
-
-  const classes = [
-    'notification-item',
-    `notification-${type}`,
-    !isRead ? 'notification-unread' : '',
-    onClick ? 'notification-clickable' : '',
-    className,
-  ]
-    .filter(Boolean)
-    .join(' ');
+export default function NotificationItem({ notification = {}, onClick, className = '' }) {
+  const name = displayName(notification);
+  const message = notification.message || notification.body || notification.text || 'There is a new update in your workspace.';
+  const isRead = Boolean(notification.isRead ?? notification.read ?? notification.readAt);
+  const rawType = String(notification.type || notification.category || 'default').toLowerCase();
+  const type = typeConfig[rawType] ? rawType : 'default';
+  const config = typeConfig[type];
+  const TypeIcon = config.icon;
+  const actor = notification.actor || notification.user || notification.sender;
+  const avatarUrl = notification.avatar || notification.avatarUrl || actor?.avatar || actor?.avatarUrl || actor?.photoURL || actor?.profileImage;
+  const time = useMemo(() => displayTime(notification), [notification]);
+  const notificationId = notification.id || notification._id || notification.notificationId;
+  const actionable = typeof onClick === 'function';
 
   const content = (
     <>
-      <div className="notification-avatar">
-        <Avatar
-          user={
-            notification?.user &&
-            typeof notification.user === 'object'
-              ? notification.user
-              : undefined
-          }
-          name={name}
-          src={avatarSource}
-          size="sm"
-        />
+      <div className={`sd-notification-avatar sd-tone-${config.tone}`}>
+        {avatarUrl || (actor && typeof actor === 'object') ? <Avatar user={typeof actor === 'object' ? actor : undefined} name={name} src={avatarUrl} size="sm" /> : <TypeIcon size={17} strokeWidth={1.8} />}
       </div>
-
-      <div className="notification-content">
-        <p className="notification-message">
-          <strong>{name}</strong>{' '}
-          <span>{String(text)}</span>
-        </p>
-
-        <small className="notification-time">
-          {String(time)}
-        </small>
+      <div className="sd-notification-item-copy">
+        <p className="sd-notification-message"><strong>{name}</strong> <span>{String(message)}</span></p>
+        <div className="sd-notification-item-meta"><time>{time}</time>{notification.workspace?.name && <><span className="sd-notification-meta-dot">·</span><span>{notification.workspace.name}</span></>}</div>
       </div>
-
-      {!isRead && (
-        <span
-          className="notification-unread-dot"
-          aria-label="Unread"
-        />
-      )}
+      {!isRead && <span className="sd-notification-unread-dot" aria-label="Unread" title="Unread" />}
     </>
   );
 
-  if (typeof onClick === 'function') {
-    return (
-      <button
-        type="button"
-        className={classes}
-        data-notification-id={notificationId}
-        onClick={() => onClick(notification)}
-      >
-        {content}
-      </button>
-    );
-  }
-
-  return (
-    <div
-      className={classes}
-      data-notification-id={notificationId}
-      role="article"
-    >
-      {content}
-    </div>
-  );
+  if (actionable) return <button type="button" className={`sd-notification-item ${!isRead ? 'is-unread' : ''} ${className}`} data-notification-id={notificationId || undefined} onClick={() => onClick(notification)}>{content}</button>;
+  return <article className={`sd-notification-item ${!isRead ? 'is-unread' : ''} ${className}`} data-notification-id={notificationId || undefined}>{content}</article>;
 }

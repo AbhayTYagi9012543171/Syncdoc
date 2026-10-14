@@ -1,0 +1,109 @@
+/* SyncDoc Premium Pages — shared page-level polish */
+:root {
+  --sd-page-accent: #6957e8;
+  --sd-page-accent-2: #8b5cf6;
+  --sd-page-border: color-mix(in srgb, var(--border-color, #dbe2ee) 76%, transparent);
+  --sd-page-shadow: 0 18px 55px rgba(27, 39, 75, .075);
+}
+
+.page, .dashboard-page, .documents-page, .analytics-page, .admin-page,
+.editor-page, .notification-page, .not-found, .auth-page,
+.settings-page, .profile-page, .workspace-page, .projects-page, .trash-page {
+  animation: sdPageEnter .42s cubic-bezier(.2,.7,.2,1) both;
+  min-width: 0;
+}
+
+.page-heading, .page-header, .dashboard-header-wrapper, .analytics-page-heading,
+.admin-page-heading, .documents-header, .notification-header {
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.page-heading h1, .page-header h1, .dashboard-welcome h1,
+.analytics-page-heading h1, .admin-page-heading h1,
+.documents-page h1, .notification-page h1, .trash-page h1 {
+  letter-spacing: -.045em;
+  text-wrap: balance;
+}
+
+.card, .analytics-stat-card, .analytics-chart-card, .analytics-documents-card,
+.admin-stat-card, .admin-users-card, .dashboard-action-card,
+.dashboard-loading-card, .trash-card, .notification-list,
+.workspace-card, .project-card, .settings-card, .profile-card {
+  border-color: var(--sd-page-border);
+  box-shadow: var(--sd-page-shadow);
+  transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+}
+
+.analytics-stat-card:hover, .admin-stat-card:hover, .dashboard-action-card:hover,
+.workspace-card:hover, .project-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 22px 50px rgba(27, 39, 75, .12);
+  border-color: color-mix(in srgb, var(--sd-page-accent) 32%, var(--sd-page-border));
+}
+
+input, textarea, select, button { font: inherit; }
+input:not([type="checkbox"]):not([type="radio"]), textarea, select {
+  max-width: 100%;
+  transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+input:focus-visible, textarea:focus-visible, select:focus-visible,
+button:focus-visible, a:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--sd-page-accent) 38%, transparent);
+  outline-offset: 2px;
+}
+
+.btn, button.btn, .btn-primary, .btn-secondary {
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease, border-color .18s ease;
+}
+.btn:hover:not(:disabled), .btn-primary:hover:not(:disabled),
+.btn-secondary:hover:not(:disabled) { transform: translateY(-1px); }
+.btn:active:not(:disabled), .btn-primary:active:not(:disabled),
+.btn-secondary:active:not(:disabled) { transform: translateY(0) scale(.985); }
+button:disabled { cursor: not-allowed; opacity: .62; }
+
+.data-table, .admin-table, .trash-list, .notification-list, .activity-list {
+  min-width: 0;
+}
+.data-table, .admin-table { overflow-x: auto; }
+.data-table table, .admin-table table { min-width: 640px; }
+
+.page-alert, .documents-alert, .dashboard-alert, .notification-error,
+.form-error, .field-error { overflow-wrap: anywhere; }
+
+/* Comfortable touch targets and stacked layouts on smaller screens. */
+@media (max-width: 760px) {
+  .page, .dashboard-page, .documents-page, .analytics-page, .admin-page,
+  .editor-page, .notification-page, .not-found, .auth-page,
+  .settings-page, .profile-page, .workspace-page, .projects-page, .trash-page {
+    padding-inline: clamp(.85rem, 4vw, 1.25rem);
+  }
+  .page-heading, .page-header, .dashboard-header-wrapper,
+  .analytics-page-heading, .admin-page-heading {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .page-heading > button, .page-header > button,
+  .analytics-page-heading > button, .admin-page-heading > button {
+    align-self: flex-start;
+  }
+  .admin-toolbar, .admin-filters, .document-toolbar,
+  .documents-summary, .notification-header-actions {
+    flex-wrap: wrap;
+  }
+  .admin-search, .document-toolbar input { width: 100%; min-width: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+@keyframes sdPageEnter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}

@@ -1,0 +1,183 @@
+/* SyncDoc Premium Loading — scoped styles, no global element overrides */
+.sd-loading {
+  --sd-load-accent: #6478ff;
+  --sd-load-accent-2: #a855f7;
+  --sd-load-ink: #182230;
+  --sd-load-muted: #718096;
+  --sd-load-surface: rgba(255, 255, 255, 0.92);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  color: var(--sd-load-ink);
+  font-family: inherit;
+  isolation: isolate;
+}
+
+.sd-loading__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  width: 100%;
+  text-align: center;
+  animation: sd-load-enter 420ms cubic-bezier(.2,.8,.2,1) both;
+}
+
+.sd-loading__visual {
+  display: grid;
+  place-items: center;
+  color: var(--sd-load-accent);
+  flex: 0 0 auto;
+}
+
+.sd-loading--sm { min-height: 44px; }
+.sd-loading--md { min-height: 100px; }
+.sd-loading--lg { min-height: 160px; }
+.sd-loading--xl { min-height: 220px; }
+.sd-loading--sm .sd-loading__content { gap: 8px; }
+.sd-loading--compact { min-height: 0; }
+.sd-loading--compact .sd-loading__content { flex-direction: row; justify-content: flex-start; gap: 10px; }
+.sd-loading--compact .sd-loading__copy { align-items: flex-start; }
+.sd-loading--compact .sd-loading__progress { display: none; }
+
+.sd-loading__spinner {
+  display: block;
+  width: 34px;
+  height: 34px;
+  border: 3px solid rgba(100, 120, 255, .17);
+  border-top-color: var(--sd-load-accent);
+  border-right-color: var(--sd-load-accent-2);
+  border-radius: 50%;
+  animation: sd-load-spin .8s linear infinite;
+  filter: drop-shadow(0 4px 10px rgba(100, 120, 255, .16));
+}
+.sd-loading--sm .sd-loading__spinner { width: 18px; height: 18px; border-width: 2px; }
+.sd-loading--lg .sd-loading__spinner { width: 46px; height: 46px; border-width: 4px; }
+.sd-loading--xl .sd-loading__spinner { width: 58px; height: 58px; border-width: 4px; }
+
+.sd-loading__dots { display: flex; align-items: center; gap: 7px; height: 34px; }
+.sd-loading__dots i {
+  display: block;
+  width: 9px; height: 9px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--sd-load-accent), var(--sd-load-accent-2));
+  animation: sd-load-bounce 850ms ease-in-out infinite;
+}
+.sd-loading__dots i:nth-child(2) { animation-delay: 120ms; }
+.sd-loading__dots i:nth-child(3) { animation-delay: 240ms; }
+.sd-loading--sm .sd-loading__dots i { width: 6px; height: 6px; }
+.sd-loading--lg .sd-loading__dots i { width: 12px; height: 12px; }
+
+.sd-loading__bars { display: flex; align-items: center; gap: 4px; height: 38px; }
+.sd-loading__bars i {
+  display: block; width: 5px; height: 14px; border-radius: 9px;
+  background: linear-gradient(180deg, var(--sd-load-accent), var(--sd-load-accent-2));
+  animation: sd-load-bars 850ms ease-in-out infinite;
+}
+.sd-loading__bars i:nth-child(2) { animation-delay: 100ms; }
+.sd-loading__bars i:nth-child(3) { animation-delay: 200ms; }
+.sd-loading__bars i:nth-child(4) { animation-delay: 300ms; }
+.sd-loading__bars i:nth-child(5) { animation-delay: 400ms; }
+
+.sd-loading__orbit { position: relative; width: 58px; height: 58px; display: grid; place-items: center; }
+.sd-loading__orbit-ring {
+  position: absolute; inset: 1px; border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: var(--sd-load-accent);
+  border-right-color: rgba(168, 85, 247, .65);
+  animation: sd-load-spin 1.15s linear infinite;
+}
+.sd-loading__orbit-ring--inner {
+  inset: 8px; border-top-color: var(--sd-load-accent-2);
+  border-right-color: transparent; border-bottom-color: rgba(100, 120, 255, .5);
+  animation-direction: reverse; animation-duration: 1.6s;
+}
+.sd-loading__orbit-core {
+  display: grid; place-items: center; width: 27px; height: 27px;
+  border-radius: 9px; color: #fff; font-size: 12px; font-weight: 800; font-style: normal;
+  background: linear-gradient(135deg, #6478ff, #9b5de5);
+  box-shadow: 0 5px 18px rgba(100, 120, 255, .34);
+  animation: sd-load-pulse 1.8s ease-in-out infinite;
+}
+.sd-loading--sm .sd-loading__orbit { width: 28px; height: 28px; }
+.sd-loading--sm .sd-loading__orbit-core { width: 14px; height: 14px; border-radius: 4px; font-size: 7px; }
+.sd-loading--sm .sd-loading__orbit-ring--inner { inset: 4px; }
+.sd-loading--lg .sd-loading__orbit, .sd-loading--xl .sd-loading__orbit { width: 76px; height: 76px; }
+.sd-loading--lg .sd-loading__orbit-core, .sd-loading--xl .sd-loading__orbit-core { width: 34px; height: 34px; border-radius: 11px; font-size: 14px; }
+
+.sd-loading__copy { display: flex; flex-direction: column; align-items: center; gap: 5px; max-width: min(440px, 100%); }
+.sd-loading__label { color: var(--sd-load-ink); font-size: 14px; font-weight: 700; line-height: 1.45; letter-spacing: -.01em; }
+.sd-loading__description { color: var(--sd-load-muted); font-size: 12px; line-height: 1.55; max-width: 38ch; }
+.sd-loading--sm .sd-loading__label { font-size: 12px; }
+.sd-loading--lg .sd-loading__label, .sd-loading--xl .sd-loading__label { font-size: 16px; }
+
+.sd-loading__progress {
+  position: relative; overflow: hidden; width: min(230px, 72vw); height: 5px;
+  border-radius: 999px; background: rgba(100, 120, 255, .12); margin-top: 2px;
+}
+.sd-loading__progress-fill {
+  display: block; height: 100%; border-radius: inherit;
+  background: linear-gradient(90deg, var(--sd-load-accent), var(--sd-load-accent-2));
+  box-shadow: 0 0 12px rgba(100, 120, 255, .35);
+  transition: width 260ms ease;
+}
+.sd-loading__progress-fill.is-indeterminate { width: 42%; animation: sd-load-progress 1.35s ease-in-out infinite; }
+
+.sd-loading--fullscreen, .sd-loading--overlay {
+  position: fixed; inset: 0; z-index: 9999; min-height: 100dvh; padding: 24px;
+}
+.sd-loading--overlay { min-height: 100%; }
+.sd-loading__backdrop {
+  position: absolute; inset: 0; z-index: -1;
+  background: radial-gradient(ellipse at 18% 12%, rgba(100,120,255,.16), transparent 42%),
+              radial-gradient(ellipse at 86% 82%, rgba(168,85,247,.12), transparent 40%),
+              rgba(247, 249, 255, .86);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+}
+.sd-loading--overlay .sd-loading__backdrop { background: rgba(19, 27, 45, .36); }
+.sd-loading__surface {
+  width: min(420px, 100%); padding: 36px 30px 28px; border-radius: 24px;
+  display: flex; flex-direction: column; align-items: center; gap: 22px;
+  background: var(--sd-load-surface);
+  border: 1px solid rgba(255,255,255,.85);
+  box-shadow: 0 24px 80px rgba(25, 38, 74, .14), inset 0 1px rgba(255,255,255,.9);
+  animation: sd-load-card-in 480ms cubic-bezier(.2,.8,.2,1) both;
+}
+.sd-loading--overlay .sd-loading__surface {
+  background: rgba(255,255,255,.96);
+  box-shadow: 0 24px 70px rgba(8,15,35,.2);
+}
+.sd-loading__brand { display: flex; align-items: center; gap: 10px; color: #202b46; font-weight: 800; font-size: 18px; letter-spacing: -.04em; }
+.sd-loading__brand-mark {
+  display: grid; place-items: center; width: 36px; height: 36px; border-radius: 12px;
+  color: #fff; background: linear-gradient(135deg, #6378ff, #a855f7);
+  box-shadow: 0 7px 20px rgba(100,120,255,.28);
+}
+.sd-loading__secure { color: #8a94a8; font-size: 11px; text-align: center; }
+.sd-loading__sr-only {
+  position: absolute !important; width: 1px !important; height: 1px !important;
+  padding: 0 !important; margin: -1px !important; overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important; white-space: nowrap !important; border: 0 !important;
+}
+
+@keyframes sd-load-spin { to { transform: rotate(360deg); } }
+@keyframes sd-load-bounce { 0%, 60%, 100% { transform: translateY(0); opacity: .65; } 30% { transform: translateY(-7px); opacity: 1; } }
+@keyframes sd-load-bars { 0%, 100% { transform: scaleY(.55); opacity: .65; } 50% { transform: scaleY(1.35); opacity: 1; } }
+@keyframes sd-load-pulse { 0%, 100% { transform: scale(.94); } 50% { transform: scale(1.04); } }
+@keyframes sd-load-progress { 0% { transform: translateX(-120%); } 100% { transform: translateX(340%); } }
+@keyframes sd-load-enter { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes sd-load-card-in { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+@media (max-width: 520px) {
+  .sd-loading--fullscreen, .sd-loading--overlay { padding: 16px; }
+  .sd-loading__surface { padding: 28px 20px 22px; border-radius: 20px; }
+  .sd-loading__description { max-width: 30ch; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sd-loading *, .sd-loading *::before, .sd-loading *::after {
+    animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important; transition-duration: .01ms !important;
+  }
+}

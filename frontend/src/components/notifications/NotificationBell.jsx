@@ -1,84 +1,59 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Bell, CheckCheck, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
-
+import useNotifications from '../../hooks/useNotifications';
 import NotificationPanel from './NotificationPanel';
+import './notifications.css';
 
-export default function NotificationBell({
-  unreadCount = 3,
-}) {
+export default function NotificationBell({ unreadCount: unreadCountProp }) {
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef(null);
+  const notificationState = useNotifications({ autoLoad: true });
+  const unreadCount = Number.isFinite(unreadCountProp)
+    ? unreadCountProp
+    : notificationState.unreadCount;
 
   useEffect(() => {
-    const handleOutsideClick = (event) => {
-      if (
-        wrapperRef.current &&
-        !wrapperRef.current.contains(event.target)
-      ) {
-        setOpen(false);
-      }
+    if (!open) return undefined;
+    const handlePointerDown = (event) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) setOpen(false);
     };
-
-    const handleEscape = (event) => {
-      if (event.key === 'Escape') {
-        setOpen(false);
-      }
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setOpen(false);
     };
-
-    document.addEventListener('mousedown', handleOutsideClick);
-    document.addEventListener('keydown', handleEscape);
-
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
     return () => {
-      document.removeEventListener(
-        'mousedown',
-        handleOutsideClick
-      );
-      document.removeEventListener('keydown', handleEscape);
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [open]);
 
   return (
-    <div
-      ref={wrapperRef}
-      className={`notification-wrap ${
-        open ? 'notification-open' : ''
-      }`}
-    >
+    <div className={`sd-notification-wrap ${open ? 'is-open' : ''}`} ref={wrapperRef}>
       <button
         type="button"
-        className="icon-btn notification-button"
-        onClick={() => setOpen((current) => !current)}
-        aria-label="Notifications"
+        className="sd-notification-trigger"
+        aria-label={unreadCount ? `Notifications, ${unreadCount} unread` : 'Notifications'}
         aria-expanded={open}
         aria-haspopup="dialog"
+        onClick={() => setOpen((value) => !value)}
       >
-        <span
-          className="notification-icon"
-          aria-hidden="true"
-        >
-          🔔
-        </span>
-
-        {unreadCount > 0 && (
-          <span className="notification-count">
-            {unreadCount > 99 ? '99+' : unreadCount}
-          </span>
-        )}
+        <Bell size={19} strokeWidth={1.8} />
+        {unreadCount > 0 && <span className="sd-notification-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>}
+        <span className="sd-notification-pulse" aria-hidden="true" />
       </button>
-
       {open && (
-        <div className="notification-popover">
+        <div className="sd-notification-popover">
           <NotificationPanel
+            notificationState={notificationState}
             onClose={() => setOpen(false)}
           />
         </div>
       )}
-
-      <Link
-        to="/notifications"
-        className="notification-mobile-link"
-        aria-label="View all notifications"
-      />
+      <Link to="/notifications" className="sd-notification-mobile-link" onClick={() => setOpen(false)} aria-label="Open all notifications">
+        <ChevronRight size={16} />
+      </Link>
     </div>
   );
 }

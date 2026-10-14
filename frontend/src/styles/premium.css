@@ -472,3 +472,31 @@ html[data-theme="dark"] .command-palette{--surface:#101827;--border:#263244;--te
     transition-duration: .01ms !important;
   }
 }
+
+
+/* ============================================================
+   PREMIUM INTERACTION LAYER — SAFE CSS-ONLY ENHANCEMENTS
+============================================================ */
+:root {
+  --premium-brand: #5b5ce2;
+  --premium-brand-2: #7c4dce;
+  --premium-cyan: #13a8c7;
+  --premium-ink: #172033;
+  --premium-muted: #68758b;
+  --premium-line: rgba(130, 146, 174, .22);
+  --premium-shadow: 0 12px 34px rgba(25, 36, 68, .065);
+  --premium-shadow-hover: 0 20px 48px rgba(25, 36, 68, .12);
+}
+
+.card, .workspace-card, .document-card, .analytics-stat-card,
+.notification-card, .settings-card, .project-card {
+  transition: transform .24s var(--sd-ease, ease), box-shadow .24s var(--sd-ease, ease), border-color .24s ease, background-color .24s ease;
+}
+.card:hover, .workspace-card:hover, .document-card:hover, .project-card:hover {
+  transform: translateY(-3px);
+}
+button, .btn, a, input, textarea, select, [role="button"] {
+  transition: color .18s ease, background-color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+button:active:not(:disabled), .btn:active:not(:disabled), [role="button"]:active { transform: translateY(1px) scale(.99); }
+input:focus, textarea:focus, select:focus { outline: none; }

@@ -258,3 +258,9 @@ html[data-theme="dark"] .quick-actions-menu kbd { background:#111827; border-col
   .quick-actions { right:12px; bottom:58px; }
   .quick-actions-menu { width:min(285px,calc(100vw - 24px)); }
 }
+
+
+/* PRODUCT SURFACE POLISH */
+.page-heading h1 { letter-spacing: -.045em; }
+.sidebar-nav-item, .card, .workspace-card, .document-card { transition-timing-function: cubic-bezier(.2,.75,.25,1); }
+.app-command-status, .system-status { border-radius: 999px; }

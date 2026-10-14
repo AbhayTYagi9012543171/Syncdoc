@@ -285,7 +285,7 @@ export function isCommenter(role) {
 ============================================================ */
 
 export function isViewer(role) {
-  return Boolean(role);
+  return normalizeRole(role) === ROLES.VIEWER;
 }
 
 /* ============================================================

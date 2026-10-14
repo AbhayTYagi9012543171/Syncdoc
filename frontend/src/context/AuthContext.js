@@ -32,7 +32,10 @@ const WORKSPACE_KEY = "syncdoc_active_workspace";
  */
 function getStorageItem(key) {
   try {
-    return localStorage.getItem(key);
+    if (typeof window === "undefined" || !window.localStorage) {
+      return null;
+    }
+    return window.localStorage.getItem(key);
   } catch (error) {
     console.warn(
       `SyncDoc: unable to read localStorage key "${key}".`,
@@ -48,7 +51,10 @@ function getStorageItem(key) {
  */
 function setStorageItem(key, value) {
   try {
-    localStorage.setItem(key, value);
+    if (typeof window === "undefined" || !window.localStorage) {
+      return false;
+    }
+    window.localStorage.setItem(key, value);
     return true;
   } catch (error) {
     console.warn(
@@ -65,7 +71,10 @@ function setStorageItem(key, value) {
  */
 function removeStorageItem(key) {
   try {
-    localStorage.removeItem(key);
+    if (typeof window === "undefined" || !window.localStorage) {
+      return;
+    }
+    window.localStorage.removeItem(key);
   } catch (error) {
     console.warn(
       `SyncDoc: unable to remove localStorage key "${key}".`,
@@ -638,6 +647,13 @@ export function AuthProvider({
       user && hasStoredToken()
     );
 
+  // A small, explicit status makes auth-aware UI easier to render dynamically.
+  const sessionStatus = loading
+    ? "restoring"
+    : isAuthenticated
+      ? "authenticated"
+      : "anonymous";
+
   /* ==========================================================
      CONTEXT VALUE
   ========================================================== */
@@ -646,7 +662,9 @@ export function AuthProvider({
     () => ({
       user,
       loading,
+      isLoading: loading,
       isAuthenticated,
+      sessionStatus,
 
       login,
       register,
@@ -677,6 +695,7 @@ export function AuthProvider({
       user,
       loading,
       isAuthenticated,
+      sessionStatus,
       login,
       register,
       logout,

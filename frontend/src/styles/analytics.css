@@ -1488,3 +1488,10 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* PREMIUM ANALYTICS */
+.analytics-page .analytics-stats-grid > *, .analytics-page .analytics-stat-card { min-width: 0; }
+.analytics-page .analytics-period { border-radius: 999px; }
+.analytics-page .analytics-period:hover:not(:disabled) { transform: translateY(-1px); }
+.analytics-page svg { max-width: 100%; }
+.analytics-page .card { overflow: hidden; }

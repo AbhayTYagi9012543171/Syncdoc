@@ -1,3 +1,4 @@
+import "./pages-premium.css";
 
 import React, {
   useCallback,

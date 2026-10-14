@@ -1,3 +1,4 @@
+
 import {
   useCallback,
   useEffect,
@@ -9,77 +10,19 @@ import {
   createCollaborationProvider,
 } from "../utils/yjsProvider";
 
-/* ============================================================
-   SYNCDOC — COLLABORATION HOOK
-   ============================================================ */
-
-/**
- * useCollaboration
- *
- * Manages the lifecycle of a real-time collaboration provider
- * for a single document.
- *
- * Responsibilities:
- * - Create collaboration provider
- * - Track connection state
- * - Track online collaborators
- * - Handle provider errors
- * - Broadcast custom events
- * - Clean up provider when document changes
- * - Prevent stale provider callbacks
- * - Expose reconnect functionality when supported
- */
-
-export default function useCollaboration(
-  documentId
-) {
-  /* ==========================================================
-     PROVIDER REF
-  ========================================================== */
-
+export default function useCollaboration(documentId) {
   const providerRef = useRef(null);
+  const mountedRef = useRef(false);
+  const documentIdRef = useRef(documentId || null);
 
-  /* ==========================================================
-     LIFECYCLE REF
-  ========================================================== */
+  const [connected, setConnected] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+  const [users, setUsers] = useState([]);
+  const [error, setError] = useState(null);
 
-  const mountedRef = useRef(true);
-
-  /* ==========================================================
-     CURRENT DOCUMENT REF
-  ========================================================== */
-
-  const documentIdRef =
-    useRef(documentId);
-
-  /* ==========================================================
-     STATE
-  ========================================================== */
-
-  const [
-    connected,
-    setConnected,
-  ] = useState(false);
-
-  const [
-    users,
-    setUsers,
-  ] = useState([]);
-
-  const [
-    error,
-    setError,
-  ] = useState(null);
-
-  const [
-    connecting,
-    setConnecting,
-  ] = useState(false);
-
-  /* ==========================================================
-     MOUNT / UNMOUNT
-  ========================================================== */
-
+  /*
+   * Track whether the hook is mounted.
+   */
   useEffect(() => {
     mountedRef.current = true;
 
@@ -88,456 +31,268 @@ export default function useCollaboration(
     };
   }, []);
 
-  /* ==========================================================
-     COLLABORATION PROVIDER
-  ========================================================== */
-
+  /*
+   * Create one provider for the current document.
+   */
   useEffect(() => {
-    /*
-     * Always clean up the previous provider when
-     * the document changes.
-     */
-    const previousProvider =
-      providerRef.current;
-
-    if (previousProvider) {
-      try {
-        previousProvider.destroy?.();
-      } catch (destroyError) {
-        console.warn(
-          "SyncDoc: failed to destroy previous collaboration provider:",
-          destroyError
-        );
-      }
-
-      providerRef.current = null;
-    }
-
-    documentIdRef.current =
-      documentId || null;
-
-    /*
-     * No document means there is nothing
-     * to collaborate on.
-     */
-    if (!documentId) {
-      setConnected(false);
-      setConnecting(false);
-      setUsers([]);
-      setError(null);
-
-      return undefined;
-    }
-
     let active = true;
+    let provider = null;
+
+    documentIdRef.current = documentId || null;
 
     setConnected(false);
-    setConnecting(true);
+    setConnecting(Boolean(documentId));
     setUsers([]);
     setError(null);
 
-    /* ========================================================
-       PROVIDER CALLBACKS
-    ======================================================== */
+    if (!documentId) {
+      providerRef.current = null;
+      setConnecting(false);
+
+      return () => {
+        active = false;
+      };
+    }
+
+    const canUpdateState = () =>
+      active && mountedRef.current;
 
     const handleConnect = () => {
-      if (
-        !active ||
-        !mountedRef.current
-      ) {
-        return;
-      }
+      if (!canUpdateState()) return;
 
       setConnected(true);
       setConnecting(false);
       setError(null);
     };
 
-    const handleDisconnect = () => {
-      if (
-        !active ||
-        !mountedRef.current
-      ) {
-        return;
-      }
+    const handleDisconnect = (reason) => {
+      if (!canUpdateState()) return;
 
       setConnected(false);
       setConnecting(false);
+
+      // Keep the reason available for debugging.
+      if (reason) {
+        console.info(
+          "SyncDoc collaboration disconnected:",
+          reason
+        );
+      }
     };
 
-    const handleUsers = (
-      nextUsers
-    ) => {
-      if (
-        !active ||
-        !mountedRef.current
-      ) {
-        return;
-      }
+    const handleUsers = (nextUsers) => {
+      if (!canUpdateState()) return;
 
-      /*
-       * Always normalize collaborators to
-       * an array so consuming components
-       * don't have to perform defensive checks.
-       */
       setUsers(
         Array.isArray(nextUsers)
-          ? nextUsers
+          ? nextUsers.filter(Boolean)
           : []
       );
     };
 
-    const handleError = (
-      providerError
-    ) => {
-      if (
-        !active ||
-        !mountedRef.current
-      ) {
-        return;
-      }
+    const handleError = (providerError) => {
+      if (!canUpdateState()) return;
+
+      const normalizedError =
+        providerError instanceof Error
+          ? providerError
+          : new Error(
+              String(
+                providerError ||
+                  "Collaboration connection failed."
+              )
+            );
 
       console.error(
         "SyncDoc collaboration error:",
-        providerError
+        normalizedError
       );
 
       setConnected(false);
       setConnecting(false);
-
-      setError(
-        providerError instanceof Error
-          ? providerError
-          : new Error(
-            String(
-              providerError ||
-              "Collaboration connection failed."
-            )
-          )
-      );
+      setError(normalizedError);
     };
 
-    /* ========================================================
-       CREATE PROVIDER
-    ======================================================== */
-
-    let provider = null;
-
     try {
-      provider =
-        createCollaborationProvider(
-          documentId,
-          {
-            onConnect:
-              handleConnect,
-
-            onDisconnect:
-              handleDisconnect,
-
-            onUsers:
-              handleUsers,
-
-            /*
-             * Supported by newer versions
-             * of the provider.
-             */
-            onError:
-              handleError,
-          }
-        );
+      provider = createCollaborationProvider(
+        documentId,
+        {
+          onConnect: handleConnect,
+          onDisconnect: handleDisconnect,
+          onUsers: handleUsers,
+          onError: handleError,
+        }
+      );
 
       if (!active) {
         provider?.destroy?.();
-
         return undefined;
       }
 
-      providerRef.current =
-        provider;
+      providerRef.current = provider;
+
+      /*
+       * The provider currently connects automatically.
+       * Do not call connect() again here.
+       */
     } catch (providerError) {
-      console.error(
-        "SyncDoc: unable to create collaboration provider:",
-        providerError
-      );
-
-      if (mountedRef.current) {
-        setConnected(false);
-        setConnecting(false);
-
-        setError(
-          providerError instanceof Error
-            ? providerError
-            : new Error(
-              "Unable to initialize collaboration."
-            )
-        );
-      }
-
-      providerRef.current =
-        null;
+      handleError(providerError);
+      providerRef.current = null;
     }
-
-    /* ========================================================
-       CLEANUP
-    ======================================================== */
 
     return () => {
       active = false;
 
-      /*
-       * Only destroy the provider created
-       * by this effect.
-       */
-      if (
-        providerRef.current ===
-        provider
-      ) {
-        providerRef.current =
-          null;
+      if (providerRef.current === provider) {
+        providerRef.current = null;
       }
 
       try {
         provider?.destroy?.();
-      } catch (destroyError) {
+      } catch (cleanupError) {
         console.warn(
-          "SyncDoc: collaboration cleanup failed:",
-          destroyError
+          "SyncDoc collaboration cleanup failed:",
+          cleanupError
         );
-      }
-
-      if (mountedRef.current) {
-        setConnected(false);
-        setConnecting(false);
-        setUsers([]);
       }
     };
   }, [documentId]);
 
-  /* ==========================================================
-     BROADCAST
-  ========================================================== */
+  /*
+   * Broadcast a document collaboration event.
+   */
+  const broadcast = useCallback((payload) => {
+    const provider = providerRef.current;
 
-  const broadcast = useCallback(
-    (payload) => {
-      const provider =
-        providerRef.current;
+    if (
+      !provider ||
+      typeof provider.broadcast !== "function"
+    ) {
+      return false;
+    }
 
-      if (!provider) {
+    try {
+      return provider.broadcast(payload) === true;
+    } catch (broadcastError) {
+      console.error(
+        "SyncDoc broadcast failed:",
+        broadcastError
+      );
+
+      return false;
+    }
+  }, []);
+
+  /*
+   * Reconnect the current provider.
+   */
+  const reconnect = useCallback(() => {
+    const provider = providerRef.current;
+
+    if (!provider) {
+      return false;
+    }
+
+    const reconnectMethod =
+      provider.reconnect || provider.connect;
+
+    if (typeof reconnectMethod !== "function") {
+      return false;
+    }
+
+    try {
+      setConnecting(true);
+      setError(null);
+
+      const result = reconnectMethod.call(provider);
+
+      if (result === false) {
+        setConnecting(false);
         return false;
       }
 
-      if (
-        typeof provider.broadcast !==
-        "function"
-      ) {
-        console.warn(
-          "SyncDoc: collaboration provider does not support broadcast()."
-        );
+      return true;
+    } catch (reconnectError) {
+      setConnecting(false);
 
+      setError(
+        reconnectError instanceof Error
+          ? reconnectError
+          : new Error("Unable to reconnect collaboration.")
+      );
+
+      console.error(
+        "SyncDoc reconnect failed:",
+        reconnectError
+      );
+
+      return false;
+    }
+  }, []);
+
+  /*
+   * Disconnect without destroying the provider.
+   */
+  const disconnect = useCallback(() => {
+    const provider = providerRef.current;
+
+    if (!provider) {
+      return false;
+    }
+
+    const disconnectMethod =
+      provider.disconnect || provider.close;
+
+    if (typeof disconnectMethod !== "function") {
+      return false;
+    }
+
+    try {
+      const result = disconnectMethod.call(provider);
+
+      if (result === false) {
         return false;
       }
 
-      try {
-        provider.broadcast(
-          payload
-        );
+      setConnected(false);
+      setConnecting(false);
+      setUsers([]);
 
-        return true;
-      } catch (broadcastError) {
-        console.error(
-          "SyncDoc: failed to broadcast collaboration event:",
-          broadcastError
-        );
+      return true;
+    } catch (disconnectError) {
+      console.error(
+        "SyncDoc disconnect failed:",
+        disconnectError
+      );
 
-        return false;
-      }
-    },
+      return false;
+    }
+  }, []);
+
+  const getProvider = useCallback(
+    () => providerRef.current,
     []
   );
 
-  /* ==========================================================
-     RECONNECT
-  ========================================================== */
-
-  const reconnect =
-    useCallback(() => {
-      const provider =
-        providerRef.current;
-
-      if (!provider) {
-        return false;
-      }
-
-      /*
-       * Different providers may expose
-       * different reconnect methods.
-       */
-      const reconnectMethod =
-        provider.reconnect ||
-        provider.connect;
-
-      if (
-        typeof reconnectMethod !==
-        "function"
-      ) {
-        console.warn(
-          "SyncDoc: collaboration provider does not support reconnect()."
-        );
-
-        return false;
-      }
-
-      try {
-        setConnecting(true);
-        setError(null);
-
-        reconnectMethod.call(
-          provider
-        );
-
-        return true;
-      } catch (reconnectError) {
-        console.error(
-          "SyncDoc: collaboration reconnect failed:",
-          reconnectError
-        );
-
-        setConnecting(false);
-
-        setError(
-          reconnectError instanceof Error
-            ? reconnectError
-            : new Error(
-              "Unable to reconnect collaboration."
-            )
-        );
-
-        return false;
-      }
-    }, []);
-
-  /* ==========================================================
-     DISCONNECT
-  ========================================================== */
-
-  const disconnect =
-    useCallback(() => {
-      const provider =
-        providerRef.current;
-
-      if (!provider) {
-        return false;
-      }
-
-      const disconnectMethod =
-        provider.disconnect ||
-        provider.close;
-
-      if (
-        typeof disconnectMethod !==
-        "function"
-      ) {
-        /*
-         * Some providers only expose
-         * destroy().
-         */
-        return false;
-      }
-
-      try {
-        disconnectMethod.call(
-          provider
-        );
-
-        setConnected(false);
-        setConnecting(false);
-
-        return true;
-      } catch (disconnectError) {
-        console.error(
-          "SyncDoc: collaboration disconnect failed:",
-          disconnectError
-        );
-
-        return false;
-      }
-    }, []);
-
-  /* ==========================================================
-     PROVIDER ACCESS
-  ========================================================== */
-
-  const getProvider =
-    useCallback(() => {
-      return providerRef.current;
-    }, []);
-
-  /* ==========================================================
-     DERIVED STATE
-  ========================================================== */
-
-  const collaboratorCount =
-    users.length;
-
-  const hasCollaborators =
-    collaboratorCount > 0;
-
-  /* ==========================================================
-     RETURN API
-  ========================================================== */
+  const collaboratorCount = users.length;
 
   return {
-    /* --------------------------------------------------------
-       Connection
-    -------------------------------------------------------- */
-
     connected,
-
     connecting,
 
-    /* --------------------------------------------------------
-       Collaborators
-    -------------------------------------------------------- */
-
     users,
-
     collaboratorCount,
-
-    hasCollaborators,
-
-    /* --------------------------------------------------------
-       Errors
-    -------------------------------------------------------- */
+    hasCollaborators: collaboratorCount > 0,
 
     error,
+    hasError: Boolean(error),
 
-    hasError:
-      Boolean(error),
-
-    /* --------------------------------------------------------
-       Document
-    -------------------------------------------------------- */
-
-    documentId:
-      documentIdRef.current,
-
-    /* --------------------------------------------------------
-       Provider
-    -------------------------------------------------------- */
-
-    provider:
-      providerRef.current,
-
+    documentId: documentIdRef.current,
+    provider: providerRef.current,
     getProvider,
 
-    /* --------------------------------------------------------
-       Actions
-    -------------------------------------------------------- */
-
     broadcast,
-
     reconnect,
-
     disconnect,
   };
 }

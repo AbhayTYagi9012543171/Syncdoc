@@ -1751,3 +1751,9 @@
     min-height: auto;
   }
 }
+
+/* PREMIUM NOTIFICATION CENTER */
+.notifications-page .notification-summary-item { transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
+.notifications-page .notification-summary-item:hover { transform: translateY(-2px); }
+.notifications-page .notification-count-badge { box-shadow: 0 4px 14px rgba(91,92,226,.15); }
+.notifications-page :is(button, a):focus-visible { outline-offset: 3px; }

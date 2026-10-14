@@ -1566,3 +1566,11 @@
   }
 }
 
+
+
+/* PREMIUM SIDEBAR INTERACTIONS */
+.sidebar { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.2) transparent; }
+.sidebar-nav-item, .sidebar a, .workspace-selector { transition: background .2s ease, color .2s ease, transform .2s ease, border-color .2s ease; }
+.sidebar-nav-item:hover, .sidebar a:hover { transform: translateX(2px); }
+.sidebar-nav-item.active { box-shadow: inset 3px 0 0 #9aa0ff, 0 7px 20px rgba(5,10,30,.12); }
+.sidebar-brand-mark { box-shadow: 0 8px 22px rgba(91,92,226,.28); }

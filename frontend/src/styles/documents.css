@@ -1329,3 +1329,10 @@
         break-inside: avoid;
     }
 }
+
+/* PREMIUM DOCUMENT LIBRARY */
+.documents-page .document-search:focus-within, .documents-page .document-toolbar:focus-within { border-color: rgba(91,92,226,.48); box-shadow: 0 0 0 4px rgba(91,92,226,.08); }
+.documents-page .document-card { border: 1px solid var(--sd-border, #e5eaf2); border-radius: 18px; }
+.documents-page .document-card:hover { border-color: rgba(91,92,226,.3); box-shadow: 0 16px 38px rgba(25,36,68,.1); }
+.documents-page .document-stat { transition: transform .2s ease, box-shadow .2s ease; }
+.documents-page .document-stat:hover { transform: translateY(-2px); }
