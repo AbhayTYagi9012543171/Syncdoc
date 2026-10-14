@@ -1,117 +1,72 @@
+
 /* ============================================================
    SYNCDOC — APPLICATION CONFIGURATION
-============================================================ */
+   Compatible with Create React App
+   ============================================================ */
 
-/**
- * Environment variable helper.
- *
- * Supports the current Create React App setup:
- *
- * REACT_APP_API_URL
- * REACT_APP_SOCKET_URL
- *
- * The Vite variables are also supported as a fallback so this
- * file can be used if the frontend is migrated back to Vite.
- */
-function getEnv(name, viteName, fallback) {
-  /* ----------------------------------------------------------
-     Create React App
-  ---------------------------------------------------------- */
+const PRODUCTION_API_URL =
+  "https://syncdoc-backend-lufy.onrender.com/api";
 
-  if (
-    typeof process !== "undefined" &&
-    process.env &&
-    process.env[name]
-  ) {
-    return process.env[name];
-  }
+const PRODUCTION_SOCKET_URL =
+  "https://syncdoc-backend-lufy.onrender.com";
 
-  /* ----------------------------------------------------------
-     Vite
-  ---------------------------------------------------------- */
+const DEVELOPMENT_API_URL =
+  "http://localhost:5000/api";
 
-  if (
-    typeof import.meta !== "undefined" &&
-    import.meta.env &&
-    import.meta.env[viteName]
-  ) {
-    return import.meta.env[viteName];
-  }
+const DEVELOPMENT_SOCKET_URL =
+  "http://localhost:5000";
 
-  return fallback;
-}
+const isProduction =
+  process.env.NODE_ENV === "production";
 
-/* ============================================================
-   URL NORMALIZATION
-============================================================ */
-
-/**
- * Remove unnecessary trailing slashes.
- */
 function normalizeUrl(value) {
-  if (!value) {
-    return "";
-  }
-
-  return String(value).replace(/\/+$/, "");
+  return String(value || "").trim().replace(/\/+$/, "");
 }
 
-/* ============================================================
-   APPLICATION CONFIG
-============================================================ */
+function getEnv(name, fallback) {
+  const value = process.env[name];
+
+  return typeof value === "string" && value.trim()
+    ? value.trim()
+    : fallback;
+}
+
+const apiUrl = normalizeUrl(
+  getEnv(
+    "REACT_APP_API_URL",
+    isProduction
+      ? PRODUCTION_API_URL
+      : DEVELOPMENT_API_URL
+  )
+);
+
+const socketUrl = normalizeUrl(
+  getEnv(
+    "REACT_APP_SOCKET_URL",
+    isProduction
+      ? PRODUCTION_SOCKET_URL
+      : DEVELOPMENT_SOCKET_URL
+  )
+);
 
 const config = Object.freeze({
-  /* ----------------------------------------------------------
-     APPLICATION
-  ---------------------------------------------------------- */
-
   appName: "SyncDoc",
-
   appVersion: "5.1.0",
 
   environment: getEnv(
     "REACT_APP_ENV",
-    "VITE_ENV",
-    "development"
+    process.env.NODE_ENV || "development"
   ),
 
-  /* ----------------------------------------------------------
-     API
-  ---------------------------------------------------------- */
+  apiUrl,
+  socketUrl,
 
-  apiUrl: normalizeUrl(
-    getEnv(
-      "REACT_APP_API_URL",
-      "VITE_API_URL",
-      "http://localhost:5000/api"
-    )
-  ),
-
-  /* ----------------------------------------------------------
-     SOCKET.IO
-  ---------------------------------------------------------- */
-
-  socketUrl: normalizeUrl(
-    getEnv(
-      "REACT_APP_SOCKET_URL",
-      "VITE_SOCKET_URL",
-      "http://localhost:5000"
-    )
-  ),
-
-  /* ----------------------------------------------------------
-     AUTH
-  ---------------------------------------------------------- */
+  // The backend Yjs WebSocket endpoint is /yjs/:documentId.
+  yjsUrl: `${socketUrl.replace(/^http/i, "ws")}/yjs`,
 
   tokenKey: "syncdoc_token",
-
   userKey: "syncdoc_user",
-
   workspaceKey: "syncdoc_active_workspace",
-
-  /* ----------------------------------------------------------
-     FEATURES
-  ---------------------------------------------------------- */
 
   features: Object.freeze({
     collaboration: true,
