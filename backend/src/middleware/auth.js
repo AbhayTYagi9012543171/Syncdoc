@@ -1,4 +1,6 @@
+
 const jwt = require('jsonwebtoken');
+const authRateLimit = require('express-rate-limit');
 const User = require('../models/User');
 const { logger } = require('../config/logger');
 
@@ -7,9 +9,8 @@ const { logger } = require('../config/logger');
  */
 const auth = async (req, res, next) => {
   try {
-    // Get token from Authorization header
     const authHeader = req.headers.authorization;
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         success: false,
@@ -26,8 +27,8 @@ const auth = async (req, res, next) => {
       });
     }
 
-    // Verify token
     let decoded;
+
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET);
     } catch (error) {
@@ -37,18 +38,19 @@ const auth = async (req, res, next) => {
           message: 'Token expired. Please refresh your token.',
         });
       }
+
       if (error.name === 'JsonWebTokenError') {
         return res.status(401).json({
           success: false,
           message: 'Invalid token. Please login again.',
         });
       }
+
       throw error;
     }
 
-    // Find user
     const user = await User.findById(decoded.id);
-    
+
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -56,7 +58,6 @@ const auth = async (req, res, next) => {
       });
     }
 
-    // Check if user is deleted
     if (user.deletedAt) {
       return res.status(401).json({
         success: false,
@@ -64,14 +65,14 @@ const auth = async (req, res, next) => {
       });
     }
 
-    // Attach user to request
     req.user = user;
     req.userId = user._id;
     req.token = token;
 
-    next();
+    return next();
   } catch (error) {
     logger.error('Auth middleware error:', error);
+
     return res.status(500).json({
       success: false,
       message: 'Authentication failed. Please try again.',
@@ -80,36 +81,35 @@ const auth = async (req, res, next) => {
 };
 
 /**
- * Optional authentication - Does not require token but attaches user if present
+ * Optional authentication
  */
 const optionalAuth = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
-    
+
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.split(' ')[1];
-      
+
       if (token) {
         try {
           const decoded = jwt.verify(token, process.env.JWT_SECRET);
           const user = await User.findById(decoded.id);
-          
+
           if (user && !user.deletedAt) {
             req.user = user;
             req.userId = user._id;
             req.token = token;
           }
         } catch (error) {
-          // Token invalid, but that's okay for optional auth
           logger.debug('Optional auth token invalid:', error.message);
         }
       }
     }
-    
-    next();
+
+    return next();
   } catch (error) {
     logger.error('Optional auth middleware error:', error);
-    next();
+    return next();
   }
 };
 
@@ -132,7 +132,7 @@ const authorize = (...roles) => {
       });
     }
 
-    next();
+    return next();
   };
 };
 
@@ -142,6 +142,14 @@ const authorize = (...roles) => {
 const checkWorkspaceMembership = async (req, res, next) => {
   try {
     const { workspaceId } = req.params;
+
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required.',
+      });
+    }
+
     const userId = req.user.id;
 
     if (!workspaceId) {
@@ -161,7 +169,9 @@ const checkWorkspaceMembership = async (req, res, next) => {
       });
     }
 
-    const isMember = workspace.isMember(userId) || workspace.owner.toString() === userId;
+    const isMember =
+      workspace.isMember(userId) ||
+      workspace.owner.toString() === userId;
 
     if (!isMember) {
       return res.status(403).json({
@@ -171,9 +181,11 @@ const checkWorkspaceMembership = async (req, res, next) => {
     }
 
     req.workspace = workspace;
-    next();
+
+    return next();
   } catch (error) {
     logger.error('Workspace membership check error:', error);
+
     return res.status(500).json({
       success: false,
       message: 'Failed to verify workspace access',
@@ -187,6 +199,14 @@ const checkWorkspaceMembership = async (req, res, next) => {
 const checkDocumentAccess = async (req, res, next) => {
   try {
     const { documentId } = req.params;
+
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required.',
+      });
+    }
+
     const userId = req.user.id;
 
     if (!documentId) {
@@ -206,8 +226,11 @@ const checkDocumentAccess = async (req, res, next) => {
       });
     }
 
-    const hasAccess = document.owner.toString() === userId ||
-      document.collaborators.some(c => c.user.toString() === userId);
+    const hasAccess =
+      document.owner.toString() === userId ||
+      document.collaborators.some(
+        (collaborator) => collaborator.user.toString() === userId
+      );
 
     if (!hasAccess) {
       return res.status(403).json({
@@ -217,9 +240,11 @@ const checkDocumentAccess = async (req, res, next) => {
     }
 
     req.document = document;
-    next();
+
+    return next();
   } catch (error) {
     logger.error('Document access check error:', error);
+
     return res.status(500).json({
       success: false,
       message: 'Failed to verify document access',
@@ -233,6 +258,14 @@ const checkDocumentAccess = async (req, res, next) => {
 const checkDocumentEditPermission = async (req, res, next) => {
   try {
     const { documentId } = req.params;
+
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required.',
+      });
+    }
+
     const userId = req.user.id;
 
     if (!documentId) {
@@ -252,10 +285,12 @@ const checkDocumentEditPermission = async (req, res, next) => {
       });
     }
 
-    const hasPermission = document.owner.toString() === userId ||
-      document.collaborators.some(c => 
-        c.user.toString() === userId && 
-        (c.role === 'admin' || c.role === 'editor')
+    const hasPermission =
+      document.owner.toString() === userId ||
+      document.collaborators.some(
+        (collaborator) =>
+          collaborator.user.toString() === userId &&
+          ['admin', 'editor'].includes(collaborator.role)
       );
 
     if (!hasPermission) {
@@ -266,9 +301,11 @@ const checkDocumentEditPermission = async (req, res, next) => {
     }
 
     req.document = document;
-    next();
+
+    return next();
   } catch (error) {
     logger.error('Document edit permission check error:', error);
+
     return res.status(500).json({
       success: false,
       message: 'Failed to verify document edit permission',
@@ -277,30 +314,53 @@ const checkDocumentEditPermission = async (req, res, next) => {
 };
 
 /**
- * Rate limiting for authentication endpoints
+ * Login rate limiter
+ *
+ * Up to 10 failed login attempts per IP within 15 minutes.
+ * Successful login responses are not counted against the limit.
  */
-const authRateLimit = require('express-rate-limit');
-
 const loginRateLimiter = authRateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 attempts per window
-  message: {
-    success: false,
-    message: 'Too many login attempts. Please try again later.',
-  },
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  skipSuccessfulRequests: true,
+
   standardHeaders: true,
   legacyHeaders: false,
+
+  message: {
+    success: false,
+    code: 'LOGIN_RATE_LIMITED',
+    message:
+      'Too many failed login attempts. Please try again in 15 minutes.',
+  },
+
+  handler: (req, res, next, options) => {
+    logger.warn(
+      `[LOGIN_RATE_LIMITED] ${req.method} ${req.originalUrl} IP: ${req.ip}`
+    );
+
+    return res
+      .status(options.statusCode || 429)
+      .json(options.message);
+  },
 });
 
+/**
+ * Registration rate limiter
+ *
+ * Up to 10 registration attempts per IP within one hour.
+ */
 const registerRateLimiter = authRateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10, // 10 attempts per window
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+
+  standardHeaders: true,
+  legacyHeaders: false,
+
   message: {
     success: false,
     message: 'Too many registration attempts. Please try again later.',
   },
-  standardHeaders: true,
-  legacyHeaders: false,
 });
 
 module.exports = {
