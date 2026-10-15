@@ -196,9 +196,25 @@ function getWorkspaceStatus(workspace) {
 }
 
 function getErrorMessage(error, fallback) {
+  const data = error?.response?.data;
+  const details = data?.error ?? data;
+
+  if (typeof details === "string") {
+    return details;
+  }
+
+  if (details && typeof details === "object") {
+    return (
+      details.message ||
+      details.error ||
+      data?.message ||
+      error?.message ||
+      fallback
+    );
+  }
+
   return (
-    error?.response?.data?.message ||
-    error?.response?.data?.error ||
+    data?.message ||
     error?.message ||
     fallback
   );

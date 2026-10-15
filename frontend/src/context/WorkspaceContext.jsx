@@ -547,9 +547,16 @@ export function WorkspaceProvider({
             requestError
           );
 
+          const responseData =
+            requestError?.response?.data;
+          const apiError =
+            responseData?.error ?? responseData;
+
           const message =
-            requestError?.response?.data
-              ?.message ||
+            (typeof apiError === "string"
+              ? apiError
+              : apiError?.message) ||
+            responseData?.message ||
             requestError?.message ||
             "Unable to create workspace.";
 

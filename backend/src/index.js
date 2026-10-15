@@ -886,7 +886,8 @@ const start =
 
             const globalRateLimiter = rateLimit({
                 windowMs: 15 * 60 * 1000,
-                limit: globalRateLimit,
+                // express-rate-limit v6 uses "max" (not "limit").
+                max: globalRateLimit,
                 standardHeaders: 'draft-7',
                 legacyHeaders: false,
 
