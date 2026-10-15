@@ -152,6 +152,9 @@ function extractWorkspace(response) {
   }
 
   const candidates = [
+    // workspaceService.createWorkspace() already unwraps response.data,
+    // so the response may itself be the workspace document.
+    response,
     response?.workspace,
     response?.data?.workspace,
     response?.data?.data?.workspace,
@@ -547,16 +550,9 @@ export function WorkspaceProvider({
             requestError
           );
 
-          const responseData =
-            requestError?.response?.data;
-          const apiError =
-            responseData?.error ?? responseData;
-
           const message =
-            (typeof apiError === "string"
-              ? apiError
-              : apiError?.message) ||
-            responseData?.message ||
+            requestError?.response?.data
+              ?.message ||
             requestError?.message ||
             "Unable to create workspace.";
 
