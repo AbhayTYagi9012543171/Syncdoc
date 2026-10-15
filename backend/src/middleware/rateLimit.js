@@ -1,51 +1,59 @@
+
 const rateLimit = require('express-rate-limit');
 const { getRedisClient } = require('../config/redis');
 const { logger } = require('../config/logger');
 
-/**
- * Default rate limit configuration
- */
 const defaultOptions = {
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+
   message: {
     success: false,
     message: 'Too many requests, please try again later.',
     code: 'RATE_LIMIT_EXCEEDED',
   },
+
   handler: (req, res, next, options) => {
-    logger.warn(`Rate limit exceeded for IP: ${req.ip}`);
-    res.status(429).json(options.message);
+    logger.warn(
+      `[RATE_LIMITED] ${req.method} ${req.originalUrl} IP: ${req.ip}`
+    );
+
+    return res.status(429).json(options.message);
   },
+
+  // Use a stable key for each authenticated user or anonymous IP.
+  // IPv6-aware IP handling is left to express-rate-limit's defaults
+  // where its default key generator is used.
   keyGenerator: (req) => {
-    // Use user ID if authenticated, otherwise use IP
-    return req.user?.id || req.ip;
+    return req.user?.id
+      ? `user:${req.user.id}`
+      : `ip:${req.ip}`;
   },
-  skip: (req) => {
-    // Skip rate limiting for admin users
-    return req.user?.role === 'admin';
-  },
+
+  skip: (req) => req.user?.role === 'admin',
 };
 
 /**
- * General rate limiter for all API routes
+ * General API limiter: 100 requests per 15 minutes.
  */
 const generalLimiter = rateLimit({
   ...defaultOptions,
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 requests per 15 minutes
+  windowMs: 15 * 60 * 1000,
+  max: 100,
 });
 
 /**
- * Strict rate limiter for authentication routes
+ * Authentication limiter: 5 failed attempts per 15 minutes.
+ * Successful requests are not counted.
  */
 const authLimiter = rateLimit({
   ...defaultOptions,
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 attempts per 15 minutes
-  skipSuccessfulRequests: true, // Don't count successful requests
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  skipSuccessfulRequests: true,
+
   message: {
     success: false,
     message: 'Too many authentication attempts. Please try again later.',
@@ -54,12 +62,13 @@ const authLimiter = rateLimit({
 });
 
 /**
- * Register rate limiter (new user registration)
+ * Registration limiter: 10 attempts per hour.
  */
 const registerLimiter = rateLimit({
   ...defaultOptions,
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10, // 10 registrations per hour
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+
   message: {
     success: false,
     message: 'Too many registration attempts. Please try again later.',
@@ -68,12 +77,13 @@ const registerLimiter = rateLimit({
 });
 
 /**
- * Password reset rate limiter
+ * Password reset limiter: 3 attempts per hour.
  */
 const passwordResetLimiter = rateLimit({
   ...defaultOptions,
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3, // 3 reset requests per hour
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+
   message: {
     success: false,
     message: 'Too many password reset attempts. Please try again later.',
@@ -82,12 +92,13 @@ const passwordResetLimiter = rateLimit({
 });
 
 /**
- * Document creation rate limiter
+ * Document creation limiter: 50 requests per hour.
  */
 const documentCreateLimiter = rateLimit({
   ...defaultOptions,
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 50, // 50 document creations per hour
+  windowMs: 60 * 60 * 1000,
+  max: 50,
+
   message: {
     success: false,
     message: 'Too many document creations. Please slow down.',
@@ -96,12 +107,13 @@ const documentCreateLimiter = rateLimit({
 });
 
 /**
- * File upload rate limiter
+ * File upload limiter: 20 requests per hour.
  */
 const uploadLimiter = rateLimit({
   ...defaultOptions,
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 20, // 20 uploads per hour
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+
   message: {
     success: false,
     message: 'Too many upload attempts. Please try again later.',
@@ -110,15 +122,19 @@ const uploadLimiter = rateLimit({
 });
 
 /**
- * API key rate limiter (for external API access)
+ * API key limiter: 1000 requests per hour.
  */
 const apiKeyLimiter = rateLimit({
   ...defaultOptions,
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 1000, // 1000 requests per hour
+  windowMs: 60 * 60 * 1000,
+  max: 1000,
+
   keyGenerator: (req) => {
-    return req.headers['x-api-key'] || req.ip;
+    return req.headers['x-api-key']
+      ? `api-key:${req.headers['x-api-key']}`
+      : `ip:${req.ip}`;
   },
+
   message: {
     success: false,
     message: 'API rate limit exceeded. Please upgrade your plan.',
@@ -127,64 +143,72 @@ const apiKeyLimiter = rateLimit({
 });
 
 /**
- * Redis store for distributed rate limiting (if Redis is available)
+ * Optional Redis store.
+ *
+ * Note: rate-limit-redis APIs vary by version. This helper is
+ * retained for compatibility with the installed project setup.
+ * If your installed version expects a different constructor,
+ * adjust this helper to that version's documented API.
  */
 const createRedisStore = () => {
   try {
     const client = getRedisClient();
+
     if (client) {
-      const { RateLimiterRedis } = require('rate-limit-redis');
-      return new RateLimiterRedis({
-        storeClient: client,
+      const { RedisStore } = require('rate-limit-redis');
+
+      return new RedisStore({
+        sendCommand: (...args) => client.call(...args),
         prefix: 'rl:',
       });
     }
   } catch (error) {
-    logger.warn('Redis store not available, using memory store for rate limiting');
+    logger.warn(
+      'Redis rate-limit store unavailable; using the default memory store.'
+    );
   }
-  return null;
+
+  return undefined;
 };
 
 /**
- * Advanced rate limiter with Redis support
+ * Create a limiter with optional Redis storage.
  */
 const createRateLimiter = (options = {}) => {
   const store = createRedisStore();
-  
+
   return rateLimit({
     ...defaultOptions,
     ...options,
-    store: store || undefined,
+    ...(store ? { store } : {}),
   });
 };
 
 /**
- * Custom rate limiter by user role
+ * Create a limiter based on the authenticated user's role.
  */
 const roleBasedLimiter = (roleLimits = {}) => {
-  return (req, res, next) => {
-    const userRole = req.user?.role || 'guest';
-    const limits = {
-      admin: { windowMs: 60 * 1000, max: 1000 }, // 1 minute, 1000 requests
-      user: { windowMs: 60 * 1000, max: 100 }, // 1 minute, 100 requests
-      guest: { windowMs: 60 * 1000, max: 20 }, // 1 minute, 20 requests
-      ...roleLimits,
-    };
+  const limits = {
+    admin: { windowMs: 60 * 1000, max: 1000 },
+    user: { windowMs: 60 * 1000, max: 100 },
+    guest: { windowMs: 60 * 1000, max: 20 },
+    ...roleLimits,
+  };
 
-    const limit = limits[userRole] || limits.guest;
-    
-    const limiter = rateLimit({
+  return (req, res, next) => {
+    const role = req.user?.role || 'guest';
+    const limit = limits[role] || limits.guest;
+
+    return rateLimit({
       ...defaultOptions,
       windowMs: limit.windowMs,
       max: limit.max,
-    });
-
-    return limiter(req, res, next);
+    })(req, res, next);
   };
 };
 
 /**
- * Rate limiter for specific endpoint
+ * Create a limiter for a specific endpoint.
  */
 const endpointLimiter = (windowMs, max) => {
   return rateLimit({
@@ -195,9 +219,9 @@ const endpointLimiter = (windowMs, max) => {
 };
 
 /**
- * Rate limit middleware factory
+ * Retrieve a named limiter.
  */
-const rateLimitMiddleware = (type = 'general', options = {}) => {
+const rateLimitMiddleware = (type = 'general') => {
   const limiters = {
     general: generalLimiter,
     auth: authLimiter,
@@ -212,35 +236,44 @@ const rateLimitMiddleware = (type = 'general', options = {}) => {
 };
 
 /**
- * Skip rate limiting for localhost/development
+ * Skip custom rate limiting in development or for loopback IPs.
  */
 const skipIfDevelopment = (req) => {
   if (process.env.NODE_ENV === 'development') {
     return true;
   }
-  // Skip for localhost
-  const ip = req.ip || req.connection.remoteAddress;
-  return ip === '::1' || ip === '127.0.0.1' || ip === 'localhost';
+
+  const ip = req.ip || req.socket?.remoteAddress || '';
+
+  return [
+    '::1',
+    '127.0.0.1',
+    '::ffff:127.0.0.1',
+    'localhost',
+  ].includes(ip);
 };
 
 /**
- * Create a custom rate limiter with skip condition
+ * Create a limiter with a custom skip callback.
  */
 const createCustomLimiter = (options = {}) => {
+  const originalSkip = options.skip;
+
   return rateLimit({
     ...defaultOptions,
     ...options,
+
     skip: (req) => {
-      if (options.skip) {
-        return options.skip(req);
+      if (typeof originalSkip === 'function') {
+        return originalSkip(req);
       }
+
       return skipIfDevelopment(req);
     },
   });
 };
 
 module.exports = {
-  // Basic limiters
   generalLimiter,
   authLimiter,
   registerLimiter,
@@ -248,14 +281,12 @@ module.exports = {
   documentCreateLimiter,
   uploadLimiter,
   apiKeyLimiter,
-  
-  // Advanced limiters
+
   createRateLimiter,
   roleBasedLimiter,
   endpointLimiter,
   rateLimitMiddleware,
   createCustomLimiter,
-  
-  // Utilities
+
   skipIfDevelopment,
 };

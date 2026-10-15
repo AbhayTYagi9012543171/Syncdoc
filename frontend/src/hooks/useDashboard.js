@@ -8,13 +8,13 @@ import {
 
 import dashboardService from "../services/dashboardService";
 
-/* ============================================================
-   HELPERS
-   ============================================================ */
-
 function getAuthToken() {
   try {
-    return localStorage.getItem("syncdoc_token") || "";
+    return (
+      localStorage.getItem("syncdoc_token") ||
+      localStorage.getItem("token") ||
+      ""
+    );
   } catch {
     return "";
   }
@@ -40,7 +40,7 @@ function extractDashboard(response) {
     return extractDashboard(data.data);
   }
 
-  return null;
+  return data;
 }
 
 function isCanceledError(error) {
@@ -51,24 +51,16 @@ function isCanceledError(error) {
   );
 }
 
-/* ============================================================
-   REQUEST DEDUPLICATION
-   ============================================================ */
-
-// Reuse a dashboard request while it is still in progress.
-// Token is part of the key so different sessions don't share data.
 const inFlightDashboardRequests = new Map();
 
 function getDashboardOnce(token) {
-  const existingRequest = inFlightDashboardRequests.get(token);
+  const existing = inFlightDashboardRequests.get(token);
 
-  if (existingRequest) {
-    return existingRequest;
+  if (existing) {
+    return existing;
   }
 
-  let request;
-
-  request = Promise.resolve()
+  const request = Promise.resolve()
     .then(() => dashboardService.get())
     .finally(() => {
       if (inFlightDashboardRequests.get(token) === request) {
@@ -81,10 +73,6 @@ function getDashboardOnce(token) {
   return request;
 }
 
-/* ============================================================
-   HOOK
-   ============================================================ */
-
 export default function useDashboard({ autoLoad = true } = {}) {
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(Boolean(autoLoad));
@@ -92,10 +80,7 @@ export default function useDashboard({ autoLoad = true } = {}) {
 
   const mountedRef = useRef(false);
   const requestRef = useRef(0);
-
-  /* ==========================================================
-     MOUNT / UNMOUNT
-     ========================================================== */
+  const retryAfterRef = useRef(0);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -105,10 +90,6 @@ export default function useDashboard({ autoLoad = true } = {}) {
       requestRef.current += 1;
     };
   }, []);
-
-  /* ==========================================================
-     LOAD / RELOAD DASHBOARD
-     ========================================================== */
 
   const reload = useCallback(async () => {
     const requestId = ++requestRef.current;
@@ -124,6 +105,11 @@ export default function useDashboard({ autoLoad = true } = {}) {
       return null;
     }
 
+    // Do not send another request during the server's cooldown.
+    if (Date.now() < retryAfterRef.current) {
+      return null;
+    }
+
     if (mountedRef.current) {
       setLoading(true);
       setError(null);
@@ -133,7 +119,6 @@ export default function useDashboard({ autoLoad = true } = {}) {
       const response = await getDashboardOnce(token);
       const data = extractDashboard(response);
 
-      // Prevent stale data from overwriting a newer request or session.
       if (
         !mountedRef.current ||
         requestId !== requestRef.current ||
@@ -142,7 +127,9 @@ export default function useDashboard({ autoLoad = true } = {}) {
         return data;
       }
 
+      retryAfterRef.current = 0;
       setDashboard(data);
+
       return data;
     } catch (requestError) {
       if (
@@ -153,14 +140,41 @@ export default function useDashboard({ autoLoad = true } = {}) {
         return null;
       }
 
-      console.error(
-        "SyncDoc: failed to load dashboard:",
-        requestError
-      );
+      const status = requestError?.response?.status;
+
+      if (status === 429) {
+        const headers = requestError?.response?.headers || {};
+
+        const rawRetryAfter =
+          headers["retry-after"] ??
+          headers["Retry-After"];
+
+        const retryAfterSeconds = Number(rawRetryAfter);
+
+        // Fallback to 60 seconds if the server provides no valid value.
+        const delaySeconds =
+          Number.isFinite(retryAfterSeconds) &&
+          retryAfterSeconds > 0
+            ? Math.min(retryAfterSeconds, 15 * 60)
+            : 60;
+
+        retryAfterRef.current =
+          Date.now() + delaySeconds * 1000;
+
+        console.warn(
+          `SyncDoc dashboard rate-limited. ` +
+          `Pausing retries for ${delaySeconds} seconds.`
+        );
+      } else {
+        console.error(
+          "SyncDoc: failed to load dashboard:",
+          requestError
+        );
+      }
 
       setError(requestError);
-      setDashboard(null);
 
+      // Preserve existing dashboard data during transient failures.
       return null;
     } finally {
       if (
@@ -172,10 +186,6 @@ export default function useDashboard({ autoLoad = true } = {}) {
     }
   }, []);
 
-  /* ==========================================================
-     INITIAL LOAD
-     ========================================================== */
-
   useEffect(() => {
     if (!autoLoad) {
       setLoading(false);
@@ -184,14 +194,15 @@ export default function useDashboard({ autoLoad = true } = {}) {
 
     void reload();
 
-    // Keep Recent activity and dashboard metrics fresh while the app remains open.
-    const refreshId = setInterval(() => { void reload(); }, 15000);
-    return () => clearInterval(refreshId);
-  }, [autoLoad, reload]);
+    // Refresh less frequently to reduce unnecessary API traffic.
+    const refreshId = setInterval(() => {
+      void reload();
+    }, 60000);
 
-  /* ==========================================================
-     RETURN DASHBOARD DATA
-     ========================================================== */
+    return () => {
+      clearInterval(refreshId);
+    };
+  }, [autoLoad, reload]);
 
   return {
     dashboard,
