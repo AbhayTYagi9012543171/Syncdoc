@@ -1,131 +1,3 @@
-
-/* ============================================================
-   GLOBAL API RATE LIMITER
-   ============================================================ */
-
-const parseRateLimit = (value, fallback, variableName) => {
-    const raw = value == null ? '' : String(value).trim();
-
-    if (!raw) {
-        return fallback;
-    }
-
-    const parsed = Number(raw);
-
-    // Reject invalid or unexpectedly low global limits.
-    if (!Number.isSafeInteger(parsed) || parsed < 100) {
-        logger.warn(
-            `[Rate Limit] Invalid ${variableName}="${raw}". ` +
-            `Using fallback ${fallback}.`
-        );
-
-        return fallback;
-    }
-
-    return parsed;
-};
-
-const configuredDevelopmentLimit = parseRateLimit(
-    process.env.DEV_GLOBAL_RATE_LIMIT,
-    50000,
-    'DEV_GLOBAL_RATE_LIMIT'
-);
-
-const configuredProductionLimit = parseRateLimit(
-    process.env.GLOBAL_RATE_LIMIT,
-    1200,
-    'GLOBAL_RATE_LIMIT'
-);
-
-const globalRateLimit =
-    NODE_ENV === 'development'
-        ? configuredDevelopmentLimit
-        : configuredProductionLimit;
-
-const isLocalRequest = (req) => {
-    const hostname = String(req.hostname || '').toLowerCase();
-    const ip = String(req.ip || '').toLowerCase();
-
-    return (
-        hostname === 'localhost' ||
-        hostname === '127.0.0.1' ||
-        ip === '127.0.0.1' ||
-        ip === '::1' ||
-        ip === '::ffff:127.0.0.1'
-    );
-};
-
-const excludedHealthPaths = new Set([
-    '/health',
-    '/system/status',
-    '/api/health',
-    '/api/system/status',
-]);
-
-const globalRateLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-
-    // express-rate-limit v6 uses max.
-    max: globalRateLimit,
-
-    standardHeaders: true,
-    legacyHeaders: false,
-
-    skip: (req) => {
-        // Do not count browser CORS preflight requests.
-        if (req.method === 'OPTIONS') {
-            return true;
-        }
-
-        // Exclude health endpoints from the global limit.
-        if (excludedHealthPaths.has(req.path)) {
-            return true;
-        }
-
-        // Only bypass loopback traffic in development.
-        if (
-            NODE_ENV === 'development' &&
-            isLocalRequest(req)
-        ) {
-            return true;
-        }
-
-        return false;
-    },
-
-    handler: (req, res) => {
-        logger.warn(
-            `[RATE_LIMITED] ${req.method} ${req.originalUrl} ` +
-            `IP: ${req.ip}`
-        );
-
-        return res.status(429).json({
-            success: false,
-            error: {
-                code: 'RATE_LIMITED',
-                message: 'Too many requests. Please try again later.',
-                retryAfter: 'Please wait before retrying.',
-            },
-        });
-    },
-});
-
-app.use(globalRateLimiter);
-
-logger.info(
-    `Global API rate limit: ${globalRateLimit} requests / 15 minutes (${NODE_ENV})`
-);
-
-if (NODE_ENV === 'development') {
-    logger.info(
-        'Development mode: localhost global rate limiting is bypassed.'
-    );
-}
-
-/* ============================================================
-   KEEP THE REST OF YOUR ORIGINAL index.js BELOW THIS POINT
-   ============================================================ */
-
 // ============================================================
 // SYNCDOC BACKEND - MAIN SERVER
 // Production-ready Express + Socket.IO + Yjs server
@@ -222,13 +94,10 @@ app.disable(
 // Trust proxy
 // ------------------------------------------------------------
 
-const trustProxy =
-    process.env.TRUST_PROXY === 'true';
-
-app.set(
-    'trust proxy',
-    trustProxy ? 1 : false
-);
+// Render and other reverse-proxy deployments forward client IPs in
+// X-Forwarded-For. Trust the nearest proxy so express-rate-limit can
+// identify clients correctly. Keep this before all rate-limit middleware.
+app.set('trust proxy', 1);
 
 // ============================================================
 // CORS
@@ -625,12 +494,7 @@ yjsWss.on(
         try {
             const auth =
                 request.yjsAuth;
-
-            // --------------------------------------------------------
-            // Authentication safety check
-            // --------------------------------------------------------
-
-            if (!auth) {
+                            if (!auth) {
                 logger.error(
                     'Yjs connection rejected: authentication missing'
                 );
@@ -947,170 +811,139 @@ const start =
              * Global rate limiter remains active.
              */
 
+            const parseGlobalRateLimit = (
+                value,
+                fallback,
+                variableName
+            ) => {
+                const raw = value == null
+                    ? ''
+                    : String(value).trim();
+
+                if (!raw) {
+                    return fallback;
+                }
+
+                const parsed = Number(raw);
+
+                if (
+                    !Number.isSafeInteger(parsed) ||
+                    parsed < 100
+                ) {
+                    logger.warn(
+                        `[Rate Limit] Invalid ${variableName}="${raw}". ` +
+                        `Using fallback ${fallback}.`
+                    );
+                    return fallback;
+                }
+
+                return parsed;
+            };
+
             const configuredDevelopmentLimit =
-                Number(
-                    process.env.DEV_GLOBAL_RATE_LIMIT ||
-                    50000
+                parseGlobalRateLimit(
+                    process.env.DEV_GLOBAL_RATE_LIMIT,
+                    50000,
+                    'DEV_GLOBAL_RATE_LIMIT'
                 );
 
             const configuredProductionLimit =
-                Number(
-                    process.env.GLOBAL_RATE_LIMIT ||
-                    1200
+                parseGlobalRateLimit(
+                    process.env.GLOBAL_RATE_LIMIT,
+                    1200,
+                    'GLOBAL_RATE_LIMIT'
                 );
 
             const globalRateLimit =
-                NODE_ENV ===
-                    'development'
+                NODE_ENV === 'development'
                     ? configuredDevelopmentLimit
                     : configuredProductionLimit;
 
-            const isLocalRequest =
-                (req) => {
-                    const hostname =
-                        String(
-                            req.hostname ||
-                            ''
-                        ).toLowerCase();
+            const isLocalRequest = (req) => {
+                const hostname = String(
+                    req.hostname || ''
+                ).toLowerCase();
 
-                    const remoteAddress =
-                        String(
-                            req.ip ||
-                            ''
-                        ).toLowerCase();
+                const remoteAddress = String(
+                    req.ip || ''
+                ).toLowerCase();
 
-                    return (
-                        hostname ===
-                        'localhost' ||
-                        hostname ===
-                        '127.0.0.1' ||
-                        hostname ===
-                        '::1' ||
-                        remoteAddress ===
-                        '127.0.0.1' ||
-                        remoteAddress ===
-                        '::1' ||
-                        remoteAddress ===
-                        '::ffff:127.0.0.1'
+                return (
+                    hostname === 'localhost' ||
+                    hostname === '127.0.0.1' ||
+                    remoteAddress === '127.0.0.1' ||
+                    remoteAddress === '::1' ||
+                    remoteAddress === '::ffff:127.0.0.1'
+                );
+            };
+
+            const excludedHealthPaths = new Set([
+                '/health',
+                '/system/status',
+                '/api/health',
+                '/api/system/status',
+            ]);
+
+            const globalRateLimiter = rateLimit({
+                windowMs: 15 * 60 * 1000,
+                limit: globalRateLimit,
+                standardHeaders: 'draft-7',
+                legacyHeaders: false,
+
+                skip: (req) => {
+                    // Browser CORS preflight should not consume the limit.
+                    if (req.method === 'OPTIONS') {
+                        return true;
+                    }
+
+                    // Keep monitoring endpoints available.
+                    if (excludedHealthPaths.has(req.path)) {
+                        return true;
+                    }
+
+                    // Bypass only local requests during development.
+                    if (
+                        NODE_ENV === 'development' &&
+                        isLocalRequest(req)
+                    ) {
+                        return true;
+                    }
+
+                    return false;
+                },
+
+                handler: (req, res) => {
+                    logger.warn(
+                        `[RATE_LIMITED] ${req.method} ${req.originalUrl} ` +
+                        `IP: ${req.ip}`
                     );
-                };
 
-            const globalRateLimiter =
-                rateLimit({
-                    windowMs:
-                        15 * 60 * 1000,
-
-                    limit:
-                        globalRateLimit,
-
-                    standardHeaders:
-                        'draft-7',
-
-                    legacyHeaders:
-                        false,
-
-                    skip: (
-                        req
-                    ) => {
-                        // Never rate-limit OPTIONS
-                        if (
-                            req.method ===
-                            'OPTIONS'
-                        ) {
-                            return true;
-                        }
-
-                        /*
-                         * Local development is not rate limited.
-                         *
-                         * This directly prevents the current
-                         * localhost:5000/api/... 429 problem.
-                         */
-                        if (
-                            NODE_ENV ===
-                            'development' &&
-                            isLocalRequest(
-                                req
-                            )
-                        ) {
-                            return true;
-                        }
-
-                        /*
-                         * Health endpoint should always remain
-                         * available for monitoring.
-                         */
-                        if (
-                            req.path ===
-                            '/health' ||
-                            req.path ===
-                            '/system/status'
-                        ) {
-                            return true;
-                        }
-
-                        return false;
-                    },
-
-                    message: {
-                        success:
-                            false,
-
+                    return res.status(429).json({
+                        success: false,
                         error: {
-                            code:
-                                'RATE_LIMITED',
-
+                            code: 'RATE_LIMITED',
                             message:
                                 'Too many requests. Please try again later.',
+                            retryAfter:
+                                'Please wait before retrying.',
                         },
-                    },
+                    });
+                },
+            });
 
-                    handler: (
-                        req,
-                        res
-                    ) => {
-                        logger.warn(
-                            `[RATE_LIMITED] ${req.method} ${req.originalUrl} - IP: ${req.ip}`
-                        );
-
-                        return res
-                            .status(429)
-                            .json({
-                                success:
-                                    false,
-
-                                error: {
-                                    code:
-                                        'RATE_LIMITED',
-
-                                    message:
-                                        'Too many requests. Please try again later.',
-
-                                    retryAfter:
-                                        'Please wait before retrying.',
-                                },
-                            });
-                    },
-                });
-
-            app.use(
-                globalRateLimiter
-            );
+            app.use(globalRateLimiter);
 
             logger.info(
-                `Global API rate limit: ${globalRateLimit} requests / 300 minutes (${NODE_ENV})`
+                `Global API rate limit: ${globalRateLimit} requests / 15 minutes (${NODE_ENV})`
             );
 
-            if (
-                NODE_ENV ===
-                'development'
-            ) {
+            if (NODE_ENV === 'development') {
                 logger.info(
                     'Development mode: localhost global rate limiting is bypassed.'
                 );
             }
 
-            // ======================================================
+// ======================================================
             // HELMET
             // ======================================================
 
@@ -1160,7 +993,7 @@ const start =
             app.use(
                 (
                     req,
-                    res,
+                                        res,
                     next
                 ) => {
                     try {
