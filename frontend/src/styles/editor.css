@@ -2530,3 +2530,12 @@ box-shadow:
 .editor-page :where(button, [role="button"]) { transition: background-color .16s ease, color .16s ease, transform .16s ease; }
 .editor-page .collaboration-cursor__caret, .editor-page .collaboration-carets__caret { pointer-events: none; }
 .editor-page .collaboration-cursor__label, .editor-page .collaboration-carets__label { border-radius: 5px 5px 5px 0; font-weight: 700; }
+
+/* === SyncDoc 2026 upgrade layer: styles/editor.css === */
+/* === Editor interaction refinement === */
+.editor-page{min-width:0}
+.editor-page input,.editor-page textarea,.editor-page select{color:#111827;-webkit-text-fill-color:#111827;caret-color:#4f46e5;user-select:text;-webkit-user-select:text;pointer-events:auto}
+.editor-page input::placeholder,.editor-page textarea::placeholder{color:#64748b;-webkit-text-fill-color:#64748b;opacity:1}
+.editor-page .editor-content,.editor-page .editor-content .ProseMirror,.editor-page [contenteditable=true]{cursor:text;caret-color:#4f46e5;user-select:text;-webkit-user-select:text;overflow-wrap:anywhere}
+.editor-page .editor-content .ProseMirror:focus,.editor-page [contenteditable=true]:focus{outline:none}
+.editor-page .editor-toolbar button:focus-visible{outline:2px solid #6366f1;outline-offset:2px}

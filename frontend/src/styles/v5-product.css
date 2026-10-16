@@ -269,3 +269,9 @@ html[data-theme="dark"] .quick-actions-menu kbd { background:#111827; border-col
 :root { --v5-brand: #6558e8; }
 :where(.v5-card, .v5-panel, .v5-surface) { transition: box-shadow .2s ease, border-color .2s ease, transform .2s ease; }
 :where(.v5-card, .v5-panel):hover { box-shadow: 0 14px 34px rgba(25,35,65,.08); }
+
+/* === SyncDoc 2026 upgrade layer: styles/v5-product.css === */
+/* === Product-wide consistency layer === */
+:where(.page,.app-content,.page-heading,.topbar){min-width:0}
+:where(.card,.workspace-card,.document-card){overflow-wrap:anywhere}
+:where(button,a,[role=button]){ -webkit-tap-highlight-color:transparent }

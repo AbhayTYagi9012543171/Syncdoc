@@ -101,3 +101,9 @@
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
+
+/* === SyncDoc 2026 upgrade layer: components/layout/LayoutPremium.css === */
+/* === App layout refinement === */
+.app-shell,.app-main,.app-content,.topbar{min-width:0}
+.global-search input,.topbar-search input,.search-box input{min-width:0;color:#111827;caret-color:#4f46e5}
+.global-search input::placeholder,.topbar-search input::placeholder,.search-box input::placeholder{color:#64748b;opacity:1}

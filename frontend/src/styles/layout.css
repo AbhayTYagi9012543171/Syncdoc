@@ -644,3 +644,12 @@
 .topbar, .app-topbar { backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
 @media (max-width: 768px) { .app-content { padding: 14px; } }
 @media (max-width: 480px) { .app-content { padding: 10px; } }
+
+/* === SyncDoc 2026 upgrade layer: styles/layout.css === */
+/* === Layout refinement === */
+.app-shell{min-width:0;isolation:isolate}
+.app-main,.app-content,.app-page,.app-page-container{min-width:0;max-width:100%}
+.topbar{backdrop-filter:saturate(150%) blur(14px)}
+.topbar button,.topbar a,.mobile-menu{transition:background-color .18s ease,color .18s ease,border-color .18s ease}
+.app-scroll{overscroll-behavior:contain;scrollbar-gutter:stable}
+@media(max-width:768px){.topbar-inner{gap:10px}.topbar-center{min-width:0}.app-content{padding-inline:clamp(12px,3vw,20px)}}

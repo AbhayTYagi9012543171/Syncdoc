@@ -1962,3 +1962,9 @@
     transition: none;
   }
 }
+
+/* === SyncDoc 2026 upgrade layer: pages/profile-premium.css === */
+/* === Profile page form refinement === */
+.profile-premium-page,.profile-settings,.profile-form{min-width:0}
+.profile-premium-page :where(input,textarea,select),.profile-form :where(input,textarea,select){max-width:100%;color:#111827;caret-color:#4f46e5}
+.profile-premium-page :where(input,textarea,select):focus,.profile-form :where(input,textarea,select):focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.15)}

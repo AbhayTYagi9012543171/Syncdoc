@@ -181,3 +181,9 @@
     scroll-behavior: auto !important; transition-duration: .01ms !important;
   }
 }
+
+/* === SyncDoc 2026 upgrade layer: components/UI/Loading.css === */
+/* === Loading state refinement === */
+.sd-loading{min-width:0;contain:layout style}
+.sd-loading__content{overflow-wrap:anywhere}
+@media(prefers-reduced-motion:reduce){.sd-loading *{animation-duration:.01ms!important;animation-iteration-count:1!important;transition:none!important}}

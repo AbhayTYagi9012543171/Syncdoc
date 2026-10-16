@@ -1344,3 +1344,12 @@
 .documents-page .document-card-title { overflow-wrap: anywhere; }
 .documents-page .document-search input { min-width: 0; }
 .documents-page .document-grid > * { min-width: 0; }
+
+/* === SyncDoc 2026 upgrade layer: styles/documents.css === */
+/* === Documents page: reliable typing and readable controls === */
+.documents-page{min-width:0}
+.documents-page .document-search input,.documents-page input,.documents-page textarea,.documents-page select{color:#111827;-webkit-text-fill-color:#111827;caret-color:#4f46e5;user-select:text;-webkit-user-select:text;pointer-events:auto}
+.documents-page .document-search input::placeholder,.documents-page input::placeholder,.documents-page textarea::placeholder{color:#64748b;-webkit-text-fill-color:#64748b;opacity:1}
+.documents-page .document-search:focus-within,.documents-page input:focus,.documents-page textarea:focus,.documents-page select:focus{border-color:#6366f1;box-shadow:0 0 0 4px rgba(99,102,241,.15)}
+.documents-page .document-card{min-width:0;overflow-wrap:anywhere}
+.documents-page button,.documents-page a{touch-action:manipulation}

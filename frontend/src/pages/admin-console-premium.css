@@ -281,3 +281,10 @@
     scroll-behavior: auto !important; transition-duration: .01ms !important;
   }
 }
+
+/* === SyncDoc 2026 upgrade layer: pages/admin-console-premium.css === */
+/* === Admin console refinement === */
+.admin-premium-page{min-width:0}
+.admin-premium-page :where(input:not([type=checkbox]),textarea,select){max-width:100%;color:#111827;caret-color:#4f46e5}
+.admin-premium-page :where(input,textarea,select):focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.15)}
+.admin-premium-page .admin-premium-table-wrap{max-width:100%;overflow-x:auto}

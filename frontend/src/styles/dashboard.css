@@ -4023,3 +4023,11 @@
 .dashboard-page .dashboard-stat, .dashboard-page .stat-card, .dashboard-page .dashboard-card { transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease; }
 .dashboard-page .dashboard-stat:hover, .dashboard-page .stat-card:hover { transform: translateY(-3px); box-shadow: 0 15px 32px rgba(30,36,70,.09); }
 .dashboard-page .dashboard-card { overflow: hidden; }
+
+/* === SyncDoc 2026 upgrade layer: styles/dashboard.css === */
+/* === Dashboard refinement === */
+.dashboard-welcome,.dashboard-section,.dashboard-card,.stat-card{min-width:0}
+.dashboard-welcome h1,.dashboard-section-heading h2{overflow-wrap:anywhere;text-wrap:balance}
+.dashboard-primary-action,.page-heading-actions .btn,.workspace-heading-actions .btn{touch-action:manipulation}
+.dashboard-alert,.workspace-alert{overflow-wrap:anywhere}
+@media(max-width:640px){.dashboard-welcome{padding:clamp(18px,5vw,28px)}.page-heading-actions,.workspace-heading-actions{flex-wrap:wrap}}

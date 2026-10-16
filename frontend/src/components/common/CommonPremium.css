@@ -137,3 +137,10 @@
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior:auto !important; animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
 }
+
+/* === SyncDoc 2026 upgrade layer: components/common/CommonPremium.css === */
+/* === Common components: accessible states === */
+.btn,.icon-btn,.quick-actions button{touch-action:manipulation}
+.btn:focus-visible,.icon-btn:focus-visible,.quick-actions button:focus-visible{outline:2px solid #6366f1;outline-offset:3px}
+:where(.modal,.modal-body) input:not([type=checkbox]):not([type=radio]),:where(.modal,.modal-body) textarea,:where(.modal,.modal-body) select{color:#111827;-webkit-text-fill-color:#111827;caret-color:#4f46e5;pointer-events:auto;user-select:text;-webkit-user-select:text}
+:where(.modal,.modal-body) input::placeholder,:where(.modal,.modal-body) textarea::placeholder{color:#64748b;-webkit-text-fill-color:#64748b;opacity:1}

@@ -129,3 +129,12 @@
   .document-grid-item, .document-search-spinner { animation: none !important; }
   .document-card, .document-card::before, .document-search, .view-toggle button { transition: none !important; }
 }
+
+/* === SyncDoc 2026 upgrade layer: components/documents/DocumentPremium.css === */
+/* === Document forms and cards: high-contrast interaction layer === */
+.create-document-form,.form-stack,.form-field{min-width:0}
+.create-document-form input:not([type=checkbox]):not([type=radio]),.create-document-form textarea,.create-document-form select,.document-form input,.document-form textarea,.document-form select{display:block;width:100%;max-width:100%;min-width:0;background:#fff!important;color:#111827!important;-webkit-text-fill-color:#111827;caret-color:#4f46e5;opacity:1;pointer-events:auto;user-select:text;-webkit-user-select:text;font:inherit;line-height:1.5}
+.create-document-form input::placeholder,.create-document-form textarea::placeholder,.document-form input::placeholder,.document-form textarea::placeholder{color:#64748b!important;-webkit-text-fill-color:#64748b;opacity:1}
+.create-document-form input:focus,.create-document-form textarea:focus,.create-document-form select:focus,.document-form input:focus,.document-form textarea:focus,.document-form select:focus{outline:none!important;border-color:#4f46e5!important;box-shadow:0 0 0 4px rgba(79,70,229,.17)!important}
+.create-document-form input:disabled,.create-document-form textarea:disabled,.create-document-form select:disabled{background:#f1f5f9!important;color:#64748b!important;-webkit-text-fill-color:#64748b;cursor:not-allowed}
+.document-card,.document-card-content,.document-card-title{min-width:0;overflow-wrap:anywhere}

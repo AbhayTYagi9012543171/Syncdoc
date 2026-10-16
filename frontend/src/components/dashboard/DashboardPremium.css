@@ -95,3 +95,9 @@
 @media (max-width:680px) { .dashboard-header { align-items:stretch; padding:22px 18px; border-radius:19px; }.dashboard-header-actions { justify-content:stretch; }.dashboard-header-actions > *, .dashboard-header-actions button { max-width:100%; }.stats-grid { gap:11px; }.stat-card { padding:15px; border-radius:16px; }.stat-top { margin-bottom:13px; }.stat-icon { width:36px; height:36px; border-radius:12px; }.stat-value { font-size:1.6rem; }.stat-change { padding:4px 6px; font-size:10px; }.productivity-chart-card,.activity-card,.recent-documents { border-radius:17px; }.chart { gap:7px; }.chart-bars { gap:5px; }.chart-bar { width:68%; }.recent-documents .section-header { align-items:flex-start; }.data-table { min-width:600px; } }
 @media (max-width:380px) { .stats-grid { grid-template-columns:1fr; }.dashboard-header h1 { font-size:1.5rem; }.recent-documents .section-header { flex-direction:column; }.chart-bar-label { font-size:9px; } }
 @media (prefers-reduced-motion:reduce) { .dashboard-header,.activity-card,.productivity-chart-card,.recent-documents,.stat-card,.activity-item,.chart-bar { animation:none!important; transition:none!important; }.stat-card:hover,.recent-documents .view-all:hover { transform:none; } }
+
+/* === SyncDoc 2026 upgrade layer: components/dashboard/DashboardPremium.css === */
+/* === Dashboard component refinement === */
+.dashboard-header,.activity-card,.productivity-chart-card,.recent-documents,.stat-card{min-width:0}
+.dashboard-header h1,.dashboard-header-content p{overflow-wrap:anywhere}
+.stat-card-clickable{touch-action:manipulation}

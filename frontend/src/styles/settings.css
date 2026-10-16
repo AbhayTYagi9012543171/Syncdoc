@@ -1789,3 +1789,10 @@ html.reduced-motion *::after {
 .settings-page .settings-card, .settings-page .settings-section { transition: border-color .2s ease, box-shadow .2s ease; }
 .settings-page .settings-card:hover { border-color: var(--primary-light, #8277f1); }
 .settings-page .settings-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+/* === SyncDoc 2026 upgrade layer: styles/settings.css === */
+/* === Settings refinement === */
+.settings-page,.settings-card,.settings-section{min-width:0}
+.settings-page :where(input:not([type=checkbox]):not([type=radio]),textarea,select){color:#111827;caret-color:#4f46e5;max-width:100%}
+.settings-page :where(input,textarea,select):focus{border-color:#6366f1;box-shadow:0 0 0 4px rgba(99,102,241,.15)}
+.settings-page :where(label){cursor:pointer}

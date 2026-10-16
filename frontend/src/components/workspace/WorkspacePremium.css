@@ -343,3 +343,10 @@
     transition-duration: .01ms !important; scroll-behavior: auto !important;
   }
 }
+
+/* === SyncDoc 2026 upgrade layer: components/workspace/WorkspacePremium.css === */
+/* === Workspace refinement === */
+.workspace-card,.workspace-switcher,.workspace-switcher-text{min-width:0}
+.workspace-switcher-select{max-width:100%;color:#111827;caret-color:#4f46e5}
+.workspace-switcher:focus-within{outline:none}
+.workspace-switcher-select:focus-visible{outline:2px solid #6366f1;outline-offset:2px}

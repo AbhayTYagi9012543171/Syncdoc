@@ -11,3 +11,11 @@
 @media(max-width:720px){.editor-header{align-items:flex-start;padding:15px;border-radius:16px}.editor-title-group{width:100%}.editor-document-title{max-width:70vw}.editor-actions{width:100%;justify-content:flex-start}.editor-content{min-height:340px;padding:22px 18px;border-radius:14px;font-size:15px}.editor-toolbar{gap:3px;padding:8px}.toolbar-separator{margin:0 3px}.version-item{grid-template-columns:12px 30px minmax(0,1fr);gap:9px;padding:13px 5px}.version-item> :last-child{grid-column:3;justify-self:start}.comments-panel{border-radius:14px}.comment-compose{padding:11px}}
 @media(max-width:420px){.presence-count{font-size:11px}.editor-header{gap:12px}.editor-actions{gap:6px}.editor-actions>*{max-width:100%}.editor-content{padding:18px 14px}.comment{padding:10px}.panel-title{padding:14px}}
 @media(prefers-reduced-motion:reduce){.editor-header,.editor-content{animation:none!important}.presence-dot,.loading-spinner,.comment-skeleton{animation:none!important}*,*:before,*:after{scroll-behavior:auto!important;transition-duration:.01ms!important}}
+
+/* === SyncDoc 2026 upgrade layer: components/editor/EditorPremium.css === */
+/* === Editor toolbar and title refinement === */
+.editor-header,.editor-title-group,.editor-document-info{min-width:0}
+.editor-document-title{min-width:0;max-width:100%;color:inherit;caret-color:#4f46e5}
+.editor-toolbar{overscroll-behavior-x:contain;scrollbar-width:thin}
+.editor-toolbar button,.editor-toolbar [role=button]{touch-action:manipulation}
+.editor-toolbar button:focus-visible,.editor-toolbar [role=button]:focus-visible{outline:2px solid #6366f1;outline-offset:2px}

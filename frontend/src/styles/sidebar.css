@@ -1580,3 +1580,11 @@
 .sidebar a, .app-sidebar a, .sidebar button, .app-sidebar button { transition: color .18s ease, background .18s ease, transform .18s ease; }
 .sidebar a:hover, .app-sidebar a:hover { background: var(--primary-soft, #f0efff); }
 .sidebar a.active, .app-sidebar a.active, .sidebar a[aria-current="page"], .app-sidebar a[aria-current="page"] { font-weight: 700; }
+
+/* === SyncDoc 2026 upgrade layer: styles/sidebar.css === */
+/* === Navigation usability refinement === */
+.sidebar{overscroll-behavior:contain;scrollbar-width:thin}
+.sidebar button,.sidebar a,.workspace-selector{min-width:0;touch-action:manipulation}
+.sidebar a:focus-visible,.sidebar button:focus-visible,.workspace-selector:focus-visible{outline:2px solid #818cf8;outline-offset:2px}
+.sidebar-nav-item,.workspace-selector,.sidebar-brand-link{transition:background-color .18s ease,color .18s ease,transform .18s ease}
+@media(prefers-reduced-motion:reduce){.sidebar-nav-item,.workspace-selector,.sidebar-brand-link{transition:none}}

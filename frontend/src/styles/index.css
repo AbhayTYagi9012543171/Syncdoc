@@ -3832,3 +3832,15 @@ select:focus-visible {
   --shadow-md: 0 14px 36px rgba(25,35,65,.075);
 }
 ::selection { color: #332c83; background: rgba(130,119,241,.22); }
+
+/* === SyncDoc 2026 upgrade layer: styles/index.css === */
+/* === SyncDoc 2026 global usability layer === */
+:root{color-scheme:light;--sd-focus-ring:0 0 0 4px rgba(79,70,229,.18);--sd-field-border:#cbd5e1;--sd-field-ink:#111827;--sd-field-muted:#64748b}
+*,*::before,*::after{box-sizing:border-box}
+::selection{background:rgba(99,102,241,.22);color:inherit}
+:where(input:not([type=checkbox]):not([type=radio]):not([type=range]),textarea,select){color:var(--sd-field-ink);caret-color:#4f46e5;min-width:0}
+:where(input,textarea,select,button,a,[role=button],[tabindex]):focus-visible{outline:2px solid #6366f1;outline-offset:2px}
+:where(input,textarea)::placeholder{color:var(--sd-field-muted);opacity:1}
+:where(.modal,.modal-backdrop) input:not([type=checkbox]):not([type=radio]),:where(.modal,.modal-backdrop) textarea,:where(.modal,.modal-backdrop) select{pointer-events:auto;user-select:text;-webkit-user-select:text;background-color:#fff;color:#111827;-webkit-text-fill-color:#111827;caret-color:#4f46e5}
+:where(.modal,.modal-backdrop) input:focus,:where(.modal,.modal-backdrop) textarea:focus,:where(.modal,.modal-backdrop) select:focus{border-color:#4f46e5;box-shadow:0 0 0 4px rgba(79,70,229,.16)}
+:where(.modal,.modal-backdrop) form{pointer-events:auto}

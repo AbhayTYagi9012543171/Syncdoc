@@ -22,3 +22,8 @@
   .admin-premium-hero-actions { flex-wrap: wrap; }
   .admin-premium-side-column { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* === SyncDoc 2026 upgrade layer: styles/pages-premium.css === */
+/* === Premium page shared refinements === */
+:where(.admin-premium-page,.settings-premium,.premium-projects-page,.profile-page,.auth-page-premium){min-width:0}
+:where(.admin-premium-page,.settings-premium,.premium-projects-page,.profile-page) :where(input,textarea,select){max-width:100%;caret-color:#4f46e5}

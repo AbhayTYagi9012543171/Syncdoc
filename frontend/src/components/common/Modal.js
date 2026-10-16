@@ -46,6 +46,9 @@ export default function Modal({
 }) {
   const modalRef = useRef(null);
   const previousActiveElement = useRef(null);
+  // Keep the latest callback without restarting the focus effect on every render.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   const generatedId = useId();
 
   const titleId = `modal-title-${generatedId.replace(/:/g, '')}`;
@@ -66,7 +69,7 @@ export default function Modal({
     const handleKeyDown = event => {
       if (event.key === 'Escape' && closeOnEscape && !preventClose) {
         event.preventDefault();
-        onClose?.();
+        onCloseRef.current?.();
       }
     };
 
@@ -103,7 +106,7 @@ export default function Modal({
         previousActiveElement.current.focus();
       }
     };
-  }, [open, closeOnEscape, lockScroll, returnFocus, preventClose, onClose, initialFocusRef]);
+  }, [open, closeOnEscape, lockScroll, returnFocus, preventClose, initialFocusRef]);
 
   useEffect(() => {
     if (!open) {
@@ -157,7 +160,7 @@ export default function Modal({
     }
 
     if (closeOnBackdrop && !preventClose) {
-      onClose?.();
+      onCloseRef.current?.();
     }
   };
 
@@ -185,7 +188,7 @@ export default function Modal({
             <button
               type="button"
               className="icon-btn"
-              onClick={onClose}
+              onClick={() => onCloseRef.current?.()}
               disabled={preventClose}
               aria-label="Close dialog"
             >

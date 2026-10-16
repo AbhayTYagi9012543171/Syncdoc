@@ -106,3 +106,9 @@
     flex-basis: 44px;
   }
 }
+
+/* === SyncDoc 2026 upgrade layer: pages/settings-premium.css === */
+/* === Premium settings refinement === */
+.settings-premium,.settings-premium-layout,.settings-premium-card{min-width:0}
+.settings-premium :where(input:not([type=checkbox]):not([type=radio]),textarea,select){max-width:100%;color:#111827;caret-color:#4f46e5}
+.settings-premium :where(input,textarea,select):focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.15)}

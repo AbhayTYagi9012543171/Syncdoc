@@ -187,3 +187,9 @@
     transition-duration: .01ms !important;
   }
 }
+
+/* === SyncDoc 2026 upgrade layer: pages/auth-premium.css === */
+/* === Authentication form refinement === */
+.auth-page-premium input:not([type=checkbox]):not([type=radio]),.auth-page-premium textarea,.auth-page-premium select{width:100%;max-width:100%;color:#111827;-webkit-text-fill-color:#111827;caret-color:#4f46e5;user-select:text;-webkit-user-select:text}
+.auth-page-premium input::placeholder,.auth-page-premium textarea::placeholder{color:#64748b;-webkit-text-fill-color:#64748b;opacity:1}
+.auth-page-premium input:focus,.auth-page-premium textarea:focus,.auth-page-premium select:focus{outline:none;border-color:#6366f1;box-shadow:0 0 0 4px rgba(99,102,241,.15)}

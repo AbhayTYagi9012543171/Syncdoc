@@ -1763,3 +1763,10 @@
 .notifications-page .notification-item, .notifications-page .notification-card { transition: background-color .18s ease, border-color .18s ease, transform .18s ease; }
 .notifications-page .notification-item:hover, .notifications-page .notification-card:hover { border-color: var(--primary-light, #8277f1); }
 .notifications-page .notification-item:focus-within { outline: 2px solid rgba(101,88,232,.24); outline-offset: 2px; }
+
+/* === SyncDoc 2026 upgrade layer: styles/notifications.css === */
+/* === Notifications refinement === */
+.notifications-page,.notification-summary-item,.notification-item{min-width:0}
+.notifications-page :where(button,a){touch-action:manipulation}
+.notifications-page :where(button,a,input):focus-visible{outline:2px solid #6366f1;outline-offset:2px}
+.notification-item,.notification-summary-item{overflow-wrap:anywhere}

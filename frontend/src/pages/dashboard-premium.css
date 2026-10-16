@@ -697,3 +697,9 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* === SyncDoc 2026 upgrade layer: pages/dashboard-premium.css === */
+/* === Premium dashboard refinement === */
+.dashboard-premium{min-width:0}
+.dashboard-premium .sd-hero h1{overflow-wrap:anywhere;text-wrap:balance}
+.dashboard-premium :where(button,a){touch-action:manipulation}

@@ -519,3 +519,10 @@ button:not(:disabled):active, [role="button"]:active { transform: translateY(1px
 :root { --premium-brand: #6558e8; --premium-brand-dark: #4f43c9; }
 :where(.premium-card, .premium-panel, .premium-surface) { border-radius: 18px; }
 :where(.premium-card, .premium-panel):hover { box-shadow: 0 16px 38px rgba(25,35,65,.085); }
+
+/* === SyncDoc 2026 upgrade layer: styles/premium.css === */
+/* === Shared premium surface refinement === */
+:where(.card,.dashboard-card,.analytics-card,.settings-card,.document-card,.workspace-card){min-width:0;overflow-wrap:anywhere}
+:where(.btn,.btn-primary,.btn-secondary,.icon-btn){touch-action:manipulation}
+:where(.btn,.btn-primary,.btn-secondary,.icon-btn):disabled{cursor:not-allowed}
+:where(.global-search,input,textarea,select){caret-color:#4f46e5}

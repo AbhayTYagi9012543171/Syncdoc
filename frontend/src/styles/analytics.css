@@ -1504,3 +1504,11 @@
 .analytics-page .analytics-chart-card, .analytics-page .analytics-activity-card, .analytics-page .analytics-documents-card { overflow: hidden; }
 .analytics-page .activity-item { transition: background-color .18s ease; }
 .analytics-page .activity-item:hover { background: rgba(101,88,232,.045); }
+
+/* === SyncDoc 2026 upgrade layer: styles/analytics.css === */
+/* === Analytics refinement === */
+.analytics-page,.analytics-stat-card,.analytics-chart-card{min-width:0}
+.analytics-page-heading h1{letter-spacing:-.035em;text-wrap:balance}
+.analytics-period,.analytics-period-label{font-variant-numeric:tabular-nums}
+.analytics-page input,.analytics-page select{color:#111827;caret-color:#4f46e5}
+.analytics-page input:focus-visible,.analytics-page select:focus-visible{outline:2px solid #6366f1;outline-offset:2px}

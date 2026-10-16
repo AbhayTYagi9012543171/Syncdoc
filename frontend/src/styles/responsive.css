@@ -2040,3 +2040,11 @@ img, video, canvas, svg { max-width: 100%; }
   .page-heading-actions > *, .workspace-heading-actions > * { max-width: 100%; }
   .modal, .dialog, [role="dialog"] { max-width: calc(100vw - 20px); }
 }
+
+/* === SyncDoc 2026 upgrade layer: styles/responsive.css === */
+/* === Responsive safety net === */
+img,svg,video,canvas{max-width:100%}
+:where(.app-main,.app-content,.app-page,.page-container,.editor-workspace,.documents-page){min-width:0}
+:where(.data-table,.table-wrap){max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+@media(max-width:640px){:where(.page-heading,.page-heading-content,.page-heading-actions){min-width:0;flex-wrap:wrap}:where(input,textarea,select){font-size:16px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}

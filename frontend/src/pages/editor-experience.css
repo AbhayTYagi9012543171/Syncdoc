@@ -6,3 +6,9 @@
 @media(max-width:1000px){.editor-hero{align-items:flex-start;flex-direction:column}.editor-metrics{width:100%}.editor-metric{flex:1}.editor-workspace-premium{grid-template-columns:minmax(0,1fr)}.editor-workspace-premium .comments-panel{position:relative;top:auto;max-height:520px}}
 @media(max-width:620px){.editor-page{padding:11px}.editor-hero{gap:18px;padding:21px;border-radius:19px}.editor-hero h2{font-size:27px}.editor-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.editor-metric{display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-width:0;padding:10px;border-radius:13px}.editor-metric-icon{width:29px;height:29px;flex-basis:29px;border-radius:9px;font-size:15px}.editor-metric strong{font-size:14px}.editor-metric small{font-size:9px}.editor-statusbar{align-items:flex-start;padding:11px}.editor-status-left,.editor-status-right{gap:8px}.editor-workspace-label{align-items:flex-start}.editor-workspace-label>div{gap:6px}.editor-workspace-hint{width:100%}.editor-workspace-premium .editor-content{min-height:360px}.editor-workspace-premium .editor-toolbar{position:sticky;top:0;z-index:3}}
 @media(prefers-reduced-motion:reduce){.editor-page *,.editor-page *:before,.editor-page *:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
+
+/* === SyncDoc 2026 upgrade layer: pages/editor-experience.css === */
+/* === Editor experience refinement === */
+.editor-page,.editor-hero,.editor-statusbar{min-width:0}
+.editor-page input,.editor-page textarea,.editor-page select{color:#111827;caret-color:#4f46e5;user-select:text;-webkit-user-select:text}
+.editor-page .editor-hero h2{overflow-wrap:anywhere;text-wrap:balance}

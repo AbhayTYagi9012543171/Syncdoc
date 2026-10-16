@@ -1290,3 +1290,9 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* === SyncDoc 2026 upgrade layer: components/layout/SidebarPremium.css === */
+/* === Sidebar accessibility refinement === */
+.sidebar-premium{overscroll-behavior:contain;scrollbar-width:thin}
+.sidebar-premium button,.sidebar-premium a{touch-action:manipulation}
+.sidebar-premium button:focus-visible,.sidebar-premium a:focus-visible{outline:2px solid #818cf8;outline-offset:2px}

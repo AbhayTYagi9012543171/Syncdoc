@@ -65,3 +65,9 @@ button.sd-notification-item { cursor: pointer; font: inherit; }
 @keyframes sd-item-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 560px) { .sd-notification-popover { position: fixed; top: 72px; left: 12px; right: 12px; width: auto; z-index: 1000; }.sd-notification-panel { border-radius: 19px; }.sd-notification-list { max-height: min(62vh, 500px); }.sd-notification-mobile-link { display: none; } }
 @media (prefers-reduced-motion: reduce) { .sd-notification-trigger, .sd-notification-footer a { transition: none; }.sd-notification-badge, .sd-notification-pulse, .sd-notification-popover, .sd-notification-item, .sd-spin, .sd-notification-loader { animation: none !important; } }
+
+/* === SyncDoc 2026 upgrade layer: components/notifications/notifications.css === */
+/* === Notification component refinement === */
+.sd-notification-wrap,.sd-notification-popover,.sd-notification-panel{min-width:0}
+.sd-notification-panel{overflow-wrap:anywhere}
+.sd-notification-wrap button:focus-visible{outline:2px solid #6366f1;outline-offset:2px}

@@ -141,3 +141,9 @@ body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; 
     transition-duration: .01ms !important;
   }
 }
+
+/* === SyncDoc 2026 upgrade layer: styles/enterprise-polish.css === */
+/* === Enterprise polish: accessibility and input reliability === */
+:where(.editor-page .editor-content,.editor-page .ProseMirror){color:#172033;caret-color:#4f46e5;user-select:text;-webkit-user-select:text}
+:where(.admin-premium-page,.settings-page,.profile-page) :where(input,textarea,select){color:#111827;caret-color:#4f46e5}
+:where(.admin-premium-page,.settings-page,.profile-page) :where(input,textarea,select):focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.15)}
