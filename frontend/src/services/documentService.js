@@ -118,6 +118,18 @@ const documentService = {
   },
 
   /* ==========================================================
+     COLLABORATION INITIALIZATION LEASE
+  ========================================================== */
+
+  async claimCollaborationSeed(id) {
+    const documentId = requireDocumentId(id);
+    const response = await api.post(
+      `${DOCUMENT_ENDPOINTS.BASE}/${encodeURIComponent(documentId)}/collaboration/seed-claim`
+    );
+    return getResponseData(response, { shouldSeed: false });
+  },
+
+  /* ==========================================================
      GET SINGLE DOCUMENT
   ========================================================== */
 

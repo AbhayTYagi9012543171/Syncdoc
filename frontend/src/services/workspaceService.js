@@ -44,6 +44,21 @@ function normalizePayload(data) {
   return { ...data };
 }
 
+
+function unwrapWorkspaceResponse(value) {
+  let current = value;
+  // Support the existing API contract and older deployments that wrapped
+  // the same payload more than once. Stop on a stable object to avoid loops.
+  for (let depth = 0; depth < 4; depth += 1) {
+    if (!current || typeof current !== "object" || Array.isArray(current)) return null;
+    if (current._id || current.id || current.workspaceId) return current;
+    if (current.workspace && typeof current.workspace === "object") { current = current.workspace; continue; }
+    if (current.data && typeof current.data === "object") { current = current.data; continue; }
+    break;
+  }
+  return current && typeof current === "object" && (current._id || current.id || current.workspaceId) ? current : null;
+}
+
 function stableSerialize(value) {
   if (value === null || typeof value !== "object") {
     return JSON.stringify(value);
@@ -144,7 +159,14 @@ const workspaceService = {
       normalizePayload(data)
     );
 
-    return getResponseData(response, null);
+    const payload = getResponseData(response, null);
+    const workspace = unwrapWorkspaceResponse(payload) || unwrapWorkspaceResponse(response?.data);
+    if (!workspace) {
+      const error = new Error("The server did not return a valid workspace after creation.");
+      error.code = "INVALID_WORKSPACE_RESPONSE";
+      throw error;
+    }
+    return workspace;
   },
 
   /**

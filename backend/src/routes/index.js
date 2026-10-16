@@ -19,6 +19,7 @@ const notificationRoutes = require('./notificationRoutes');
 const settingsRoutes = require('./settingsRoutes');
 const systemRoutes = require('./systemRoutes');
 const searchRoutes = require('./searchRoutes');
+const aiRoutes = require('./aiRoutes');
 
 // ============================================================
 // SYSTEM / HEALTH
@@ -158,6 +159,9 @@ router.use('/settings', settingsRoutes);
 // ============================================================
 
 router.use('/search', searchRoutes);
+
+// Optional AI document assistant (requires AI_API_KEY on the server).
+router.use('/ai', aiRoutes);
 
 // ============================================================
 // WORKSPACES

@@ -636,3 +636,11 @@
 .topbar { position: sticky; top: 0; z-index: 30; }
 .app-page-container, .app-page, .app-main-content { animation: sd-page-enter .38s var(--sd-ease, ease) both; }
 @keyframes sd-page-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Layout refinement */
+.app-shell { min-height: 100vh; }
+.app-main, .app-content, .main-content, .content-area { min-width: 0; }
+.app-content { padding: clamp(12px, 2vw, 30px); }
+.topbar, .app-topbar { backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+@media (max-width: 768px) { .app-content { padding: 14px; } }
+@media (max-width: 480px) { .app-content { padding: 10px; } }

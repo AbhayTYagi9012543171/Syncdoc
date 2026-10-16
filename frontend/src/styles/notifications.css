@@ -1757,3 +1757,9 @@
 .notifications-page .notification-summary-item:hover { transform: translateY(-2px); }
 .notifications-page .notification-count-badge { box-shadow: 0 4px 14px rgba(91,92,226,.15); }
 .notifications-page :is(button, a):focus-visible { outline-offset: 3px; }
+
+/* Notification center refinement */
+.notifications-page { max-width: 1450px; margin-inline: auto; }
+.notifications-page .notification-item, .notifications-page .notification-card { transition: background-color .18s ease, border-color .18s ease, transform .18s ease; }
+.notifications-page .notification-item:hover, .notifications-page .notification-card:hover { border-color: var(--primary-light, #8277f1); }
+.notifications-page .notification-item:focus-within { outline: 2px solid rgba(101,88,232,.24); outline-offset: 2px; }

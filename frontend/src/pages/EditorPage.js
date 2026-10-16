@@ -16,9 +16,11 @@ import EditorContent from "../components/editor/EditorContent";
 import CommentsPanel from "../components/editor/CommentsPanel";
 import VersionHistory from "../components/editor/VersionHistory";
 import PresenceIndicator from "../components/editor/PresenceIndicator";
+import EditorAIAssistant from "../components/editor/EditorAIAssistant";
 
 import useCollaboration from "../hooks/useCollaboration";
 import documentService from "../services/documentService";
+import { useAuth } from "../context/AuthContext";
 
 /* ============================================================
    CONSTANTS
@@ -126,6 +128,10 @@ export default function EditorPage() {
   ========================================================== */
 
   const editorRef = useRef(null);
+  const editorApiRef = useRef(null);
+  const handleEditorReady = useCallback((instance) => {
+    editorApiRef.current = instance;
+  }, []);
 
   const saveTimerRef = useRef(null);
 
@@ -195,11 +201,21 @@ export default function EditorPage() {
      COLLABORATION
   ========================================================== */
 
+  const { user } = useAuth();
   const {
+    ydoc,
+    provider,
     connected,
+    connecting,
     users,
-    broadcast,
-  } = useCollaboration(documentId);
+    error: collaborationError,
+    reconnect: reconnectCollaboration,
+  } = useCollaboration(documentId, { enabled: !loading && !loadError, user });
+
+  const claimCollaborationSeed = useCallback(
+    () => documentService.claimCollaborationSeed(documentId),
+    [documentId]
+  );
 
   const documentStats = React.useMemo(() => {
     const plainText = String(content || "")
@@ -634,34 +650,11 @@ export default function EditorPage() {
         pendingContentRef.current =
           html;
 
-        /*
-         * Broadcast the change to the collaboration
-         * layer without allowing collaboration errors
-         * to interrupt local editing.
-         */
-        try {
-          if (
-            typeof broadcast ===
-            "function"
-          ) {
-            broadcast({
-              type: "content",
-              documentId,
-              html,
-              timestamp: Date.now(),
-            });
-          }
-        } catch (error) {
-          console.warn(
-            "SyncDoc: collaboration broadcast failed:",
-            error
-          );
-        }
-
+        // Live content is synchronized by Yjs through the editor's shared
+        // ProseMirror document. REST autosave remains the durable fallback.
         scheduleSave(html);
       },
       [
-        broadcast,
         documentId,
         scheduleSave,
       ]
@@ -847,87 +840,34 @@ export default function EditorPage() {
   const handleCommand =
     useCallback(
       (command, value) => {
-        if (!command) {
-          return;
-        }
+        const editor = editorApiRef.current;
+        if (!editor || !command) return;
 
-        const editor =
-          editorRef.current;
-
-        if (!editor) {
-          return;
-        }
-
-        /*
-         * Keep editor focused before executing a
-         * formatting command.
-         */
+        const chain = editor.chain().focus();
         try {
-          editor.focus?.();
-        } catch (error) {
-          console.warn(
-            "SyncDoc: unable to focus editor:",
-            error
-          );
-        }
-
-        try {
-          if (
-            command ===
-            "createLink"
-          ) {
-            const url =
-              value ||
-              window.prompt(
-                "Enter URL"
-              );
-
-            if (!url) {
-              return;
+          if (command === "bold") chain.toggleBold().run();
+          else if (command === "italic") chain.toggleItalic().run();
+          else if (command === "underline") chain.toggleUnderline().run();
+          else if (command === "insertUnorderedList") chain.toggleBulletList().run();
+          else if (command === "insertOrderedList") chain.toggleOrderedList().run();
+          else if (command === "createLink") {
+            const url = value || window.prompt("Enter URL");
+            if (url && /^https?:\/\//i.test(url.trim())) {
+              chain.extendMarkRange("link").setLink({ href: url.trim() }).run();
             }
-
-            document.execCommand(
-              "createLink",
-              false,
-              url.trim()
-            );
-          } else if (
-            command ===
-            "formatBlock"
-          ) {
-            document.execCommand(
-              "formatBlock",
-              false,
-              value || "p"
-            );
-          } else {
-            document.execCommand(
-              command,
-              false,
-              value
-            );
-          }
-
-          /*
-           * execCommand may not trigger React's
-           * input event consistently across browsers.
-           */
-          if (
-            typeof editor.innerHTML ===
-            "string"
-          ) {
-            handleContentChange(
-              editor.innerHTML
-            );
+          } else if (command === "formatBlock") {
+            const block = String(value || "p").toLowerCase();
+            if (block === "h1") chain.toggleHeading({ level: 1 }).run();
+            else if (block === "h2") chain.toggleHeading({ level: 2 }).run();
+            else if (block === "blockquote") chain.toggleBlockquote().run();
+            else if (block === "pre") chain.toggleCodeBlock().run();
+            else chain.setParagraph().run();
           }
         } catch (error) {
-          console.error(
-            "SyncDoc: editor command failed:",
-            error
-          );
+          console.error("SyncDoc: editor command failed:", error);
         }
       },
-      [handleContentChange]
+      []
     );
 
   /* ==========================================================
@@ -1185,6 +1125,8 @@ export default function EditorPage() {
         onShare={handleShare}
       />
 
+      <EditorAIAssistant documentId={documentId} content={content} />
+
       {/* ======================================================
           STATUS BAR
       ====================================================== */}
@@ -1212,8 +1154,20 @@ export default function EditorPage() {
 
             {connected
               ? "Live collaboration"
-              : "Working locally"}
+              : connecting
+                ? "Connecting collaborators…"
+                : "Working locally"}
           </span>
+          {!connected && !connecting && documentId && (
+            <button type="button" className="editor-reconnect-button" onClick={reconnectCollaboration}>
+              Reconnect
+            </button>
+          )}
+          {collaborationError && (
+            <span className="editor-collaboration-error" title={collaborationError.message}>
+              Collaboration unavailable
+            </span>
+          )}
         </div>
 
         <div className="editor-status-right">
@@ -1256,10 +1210,13 @@ export default function EditorPage() {
 
           <EditorContent
             ref={editorRef}
+            onEditorReady={handleEditorReady}
             initialContent={content}
-            onInput={
-              handleContentChange
-            }
+            ydoc={ydoc}
+            provider={provider}
+            user={user}
+            claimSeed={claimCollaborationSeed}
+            onInput={handleContentChange}
           />
         </main>
 

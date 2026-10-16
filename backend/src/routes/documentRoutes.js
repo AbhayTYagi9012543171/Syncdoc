@@ -66,6 +66,16 @@ router.get(
   DocumentController.getById
 );
 
+// One editor initializes the empty Yjs room from the durable document HTML.
+router.post(
+  '/:documentId/collaboration/seed-claim',
+  auth,
+  commonValidation.documentId,
+  validate,
+  checkDocumentEditPermission,
+  DocumentController.claimCollaborationSeed
+);
+
 // ============================================================
 // UPDATE DOCUMENT
 // ============================================================

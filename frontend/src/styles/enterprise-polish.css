@@ -1,0 +1,143 @@
+/* SyncDoc enterprise visual refinement: consistent surfaces, motion and responsive behavior. */
+:root {
+  --sd-ease: cubic-bezier(.2,.75,.25,1);
+  --sd-glass: rgba(255,255,255,.78);
+  --sd-outline: rgba(99,102,241,.28);
+}
+
+body { background: radial-gradient(ellipse at 10% -10%, rgba(99,102,241,.055), transparent 38rem), var(--page-bg, #f6f8fb); }
+button, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+button { transition: transform .18s var(--sd-ease), box-shadow .18s var(--sd-ease), border-color .18s var(--sd-ease), background-color .18s var(--sd-ease), color .18s var(--sd-ease); }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid var(--sd-outline); outline-offset: 2px; }
+
+/* Shared page rhythm */
+.page, .page-content, .dashboard-page, .analytics-page, .documents-page, .projects-page, .settings-page, .profile-page, .notifications-page, .workspace-page, .trash-page {
+  animation: sd-page-in .34s var(--sd-ease) both;
+}
+.page h1, .page-content h1, .dashboard-page h1, .analytics-page h1, .documents-page h1, .projects-page h1, .settings-page h1, .profile-page h1, .notifications-page h1, .workspace-page h1 {
+  letter-spacing: -.045em;
+  text-wrap: balance;
+}
+.card, .dashboard-card, .stat-card, .analytics-card, .document-card, .workspace-card, .project-card, .settings-card, .notification-card {
+  transition: transform .22s var(--sd-ease), box-shadow .22s var(--sd-ease), border-color .22s var(--sd-ease);
+}
+.document-card:hover, .workspace-card:hover, .project-card:hover { transform: translateY(-3px); box-shadow: 0 18px 42px rgba(31,41,80,.09); }
+.card, .dashboard-card, .analytics-card, .settings-card { border-radius: 18px; }
+
+/* Inputs and controls */
+input:not([type="checkbox"]):not([type="radio"]), select, textarea {
+  transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease;
+}
+input:not([type="checkbox"]):not([type="radio"]):focus, select:focus, textarea:focus {
+  border-color: #9b9af8 !important;
+  box-shadow: 0 0 0 4px rgba(99,102,241,.09);
+}
+button:active:not(:disabled) { transform: translateY(1px) scale(.99); }
+button:disabled { cursor: not-allowed; }
+
+/* Tables, lists and blank states */
+.table-responsive, .table-wrap, .data-table-wrap { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
+table { border-collapse: separate; border-spacing: 0; }
+.empty-state, .empty-state-card, .no-data-state { border-radius: 18px; }
+
+/* Editor: make the live collaborative editor feel like a product surface. */
+.editor-page { width: 100%; max-width: 1800px; margin-inline: auto; }
+.editor-page .editor-content { min-height: clamp(420px, 64vh, 940px); overflow-wrap: anywhere; caret-color: #625bf6; }
+.editor-page .editor-content .ProseMirror { min-height: inherit; outline: none; }
+.editor-page .editor-content p.is-editor-empty:first-child::before { color: #a1aabc; content: attr(data-placeholder); float: left; height: 0; pointer-events: none; }
+.editor-page .collaboration-cursor__caret, .editor-page .collaboration-carets__caret { position: relative; border-left: 2px solid; border-right: 0; margin-left: -1px; margin-right: -1px; pointer-events: none; overflow-wrap: normal; }
+.editor-page .collaboration-cursor__label, .editor-page .collaboration-carets__label { position: absolute; top: -1.5em; left: -1px; padding: 2px 6px; border-radius: 5px 5px 5px 0; color: white; font: 600 10px/1.5 Inter, sans-serif; white-space: nowrap; user-select: none; }
+.editor-reconnect-button { padding: 5px 9px; border: 1px solid #d9def5; border-radius: 9px; background: white; color: #5852c8; font-size: 11px; font-weight: 750; cursor: pointer; }
+.editor-reconnect-button:hover { border-color: #9a96f4; background: #f5f4ff; }
+.editor-collaboration-error { color: #b45309; font-size: 11px; }
+
+/* Admin console: refined interaction states and narrower-screen table behavior. */
+.admin-premium-page .admin-premium-panel, .admin-premium-page .admin-premium-stat { transition: transform .22s var(--sd-ease), box-shadow .22s var(--sd-ease), border-color .22s var(--sd-ease); }
+.admin-premium-page .admin-premium-stat:hover { transform: translateY(-3px); box-shadow: 0 22px 50px rgba(0,0,0,.22); }
+.admin-premium-page .admin-premium-table-wrap { max-width: 100%; overscroll-behavior-x: contain; }
+.admin-premium-page .admin-premium-table tbody tr:focus-within { background: rgba(129,140,248,.08); }
+.admin-premium-page .admin-premium-btn { min-height: 40px; }
+.admin-premium-page .admin-premium-search:focus-within { border-color: rgba(139,124,255,.7); box-shadow: 0 0 0 4px rgba(139,124,255,.09); }
+
+@keyframes sd-page-in { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 760px) {
+  .editor-page { padding-inline: 10px; }
+  .editor-page .editor-content { padding: 24px 18px; min-height: 380px; }
+  .admin-premium-page { padding: 12px; border-radius: 18px; }
+  .admin-premium-page .admin-premium-hero { align-items: stretch; flex-direction: column; }
+  .admin-premium-page .admin-premium-hero-actions { justify-content: flex-start; flex-wrap: wrap; }
+  .admin-premium-page .admin-premium-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-premium-page .admin-premium-main-grid { grid-template-columns: minmax(0, 1fr); }
+  .admin-premium-page .admin-premium-table-wrap { margin-inline: -4px; }
+}
+@media (max-width: 420px) {
+  .admin-premium-page .admin-premium-stats { grid-template-columns: minmax(0, 1fr); }
+  .editor-page .editor-actions { justify-content: flex-start; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
+}
+
+/* ============================================================
+   SYNCDOC PREMIUM POLISH — SHARED OVERRIDES
+   Keep existing component contracts; visual-only enhancements.
+============================================================ */
+:root {
+  --sd-brand: #6558e8;
+  --sd-brand-strong: #5144d0;
+  --sd-brand-tint: rgba(101, 88, 232, .09);
+  --sd-brand-line: rgba(101, 88, 232, .24);
+  --sd-surface-glass: rgba(255,255,255,.84);
+  --sd-motion: cubic-bezier(.2,.75,.25,1);
+  --sd-shadow-float: 0 18px 48px rgba(26, 32, 67, .09);
+}
+html { scroll-behavior: smooth; }
+body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+#root { min-height: 100vh; }
+:where(button, a, input, textarea, select, [role="button"]) { -webkit-tap-highlight-color: transparent; }
+:where(button, a, input, textarea, select, [tabindex]):focus-visible {
+  outline: 3px solid rgba(101,88,232,.30);
+  outline-offset: 3px;
+}
+:where(.page, .page-content, .dashboard-page, .analytics-page, .documents-page,
+  .workspace-page, .projects-page, .settings-page, .settings-premium,
+  .profile-page, .notifications-page, .trash-page, .admin-premium-page, .editor-page) {
+  min-width: 0;
+  animation: sd-premium-enter .32s var(--sd-motion) both;
+}
+:where(.card, .dashboard-card, .analytics-card, .settings-card, .settings-premium-card,
+  .notification-card, .admin-premium-panel) {
+  transition: border-color .2s var(--sd-motion), box-shadow .2s var(--sd-motion), transform .2s var(--sd-motion);
+}
+:where(.card, .dashboard-card, .analytics-card, .settings-card, .settings-premium-card,
+  .notification-card, .admin-premium-panel):hover {
+  border-color: var(--sd-brand-line);
+  box-shadow: var(--sd-shadow-float);
+}
+:where(.btn-primary, .button-primary, .admin-premium-btn-primary, .dashboard-primary-action) {
+  box-shadow: 0 7px 18px rgba(101,88,232,.19);
+  transition: transform .18s var(--sd-motion), box-shadow .18s var(--sd-motion), filter .18s ease;
+}
+:where(.btn-primary, .button-primary, .admin-premium-btn-primary, .dashboard-primary-action):hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 11px 24px rgba(101,88,232,.24);
+  filter: saturate(1.06);
+}
+:where(input:not([type=checkbox]):not([type=radio]):not([type=range]), select, textarea) {
+  max-width: 100%;
+  transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease;
+}
+:where(table) { max-width: 100%; }
+:where(img, svg, video, canvas) { max-width: 100%; }
+@keyframes sd-premium-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

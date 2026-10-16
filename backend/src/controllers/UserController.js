@@ -9,35 +9,47 @@ const UserController = {
     try {
       const { search, limit = 20, page = 1 } = req.query;
 
-      const query = {};
-      
-      if (search) {
+      // The route validator caps limit at 100. Keep safe defaults here too
+      // so direct controller use cannot trigger an unbounded query.
+      const currentPage = Math.max(1, Number.parseInt(page, 10) || 1);
+      const pageSize = Math.min(
+        100,
+        Math.max(1, Number.parseInt(limit, 10) || 20)
+      );
+      const skip = (currentPage - 1) * pageSize;
+
+      // Never expose soft-deleted accounts in the active admin user list.
+      const query = { deletedAt: null };
+
+      if (typeof search === 'string' && search.trim()) {
+        // Treat search input literally instead of allowing user-supplied
+        // regular-expression operators to create expensive database queries.
+        const escapedSearch = search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         query.$or = [
-          { username: { $regex: search, $options: 'i' } },
-          { email: { $regex: search, $options: 'i' } },
-          { displayName: { $regex: search, $options: 'i' } },
+          { username: { $regex: escapedSearch, $options: 'i' } },
+          { email: { $regex: escapedSearch, $options: 'i' } },
+          { displayName: { $regex: escapedSearch, $options: 'i' } },
         ];
       }
 
-      const skip = (parseInt(page) - 1) * parseInt(limit);
-
-      const users = await User.find(query)
-        .select('-password -activeSessions -resetPasswordToken -resetPasswordExpires')
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(parseInt(limit));
-
-      const total = await User.countDocuments(query);
+      const [users, total] = await Promise.all([
+        User.find(query)
+          .select('-password -activeSessions -resetPasswordToken -resetPasswordExpires')
+          .sort({ createdAt: -1, _id: -1 })
+          .skip(skip)
+          .limit(pageSize),
+        User.countDocuments(query),
+      ]);
 
       res.json({
         success: true,
         data: {
           users,
           pagination: {
-            page: parseInt(page),
-            limit: parseInt(limit),
+            page: currentPage,
+            limit: pageSize,
             total,
-            pages: Math.ceil(total / parseInt(limit)),
+            pages: Math.ceil(total / pageSize),
           },
         },
       });
@@ -51,6 +63,10 @@ const UserController = {
   async getUserById(req, res, next) {
     try {
       const { userId } = req.params;
+      const requesterId = String(req.user?._id || req.user?.id || '');
+      if (requesterId !== String(userId) && req.user?.role !== 'admin') {
+        return res.status(403).json({ success: false, message: 'You do not have permission to view this user.' });
+      }
 
       const user = await User.findById(userId)
         .select('-password -activeSessions -resetPasswordToken -resetPasswordExpires');

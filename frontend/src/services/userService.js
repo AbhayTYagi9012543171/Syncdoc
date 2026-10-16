@@ -28,11 +28,34 @@ async function request(action, fallbackMessage) {
 const userService = {
   async list(params = {}) {
     return request(async () => {
-      const response = await api.get(BASE_PATH, { params: normalizeParams(params) });
-      const data = getResponseData(response, {});
+      const normalized = normalizeParams(params);
+
+      // The backend's documented maximum page size is 100. Clamp older
+      // callers (for example limit: 500) so the Admin Console does not
+      // repeatedly trigger a validation 400.
+      if (normalized.limit !== undefined) {
+        const requestedLimit = Number(normalized.limit);
+        normalized.limit = Number.isFinite(requestedLimit)
+          ? Math.min(100, Math.max(1, Math.trunc(requestedLimit)))
+          : 20;
+      }
+      if (normalized.page !== undefined) {
+        const requestedPage = Number(normalized.page);
+        normalized.page = Number.isFinite(requestedPage)
+          ? Math.max(1, Math.trunc(requestedPage))
+          : 1;
+      }
+
+      const response = await api.get(BASE_PATH, { params: normalized });
+      let data = getResponseData(response, {});
+      // Normalize both { users, pagination } and legacy nested { data: ... }
+      // responses without assuming every deployment is on the same revision.
+      for (let depth = 0; depth < 3 && data && !Array.isArray(data) && !Array.isArray(data.users) && data.data; depth += 1) {
+        data = data.data;
+      }
       if (Array.isArray(data)) return { users: data, pagination: {} };
       return {
-        ...data,
+        ...(data && typeof data === "object" ? data : {}),
         users: Array.isArray(data?.users) ? data.users : [],
         pagination: data?.pagination || {},
       };

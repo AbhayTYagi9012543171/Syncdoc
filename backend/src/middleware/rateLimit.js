@@ -61,6 +61,19 @@ const authLimiter = rateLimit({
   },
 });
 
+
+/** AI endpoints are cost-bearing external calls; apply a per-user budget. */
+const aiLimiter = rateLimit({
+  ...defaultOptions,
+  windowMs: 60 * 1000,
+  max: Number(process.env.AI_RATE_LIMIT_PER_MINUTE) || 10,
+  message: {
+    success: false,
+    message: 'AI request limit reached. Please wait a minute and try again.',
+    code: 'AI_RATE_LIMIT_EXCEEDED',
+  },
+});
+
 /**
  * Registration limiter: 10 attempts per hour.
  */
@@ -281,6 +294,7 @@ module.exports = {
   documentCreateLimiter,
   uploadLimiter,
   apiKeyLimiter,
+  aiLimiter,
 
   createRateLimiter,
   roleBasedLimiter,

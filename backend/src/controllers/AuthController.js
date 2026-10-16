@@ -256,19 +256,22 @@ const AuthController = {
         },
       });
     } catch (error) {
-      logger.error(
-        `Login error: ${error.message}`,
-        {
-          stack: error.stack,
-        }
-      );
+      // Invalid credentials are expected authentication failures. Do not
+      // convert database/JWT/server failures into a misleading 401.
+      if (error?.message === 'Invalid email or password') {
+        logger.warn('Login rejected: invalid credentials');
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid email or password',
+          code: 'INVALID_CREDENTIALS',
+        });
+      }
 
-      return res.status(401).json({
-        success: false,
-        message:
-          error.message ||
-          'Invalid email or password',
+      logger.error('Login failed because of a server error', {
+        message: error?.message,
+        stack: error?.stack,
       });
+      return next(error);
     }
   },
 
@@ -690,12 +693,7 @@ const AuthController = {
   // =========================================================
   async updateProfile(req, res, next) {
     try {
-      const {
-        displayName,
-        avatar,
-        preferences,
-      } = req.body;
-
+      const { displayName, username, avatar, preferences } = req.body || {};
       const user = req.user;
 
       if (!user) {
@@ -705,20 +703,49 @@ const AuthController = {
         });
       }
 
-      if (displayName) {
-        user.displayName =
-          displayName;
+      if (displayName !== undefined) {
+        if (typeof displayName !== 'string' || displayName.trim().length < 2 || displayName.trim().length > 50) {
+          return res.status(400).json({ success: false, message: 'Display name must be between 2 and 50 characters.' });
+        }
+        user.displayName = displayName.trim();
       }
 
-      if (avatar) {
+      if (username !== undefined) {
+        if (typeof username !== 'string' || !/^[a-zA-Z0-9_]{3,30}$/.test(username.trim())) {
+          return res.status(400).json({ success: false, message: 'Username must be 3–30 characters using letters, numbers, or underscores.' });
+        }
+        const normalizedUsername = username.trim();
+        if (normalizedUsername !== user.username) {
+          const existingUser = await User.findOne({ username: normalizedUsername, _id: { $ne: user._id }, deletedAt: null }).select('_id');
+          if (existingUser) {
+            return res.status(409).json({ success: false, message: 'That username is already in use.' });
+          }
+          user.username = normalizedUsername;
+        }
+      }
+
+      if (avatar !== undefined) {
+        if (avatar !== null && (typeof avatar !== 'string' || avatar.length > 2048)) {
+          return res.status(400).json({ success: false, message: 'Avatar URL is invalid.' });
+        }
         user.avatar = avatar;
       }
 
-      if (preferences) {
-        user.preferences = {
-          ...(user.preferences || {}),
-          ...preferences,
-        };
+      if (preferences !== undefined) {
+        if (!preferences || typeof preferences !== 'object' || Array.isArray(preferences)) {
+          return res.status(400).json({ success: false, message: 'Preferences must be an object.' });
+        }
+        const allowedPreferences = ['theme', 'compactMode', 'reducedMotion', 'fontSize', 'autosaveInterval'];
+        const safePreferences = Object.fromEntries(Object.entries(preferences).filter(([key]) => allowedPreferences.includes(key)));
+        if (safePreferences.theme !== undefined && !['light', 'dark', 'system'].includes(safePreferences.theme)) {
+          return res.status(400).json({ success: false, message: 'Theme must be light, dark, or system.' });
+        }
+        for (const key of ['compactMode', 'reducedMotion']) {
+          if (safePreferences[key] !== undefined && typeof safePreferences[key] !== 'boolean') {
+            return res.status(400).json({ success: false, message: `${key} must be a boolean.` });
+          }
+        }
+        user.preferences = { ...(user.preferences || {}), ...safePreferences };
       }
 
       await user.save();

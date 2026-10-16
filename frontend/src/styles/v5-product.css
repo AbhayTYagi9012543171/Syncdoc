@@ -264,3 +264,8 @@ html[data-theme="dark"] .quick-actions-menu kbd { background:#111827; border-col
 .page-heading h1 { letter-spacing: -.045em; }
 .sidebar-nav-item, .card, .workspace-card, .document-card { transition-timing-function: cubic-bezier(.2,.75,.25,1); }
 .app-command-status, .system-status { border-radius: 999px; }
+
+/* Product experience polish */
+:root { --v5-brand: #6558e8; }
+:where(.v5-card, .v5-panel, .v5-surface) { transition: box-shadow .2s ease, border-color .2s ease, transform .2s ease; }
+:where(.v5-card, .v5-panel):hover { box-shadow: 0 14px 34px rgba(25,35,65,.08); }

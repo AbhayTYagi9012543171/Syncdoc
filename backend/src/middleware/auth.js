@@ -30,7 +30,12 @@ const auth = async (req, res, next) => {
     let decoded;
 
     try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const jwtSecret = process.env.JWT_SECRET || process.env.JWT_ACCESS_SECRET;
+      if (!jwtSecret) {
+        logger.error('Authentication is unavailable: JWT secret is not configured.');
+        return res.status(503).json({ success: false, message: 'Authentication is temporarily unavailable.' });
+      }
+      decoded = jwt.verify(token, jwtSecret);
     } catch (error) {
       if (error.name === 'TokenExpiredError') {
         return res.status(401).json({
@@ -92,13 +97,16 @@ const optionalAuth = async (req, res, next) => {
 
       if (token) {
         try {
-          const decoded = jwt.verify(token, process.env.JWT_SECRET);
-          const user = await User.findById(decoded.id);
+          const jwtSecret = process.env.JWT_SECRET || process.env.JWT_ACCESS_SECRET;
+          if (jwtSecret) {
+            const decoded = jwt.verify(token, jwtSecret);
+            const user = await User.findById(decoded.id);
 
-          if (user && !user.deletedAt) {
-            req.user = user;
-            req.userId = user._id;
-            req.token = token;
+            if (user && !user.deletedAt) {
+              req.user = user;
+              req.userId = user._id;
+              req.token = token;
+            }
           }
         } catch (error) {
           logger.debug('Optional auth token invalid:', error.message);
@@ -321,7 +329,7 @@ const checkDocumentEditPermission = async (req, res, next) => {
  */
 const loginRateLimiter = authRateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 5,
   skipSuccessfulRequests: true,
 
   standardHeaders: true,

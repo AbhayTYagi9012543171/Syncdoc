@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import '../styles/pages-premium.css';
+import './admin-console-premium.css';
 import Card from '../components/common/Card';
-import Badge from '../components/common/Badge';
 import userService from '../services/userService';
 
 const toArray = (response) => {
@@ -74,7 +74,7 @@ export default function Admin() {
     setError('');
     try {
       const [usersResult, statsResult, activityResult] = await Promise.allSettled([
-        userService.list({ page: 1, limit: 500 }),
+        userService.list({ page: 1, limit: 100 }),
         userService.stats(),
         typeof userService.activity === 'function' ? userService.activity({ limit: 8 }) : Promise.resolve(null),
       ]);

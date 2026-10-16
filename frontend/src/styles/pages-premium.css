@@ -9,3 +9,16 @@
 @media(max-width:720px){.admin-premium-page{padding:16px;border-radius:16px}.admin-premium-hero{align-items:flex-start;flex-direction:column}.admin-premium-hero-actions{width:100%}.admin-premium-hero-actions .admin-premium-btn{flex:1}.admin-premium-toolbar{align-items:stretch;flex-direction:column}.admin-premium-filter-group>*{flex:1}.admin-premium-filter-group select{max-width:none;width:100%}.admin-premium-side-column{grid-template-columns:minmax(0,1fr)}.admin-premium-side-column>.admin-premium-panel:last-child{grid-column:auto}.admin-premium-stats{gap:10px}.admin-premium-stat{padding:15px}.admin-premium-stat-detail{line-height:1.5}.admin-premium-table-caption{padding-top:2px}.admin-premium-alert{align-items:flex-start}.admin-premium-alert button{align-self:center}}
 @media(max-width:420px){.admin-premium-stats{grid-template-columns:minmax(0,1fr)}.admin-premium-stat{padding:16px}.admin-premium-meta{gap:10px}.admin-premium-pagination{gap:10px;align-items:flex-start;flex-direction:column}.admin-premium-filter-group{flex-direction:column}.admin-premium-hero-actions{flex-direction:column}}
 @media(prefers-reduced-motion:reduce){.admin-premium-page *{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
+
+/* Admin console premium refinement */
+.admin-premium-page { max-width: 1800px; margin-inline: auto; }
+.admin-premium-page .admin-premium-stat, .admin-premium-page .admin-premium-panel { transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+.admin-premium-page .admin-premium-stat:hover { transform: translateY(-3px); }
+.admin-premium-page .admin-premium-table-wrap { max-width: 100%; overflow-x: auto; }
+.admin-premium-page .admin-premium-table th { position: sticky; top: 0; z-index: 1; }
+@media (max-width: 760px) {
+  .admin-premium-page { padding: 14px; }
+  .admin-premium-hero { align-items: flex-start; flex-direction: column; }
+  .admin-premium-hero-actions { flex-wrap: wrap; }
+  .admin-premium-side-column { grid-template-columns: minmax(0, 1fr); }
+}

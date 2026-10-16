@@ -5,13 +5,14 @@ const { logger } = require('../config/logger');
 // ============================================================
 
 class APIError extends Error {
-  constructor(message, statusCode = 500, code = 'INTERNAL_ERROR') {
+  constructor(message, statusCode = 500, code = 'INTERNAL_ERROR', details = undefined) {
     super(message);
 
     this.name = 'APIError';
     this.statusCode = statusCode;
     this.code = code;
     this.isOperational = true;
+    if (details !== undefined) this.details = details;
 
     Error.captureStackTrace(this, this.constructor);
   }
@@ -40,6 +41,10 @@ const errorHandler = (err, req, res, next) => {
   // rejected uploads never become misleading 500 responses.
   let statusCode = err.statusCode || err.status || 500;
   let message = err.message || 'Internal server error';
+
+  if (statusCode >= 500 && process.env.NODE_ENV === 'production') {
+    message = 'An unexpected server error occurred.';
+  }
 
   if (err.name === 'MulterError') {
     if (err.code === 'LIMIT_FILE_SIZE') {
@@ -87,11 +92,8 @@ const errorHandler = (err, req, res, next) => {
     success: false,
     message,
     code: err.code || 'INTERNAL_ERROR',
-    ...(process.env.NODE_ENV === 'development'
-      ? {
-          stack: err.stack,
-        }
-      : {}),
+    ...(err.details !== undefined ? { details: err.details } : {}),
+    ...(process.env.NODE_ENV === 'development' ? { stack: err.stack } : {}),
   });
 };
 

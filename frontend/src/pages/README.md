@@ -1,30 +1,15 @@
-# SyncDoc Premium Pages
-
-This package contains the 14 page modules from the prepared SyncDoc frontend plus a shared responsive polish stylesheet. Existing page logic, service calls, context hooks, and route-compatible filenames are preserved.
-
-## Install
-1. Back up `frontend/src/pages` (for example, rename it to `pages_backup`).
-2. Copy every file in this package into `frontend/src/pages`.
-3. Confirm the corresponding `components`, `context`, `hooks`, `services`, and `utils` modules are present in your project. These pages depend on them.
-4. Run `npm run dev`, then `npm run build`.
+# SyncDoc Admin Console Premium UI Upgrade
 
 ## Files
-- Admin.jsx
-- Analytics.jsx
-- Dashboard.js
-- Documents.js
-- EditorPage.js
-- Login.js
-- NotFound.js
-- Notifications.jsx
-- Profile.jsx
-- Projects.jsx
-- Register.js
-- Settings.js
-- Trash.jsx
-- Workspace.jsx
-- pages-premium.css
+- `Admin.jsx` — upgraded admin page component; preserves the existing userService API calls, filters, pagination, CSV export, activity feed, and health indicators.
+- `admin-console-premium.css` — responsive premium dark visual layer with animated cards, responsive layouts, focus states, and reduced-motion support.
 
-The stylesheet adds page entrance motion, accessible focus states, subtle hover lift, responsive page-heading/table behavior, and respects `prefers-reduced-motion`. It does not fabricate backend features; data actions still rely on the existing services and API.
+## Install
+1. Replace your current Admin page component with `Admin.jsx` (keep the filename/path your router currently imports).
+2. Copy `admin-console-premium.css` to `frontend/src/styles/admin-console-premium.css`.
+3. Confirm the component imports both:
+   `import '../styles/pages-premium.css';`
+   `import '../styles/admin-console-premium.css';`
+4. Start the frontend with `npm run dev`.
 
-Build/runtime testing was not performed in the user's Windows environment.
+The stylesheet is scoped to `.admin-premium-page`, so it should not restyle unrelated pages. No backend API contract was changed. The UI continues to show API-derived values; it does not fabricate system health or activity events.

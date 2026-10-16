@@ -1,4 +1,7 @@
 const { logger } = require('./config/logger');
+const jwt = require('jsonwebtoken');
+const User = require('./models/User');
+const Document = require('./models/Document');
 const CollaborationService = require('./services/CollaborationService');
 
 /**
@@ -63,11 +66,25 @@ const setupSocketHandlers = (io) => {
             return;
           }
 
-          // ----------------------------------------------------
-          // Store authenticated user information
-          // ----------------------------------------------------
+          // Never trust a client-supplied userId or token presence alone.
+          const jwtSecret = process.env.JWT_SECRET || process.env.JWT_ACCESS_SECRET;
+          if (!jwtSecret) {
+            socket.emit('auth-error', { success: false, message: 'Socket authentication is unavailable.' });
+            return;
+          }
+          const decoded = jwt.verify(token, jwtSecret);
+          const tokenUserId = decoded.id || decoded.userId || decoded._id || decoded.sub;
+          if (!tokenUserId || String(tokenUserId) !== String(userId)) {
+            socket.emit('auth-error', { success: false, message: 'The user does not match the authentication token.' });
+            return;
+          }
+          const activeUser = await User.findById(tokenUserId).select('_id deletedAt');
+          if (!activeUser || activeUser.deletedAt) {
+            socket.emit('auth-error', { success: false, message: 'Account is not active.' });
+            return;
+          }
 
-          socket.userId = userId;
+          socket.userId = String(activeUser._id);
           socket.token = token;
           socket.authenticated = true;
 
@@ -141,8 +158,23 @@ const setupSocketHandlers = (io) => {
             return;
           }
 
-          const roomName =
-            `doc:${documentId}`;
+          if (!require('mongoose').Types.ObjectId.isValid(String(documentId))) {
+            socket.emit('error', { success: false, message: 'Invalid document ID.' });
+            return;
+          }
+          const targetDocument = await Document.findById(documentId).select('_id owner collaborators deletedAt');
+          if (!targetDocument || targetDocument.deletedAt) {
+            socket.emit('error', { success: false, message: 'Document not found.' });
+            return;
+          }
+          const ownsDocument = String(targetDocument.owner) === String(socket.userId);
+          const isCollaborator = Array.isArray(targetDocument.collaborators) && targetDocument.collaborators.some((item) => String(item.user) === String(socket.userId));
+          if (!ownsDocument && !isCollaborator) {
+            socket.emit('error', { success: false, message: 'You do not have access to this document.' });
+            return;
+          }
+
+          const roomName = `doc:${documentId}`;
 
           // ----------------------------------------------------
           // Join Socket.IO document room

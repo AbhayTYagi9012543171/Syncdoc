@@ -49,6 +49,10 @@ const socketUrl = normalizeUrl(
   )
 );
 
+const yjsUrl = normalizeUrl(
+  getEnv("REACT_APP_YJS_URL", `${socketUrl.replace(/^http/i, "ws")}/yjs`)
+);
+
 const config = Object.freeze({
   appName: "SyncDoc",
   appVersion: "5.1.0",
@@ -62,7 +66,7 @@ const config = Object.freeze({
   socketUrl,
 
   // The backend Yjs WebSocket endpoint is /yjs/:documentId.
-  yjsUrl: `${socketUrl.replace(/^http/i, "ws")}/yjs`,
+  yjsUrl,
 
   tokenKey: "syncdoc_token",
   userKey: "syncdoc_user",

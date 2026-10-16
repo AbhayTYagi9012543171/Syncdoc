@@ -3,6 +3,10 @@ const Workspace = require('../models/Workspace');
 const { logger } = require('../config/logger');
 const { OperationTransformer } = require('../services/ot/OperationTransformer');
 
+// Short-lived process-local seed leases prevent two clients from initializing
+// the same empty Yjs room with duplicate copies of the REST document.
+const collaborationSeedLeases = new Map();
+
 const DocumentController = {
   // Create document
   async create(req, res, next) {
@@ -61,6 +65,26 @@ const DocumentController = {
     } catch (error) {
       logger.error('Create document error:', error);
       next(error);
+    }
+  },
+
+  // Claim initialization of an empty live-collaboration room. Access is
+  // protected by the document route middleware before this handler runs.
+  async claimCollaborationSeed(req, res, next) {
+    try {
+      const documentId = String(req.params.documentId || '');
+      const now = Date.now();
+      for (const [leasedDocumentId, lease] of collaborationSeedLeases.entries()) {
+        if (!lease || lease.expiresAt <= now) collaborationSeedLeases.delete(leasedDocumentId);
+      }
+      const currentLease = collaborationSeedLeases.get(documentId);
+      if (currentLease && currentLease.expiresAt > now) {
+        return res.status(200).json({ success: true, shouldSeed: false });
+      }
+      collaborationSeedLeases.set(documentId, { expiresAt: now + 15000 });
+      return res.status(200).json({ success: true, shouldSeed: true });
+    } catch (error) {
+      return next(error);
     }
   },
 

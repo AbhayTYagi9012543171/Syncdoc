@@ -1,298 +1,169 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import * as Y from "yjs";
+import { createCollaborationProvider } from "../utils/yjsProvider";
 
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+function normalizeUser(user) {
+  const name = user?.displayName || user?.name || user?.username || user?.email || "SyncDoc user";
+  let hash = 0;
+  for (let index = 0; index < name.length; index += 1) hash = (hash * 31 + name.charCodeAt(index)) | 0;
+  const colors = ["#6558d3", "#0e9f8a", "#db7c35", "#2875d7", "#c14d86", "#688b28"];
+  return {
+    id: String(user?._id || user?.id || user?.userId || user?.email || "anonymous"),
+    name: String(name),
+    color: colors[Math.abs(hash) % colors.length],
+  };
+}
 
-import {
-  createCollaborationProvider,
-} from "../utils/yjsProvider";
+function awarenessUsers(provider) {
+  const states = provider?.awareness?.getStates?.();
+  if (!states) return [];
+  const unique = new Map();
+  states.forEach((state, clientId) => {
+    const user = state?.user;
+    if (!user) return;
+    const id = String(user.id || clientId);
+    unique.set(id, { ...user, id, isOnline: true, status: "online" });
+  });
+  return Array.from(unique.values());
+}
 
-export default function useCollaboration(documentId) {
+export default function useCollaboration(documentId, { enabled = true, user } = {}) {
   const providerRef = useRef(null);
-  const mountedRef = useRef(false);
-  const documentIdRef = useRef(documentId || null);
-
+  const ydocRef = useRef(null);
+  const [ydoc, setYdoc] = useState(null);
+  const [provider, setProvider] = useState(null);
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [users, setUsers] = useState([]);
   const [error, setError] = useState(null);
 
-  /*
-   * Track whether the hook is mounted.
-   */
-  useEffect(() => {
-    mountedRef.current = true;
+  const userId = user?._id || user?.id || user?.userId || user?.email || "anonymous";
+  const userName = user?.displayName || user?.name || user?.username || user?.email || "SyncDoc user";
+  const userEmail = user?.email || "";
 
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-
-  /*
-   * Create one provider for the current document.
-   */
   useEffect(() => {
     let active = true;
-    let provider = null;
-
-    documentIdRef.current = documentId || null;
+    let nextDoc = null;
+    let nextProvider = null;
 
     setConnected(false);
-    setConnecting(Boolean(documentId));
+    setConnecting(Boolean(documentId && enabled));
     setUsers([]);
     setError(null);
+    setProvider(null);
+    setYdoc(null);
+    providerRef.current = null;
+    ydocRef.current = null;
 
-    if (!documentId) {
-      providerRef.current = null;
+    if (!documentId || !enabled) {
       setConnecting(false);
-
-      return () => {
-        active = false;
-      };
+      return () => { active = false; };
     }
 
-    const canUpdateState = () =>
-      active && mountedRef.current;
-
-    const handleConnect = () => {
-      if (!canUpdateState()) return;
-
-      setConnected(true);
-      setConnecting(false);
-      setError(null);
-    };
-
-    const handleDisconnect = (reason) => {
-      if (!canUpdateState()) return;
-
-      setConnected(false);
-      setConnecting(false);
-
-      // Keep the reason available for debugging.
-      if (reason) {
-        console.info(
-          "SyncDoc collaboration disconnected:",
-          reason
-        );
-      }
-    };
-
-    const handleUsers = (nextUsers) => {
-      if (!canUpdateState()) return;
-
-      setUsers(
-        Array.isArray(nextUsers)
-          ? nextUsers.filter(Boolean)
-          : []
-      );
-    };
-
-    const handleError = (providerError) => {
-      if (!canUpdateState()) return;
-
-      const normalizedError =
-        providerError instanceof Error
-          ? providerError
-          : new Error(
-              String(
-                providerError ||
-                  "Collaboration connection failed."
-              )
-            );
-
-      console.error(
-        "SyncDoc collaboration error:",
-        normalizedError
-      );
-
-      setConnected(false);
-      setConnecting(false);
-      setError(normalizedError);
+    const updateUsers = () => {
+      if (active) setUsers(awarenessUsers(nextProvider));
     };
 
     try {
-      provider = createCollaborationProvider(
-        documentId,
-        {
-          onConnect: handleConnect,
-          onDisconnect: handleDisconnect,
-          onUsers: handleUsers,
-          onError: handleError,
+      nextDoc = new Y.Doc();
+      nextProvider = createCollaborationProvider(documentId, nextDoc, {
+        connect: false,
+        maxBackoffTime: 10000,
+      });
+      nextProvider.awareness.setLocalStateField("user", normalizeUser({
+        id: userId,
+        displayName: userName,
+        email: userEmail,
+      }));
+      nextProvider.on("status", ({ status }) => {
+        if (!active) return;
+        const isConnected = status === "connected";
+        setConnected(isConnected);
+        setConnecting(status === "connecting");
+        if (isConnected) setError(null);
+      });
+      nextProvider.on("sync", (isSynced) => {
+        if (!active) return;
+        if (isSynced) {
+          setConnecting(false);
+          setError(null);
         }
-      );
-
-      if (!active) {
-        provider?.destroy?.();
-        return undefined;
-      }
-
-      providerRef.current = provider;
-
-      /*
-       * The provider currently connects automatically.
-       * Do not call connect() again here.
-       */
+      });
+      nextProvider.on("connection-error", (event) => {
+        if (!active) return;
+        setError(new Error(event?.message || "Unable to connect to live collaboration."));
+        setConnecting(false);
+      });
+      nextProvider.on("connection-close", () => {
+        if (!active) return;
+        setConnected(false);
+      });
+      nextProvider.awareness.on("change", updateUsers);
+      updateUsers();
+      providerRef.current = nextProvider;
+      ydocRef.current = nextDoc;
+      setYdoc(nextDoc);
+      setProvider(nextProvider);
+      // EditorContent waits for the provider's sync event before seeding
+      // an empty shared document, avoiding overwriting already-synced content.
+      nextProvider.connect();
     } catch (providerError) {
-      handleError(providerError);
-      providerRef.current = null;
+      setError(providerError instanceof Error ? providerError : new Error(String(providerError)));
+      setConnecting(false);
     }
 
     return () => {
       active = false;
-
-      if (providerRef.current === provider) {
-        providerRef.current = null;
+      if (nextProvider) {
+        try { nextProvider.awareness.off("change", updateUsers); } catch (_) { /* no-op */ }
+        try { nextProvider.destroy(); } catch (_) { /* no-op */ }
       }
-
-      try {
-        provider?.destroy?.();
-      } catch (cleanupError) {
-        console.warn(
-          "SyncDoc collaboration cleanup failed:",
-          cleanupError
-        );
+      if (nextDoc) {
+        try { nextDoc.destroy(); } catch (_) { /* no-op */ }
       }
+      if (providerRef.current === nextProvider) providerRef.current = null;
+      if (ydocRef.current === nextDoc) ydocRef.current = null;
     };
-  }, [documentId]);
+  }, [documentId, enabled, userId, userName, userEmail]);
 
-  /*
-   * Broadcast a document collaboration event.
-   */
   const broadcast = useCallback((payload) => {
-    const provider = providerRef.current;
-
-    if (
-      !provider ||
-      typeof provider.broadcast !== "function"
-    ) {
-      return false;
-    }
-
+    const current = providerRef.current;
+    if (!current?.awareness || !payload || typeof payload !== "object") return false;
     try {
-      return provider.broadcast(payload) === true;
+      current.awareness.setLocalStateField("syncdocEvent", {
+        ...payload,
+        timestamp: payload.timestamp || Date.now(),
+      });
+      return true;
     } catch (broadcastError) {
-      console.error(
-        "SyncDoc broadcast failed:",
-        broadcastError
-      );
-
+      console.warn("SyncDoc collaboration broadcast failed:", broadcastError);
       return false;
     }
   }, []);
 
-  /*
-   * Reconnect the current provider.
-   */
   const reconnect = useCallback(() => {
-    const provider = providerRef.current;
-
-    if (!provider) {
-      return false;
-    }
-
-    const reconnectMethod =
-      provider.reconnect || provider.connect;
-
-    if (typeof reconnectMethod !== "function") {
-      return false;
-    }
-
+    const current = providerRef.current;
+    if (!current) return false;
+    setConnecting(true);
+    setError(null);
     try {
-      setConnecting(true);
-      setError(null);
-
-      const result = reconnectMethod.call(provider);
-
-      if (result === false) {
-        setConnecting(false);
-        return false;
-      }
-
+      current.connect();
       return true;
     } catch (reconnectError) {
       setConnecting(false);
-
-      setError(
-        reconnectError instanceof Error
-          ? reconnectError
-          : new Error("Unable to reconnect collaboration.")
-      );
-
-      console.error(
-        "SyncDoc reconnect failed:",
-        reconnectError
-      );
-
+      setError(reconnectError instanceof Error ? reconnectError : new Error(String(reconnectError)));
       return false;
     }
   }, []);
 
-  /*
-   * Disconnect without destroying the provider.
-   */
   const disconnect = useCallback(() => {
-    const provider = providerRef.current;
-
-    if (!provider) {
-      return false;
-    }
-
-    const disconnectMethod =
-      provider.disconnect || provider.close;
-
-    if (typeof disconnectMethod !== "function") {
-      return false;
-    }
-
-    try {
-      const result = disconnectMethod.call(provider);
-
-      if (result === false) {
-        return false;
-      }
-
-      setConnected(false);
-      setConnecting(false);
-      setUsers([]);
-
-      return true;
-    } catch (disconnectError) {
-      console.error(
-        "SyncDoc disconnect failed:",
-        disconnectError
-      );
-
-      return false;
-    }
+    const current = providerRef.current;
+    if (!current) return false;
+    current.disconnect();
+    setConnected(false);
+    setConnecting(false);
+    return true;
   }, []);
 
-  const getProvider = useCallback(
-    () => providerRef.current,
-    []
-  );
-
-  const collaboratorCount = users.length;
-
-  return {
-    connected,
-    connecting,
-
-    users,
-    collaboratorCount,
-    hasCollaborators: collaboratorCount > 0,
-
-    error,
-    hasError: Boolean(error),
-
-    documentId: documentIdRef.current,
-    provider: providerRef.current,
-    getProvider,
-
-    broadcast,
-    reconnect,
-    disconnect,
-  };
+  return { ydoc, provider, connected, connecting, users, error, broadcast, reconnect, disconnect };
 }

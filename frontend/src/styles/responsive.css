@@ -2009,3 +2009,34 @@ button, .btn, a, input, select, textarea { -webkit-tap-highlight-color: transpar
   .app-main { margin: 0 !important; width: 100% !important; }
   .card { box-shadow: none !important; break-inside: avoid; }
 }
+
+
+/* SyncDoc full-stack upgrade: final overflow and accessibility safeguards */
+html { scroll-padding-top: 5rem; }
+body { min-width: 320px; }
+button, input, select, textarea { max-width: 100%; }
+pre, code, .document-title, .workspace-name, .user-email { overflow-wrap: anywhere; }
+[aria-busy="true"] { cursor: progress; }
+button:disabled, [role="button"][aria-disabled="true"] { cursor: not-allowed; }
+@media (max-width: 768px) {
+  .table-container, .table-wrap, .data-table-wrapper { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .modal, .dialog, [role="dialog"] { max-width: calc(100vw - 1rem); max-height: calc(100dvh - 1rem); overflow: auto; }
+  .settings-hero-art, .settings-orbit { pointer-events: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html:focus-within { scroll-behavior: auto !important; }
+}
+
+/* Responsive safety net */
+.app-content, .page, .page-content, .dashboard-page, .analytics-page, .documents-page, .settings-page, .admin-premium-page { min-width: 0; max-width: 100%; }
+.table-responsive, .table-wrap, .admin-premium-table-wrap { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
+img, video, canvas, svg { max-width: 100%; }
+@media (max-width: 768px) {
+  .page-heading, .dashboard-header, .analytics-page-heading { align-items: flex-start; flex-wrap: wrap; gap: 14px; }
+  .page-heading-actions, .workspace-heading-actions { flex-wrap: wrap; }
+  .admin-premium-page { padding: 14px; }
+}
+@media (max-width: 480px) {
+  .page-heading-actions > *, .workspace-heading-actions > * { max-width: 100%; }
+  .modal, .dialog, [role="dialog"] { max-width: calc(100vw - 20px); }
+}

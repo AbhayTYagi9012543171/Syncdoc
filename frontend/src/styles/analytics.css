@@ -1495,3 +1495,12 @@
 .analytics-page .analytics-period:hover:not(:disabled) { transform: translateY(-1px); }
 .analytics-page svg { max-width: 100%; }
 .analytics-page .card { overflow: hidden; }
+
+/* Analytics premium refinement */
+.analytics-page { max-width: 1700px; margin-inline: auto; }
+.analytics-page-heading h1 { letter-spacing: -.05em; }
+.analytics-page .analytics-stat-card { transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease; }
+.analytics-page .analytics-stat-card:hover { transform: translateY(-3px); box-shadow: 0 16px 32px rgba(36,40,80,.09); }
+.analytics-page .analytics-chart-card, .analytics-page .analytics-activity-card, .analytics-page .analytics-documents-card { overflow: hidden; }
+.analytics-page .activity-item { transition: background-color .18s ease; }
+.analytics-page .activity-item:hover { background: rgba(101,88,232,.045); }

@@ -97,7 +97,17 @@ app.disable(
 // Render and other reverse-proxy deployments forward client IPs in
 // X-Forwarded-For. Trust the nearest proxy so express-rate-limit can
 // identify clients correctly. Keep this before all rate-limit middleware.
-app.set('trust proxy', 1);
+const trustProxySetting = String(process.env.TRUST_PROXY ?? '1').trim().toLowerCase();
+if (trustProxySetting === 'true') {
+    app.set('trust proxy', true);
+} else if (trustProxySetting === 'false' || trustProxySetting === '0') {
+    app.set('trust proxy', false);
+} else if (/^\d+$/.test(trustProxySetting)) {
+    app.set('trust proxy', Number(trustProxySetting));
+} else {
+    // Named proxy ranges are supported by Express, e.g. loopback or linklocal.
+    app.set('trust proxy', trustProxySetting);
+}
 
 // ============================================================
 // CORS
@@ -298,7 +308,7 @@ const extractYjsDocumentId = (
 
 server.on(
     'upgrade',
-    (
+    async (
         request,
         socket,
         head
@@ -407,6 +417,47 @@ server.on(
                 decodedToken._id ||
                 decodedToken.sub ||
                 null;
+
+            // A valid JWT is not sufficient: verify the account still exists
+            // and the user is allowed to access this specific document.
+            const mongoose = require('mongoose');
+            const User = require('./models/User');
+            const Document = require('./models/Document');
+            if (!mongoose.Types.ObjectId.isValid(String(userId)) || !mongoose.Types.ObjectId.isValid(String(documentId))) {
+                socket.write('HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\nInvalid document or user identifier');
+                socket.destroy();
+                return;
+            }
+            const [activeUser, targetDocument] = await Promise.all([
+                User.findById(userId).select('_id deletedAt role'),
+                Document.findById(documentId).select('_id owner collaborators deletedAt'),
+            ]);
+            if (!activeUser || activeUser.deletedAt) {
+                socket.write('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\nAccount is not active');
+                socket.destroy();
+                return;
+            }
+            if (!targetDocument || targetDocument.deletedAt) {
+                socket.write('HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\nDocument not found');
+                socket.destroy();
+                return;
+            }
+            const ownsDocument = String(targetDocument.owner) === String(activeUser._id);
+            const collaborator = Array.isArray(targetDocument.collaborators) ? targetDocument.collaborators.find((item) => String(item.user) === String(activeUser._id)) : null;
+            const isCollaborator = Boolean(collaborator);
+            if (!ownsDocument && !isCollaborator && activeUser.role !== 'admin') {
+                socket.write('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\nDocument access denied');
+                socket.destroy();
+                return;
+            }
+            // Yjs accepts incoming document updates, so only grant a writable
+            // provider to owners/admins/editors. Viewers can still use read APIs.
+            const canEdit = ownsDocument || activeUser.role === 'admin' || (collaborator && (['editor', 'admin'].includes(collaborator.role) || (Array.isArray(collaborator.permissions) && collaborator.permissions.includes('write'))));
+            if (!canEdit) {
+                socket.write('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\nLive editing permission required');
+                socket.destroy();
+                return;
+            }
 
             const email =
                 decodedToken.email ||

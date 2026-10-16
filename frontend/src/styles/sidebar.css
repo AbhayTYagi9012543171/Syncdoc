@@ -1574,3 +1574,9 @@
 .sidebar-nav-item:hover, .sidebar a:hover { transform: translateX(2px); }
 .sidebar-nav-item.active { box-shadow: inset 3px 0 0 #9aa0ff, 0 7px 20px rgba(5,10,30,.12); }
 .sidebar-brand-mark { box-shadow: 0 8px 22px rgba(91,92,226,.28); }
+
+/* Navigation refinement */
+.sidebar, .app-sidebar { scrollbar-width: thin; scrollbar-color: rgba(120,128,154,.35) transparent; }
+.sidebar a, .app-sidebar a, .sidebar button, .app-sidebar button { transition: color .18s ease, background .18s ease, transform .18s ease; }
+.sidebar a:hover, .app-sidebar a:hover { background: var(--primary-soft, #f0efff); }
+.sidebar a.active, .app-sidebar a.active, .sidebar a[aria-current="page"], .app-sidebar a[aria-current="page"] { font-weight: 700; }

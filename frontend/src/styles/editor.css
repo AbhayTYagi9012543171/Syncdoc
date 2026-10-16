@@ -2523,3 +2523,10 @@ box-shadow:
 .editor-page .save-state { transition: color .2s ease, background .2s ease; }
 .editor-page :is(button, [role="button"]) { transition: background .18s ease, color .18s ease, transform .18s ease, box-shadow .18s ease; }
 .editor-page :is(button, [role="button"]):active:not(:disabled) { transform: scale(.97); }
+
+/* Editor refinement */
+.editor-page { max-width: 1800px; margin-inline: auto; min-width: 0; }
+.editor-page .ProseMirror, .editor-content .ProseMirror { overflow-wrap: anywhere; caret-color: var(--primary, #6558e8); }
+.editor-page :where(button, [role="button"]) { transition: background-color .16s ease, color .16s ease, transform .16s ease; }
+.editor-page .collaboration-cursor__caret, .editor-page .collaboration-carets__caret { pointer-events: none; }
+.editor-page .collaboration-cursor__label, .editor-page .collaboration-carets__label { border-radius: 5px 5px 5px 0; font-weight: 700; }

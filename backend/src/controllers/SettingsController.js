@@ -1,78 +1,266 @@
+
 const User = require("../models/User");
 
-const DEFAULT_PREFERENCES = { theme: "system", compactMode: false, reducedMotion: false };
-const DEFAULT_NOTIFICATIONS = { email: true, mentions: true, documentUpdates: true, workspaceActivity: true };
+const DEFAULT_PREFERENCES = {
+  theme: "system",
+  compactMode: false,
+  reducedMotion: false,
+  fontSize: 16,
+  autosaveInterval: 30000,
+};
+
+const DEFAULT_NOTIFICATIONS = {
+  email: true,
+  mentions: true,
+  documentUpdates: true,
+  workspaceActivity: true,
+};
+
 const THEMES = new Set(["light", "dark", "system"]);
 
-const userIdFrom = (req) => req.user?._id || req.user?.id || req.userId || null;
-const fail = (res, status, message) => res.status(status).json({ success: false, message });
-const plain = (value) => value?.toObject?.() || value || {};
+const PREFERENCE_KEYS = [
+  "theme",
+  "compactMode",
+  "reducedMotion",
+  "fontSize",
+  "autosaveInterval",
+];
+
+const NOTIFICATION_KEYS = [
+  "email",
+  "mentions",
+  "documentUpdates",
+  "workspaceActivity",
+];
+
+function userIdFrom(req) {
+  return req.user?._id || req.user?.id || req.userId || null;
+}
+
+function fail(res, status, message) {
+  return res.status(status).json({
+    success: false,
+    message,
+  });
+}
+
+function plain(value) {
+  return value?.toObject?.() || value || {};
+}
+
+function isPlainObject(value) {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    !Array.isArray(value)
+  );
+}
 
 function serialize(user) {
+  const preferences = plain(user.preferences);
+  const notifications = plain(user.notificationPreferences);
+
   return {
-    preferences: { ...DEFAULT_PREFERENCES, ...plain(user.preferences) },
-    notifications: { ...DEFAULT_NOTIFICATIONS, ...plain(user.notificationPreferences) },
+    preferences: {
+      ...DEFAULT_PREFERENCES,
+      ...preferences,
+    },
+    notifications: {
+      ...DEFAULT_NOTIFICATIONS,
+      ...notifications,
+    },
   };
+}
+
+function validatePreferences(preferences, updates) {
+  if (!isPlainObject(preferences)) {
+    return "preferences must be an object.";
+  }
+
+  if (Object.keys(preferences).some(
+    (key) => !PREFERENCE_KEYS.includes(key)
+  )) {
+    return "Unsupported appearance preference.";
+  }
+
+  if (preferences.theme !== undefined) {
+    if (
+      typeof preferences.theme !== "string" ||
+      !THEMES.has(preferences.theme)
+    ) {
+      return "Theme must be light, dark, or system.";
+    }
+
+    updates["preferences.theme"] = preferences.theme;
+  }
+
+  for (const key of ["compactMode", "reducedMotion"]) {
+    if (preferences[key] !== undefined) {
+      if (typeof preferences[key] !== "boolean") {
+        return `preferences.${key} must be boolean.`;
+      }
+
+      updates[`preferences.${key}`] = preferences[key];
+    }
+  }
+
+  if (preferences.fontSize !== undefined) {
+    const value = preferences.fontSize;
+
+    if (
+      typeof value !== "number" ||
+      !Number.isInteger(value) ||
+      value < 12 ||
+      value > 24
+    ) {
+      return "preferences.fontSize must be an integer from 12 to 24.";
+    }
+
+    updates["preferences.fontSize"] = value;
+  }
+
+  if (preferences.autosaveInterval !== undefined) {
+    const value = preferences.autosaveInterval;
+
+    if (
+      typeof value !== "number" ||
+      !Number.isInteger(value) ||
+      value < 5000 ||
+      value > 60000
+    ) {
+      return "preferences.autosaveInterval must be between 5000 and 60000 milliseconds.";
+    }
+
+    updates["preferences.autosaveInterval"] = value;
+  }
+
+  return null;
+}
+
+function validateNotifications(notifications, updates) {
+  if (!isPlainObject(notifications)) {
+    return "notifications must be an object.";
+  }
+
+  if (Object.keys(notifications).some(
+    (key) => !NOTIFICATION_KEYS.includes(key)
+  )) {
+    return "Unsupported notification preference.";
+  }
+
+  for (const key of NOTIFICATION_KEYS) {
+    if (notifications[key] !== undefined) {
+      if (typeof notifications[key] !== "boolean") {
+        return `notifications.${key} must be boolean.`;
+      }
+
+      updates[`notificationPreferences.${key}`] =
+        notifications[key];
+    }
+  }
+
+  return null;
 }
 
 exports.getSettings = async (req, res, next) => {
   try {
     const id = userIdFrom(req);
-    if (!id) return fail(res, 401, "Authentication required.");
-    const user = await User.findOne({ _id: id, deletedAt: null }).select("preferences notificationPreferences");
-    if (!user) return fail(res, 404, "Account not found.");
-    return res.json({ success: true, data: serialize(user) });
-  } catch (error) { return next(error); }
+
+    if (!id) {
+      return fail(res, 401, "Authentication required.");
+    }
+
+    const user = await User.findOne({
+      _id: id,
+      deletedAt: null,
+    }).select("preferences notificationPreferences");
+
+    if (!user) {
+      return fail(res, 404, "Account not found.");
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: serialize(user),
+    });
+  } catch (error) {
+    return next(error);
+  }
 };
 
 exports.updateSettings = async (req, res, next) => {
   try {
     const id = userIdFrom(req);
-    if (!id) return fail(res, 401, "Authentication required.");
+
+    if (!id) {
+      return fail(res, 401, "Authentication required.");
+    }
+
     const body = req.body;
-    if (!body || typeof body !== "object" || Array.isArray(body)) return fail(res, 400, "Request body must be an object.");
-    if (Object.keys(body).some((key) => !["preferences", "notifications"].includes(key))) {
+
+    if (!isPlainObject(body)) {
+      return fail(res, 400, "Request body must be an object.");
+    }
+
+    const allowedSections = ["preferences", "notifications"];
+
+    if (
+      Object.keys(body).some(
+        (key) => !allowedSections.includes(key)
+      )
+    ) {
       return fail(res, 400, "Unsupported settings field.");
     }
 
     const updates = {};
+
     if (body.preferences !== undefined) {
-      const p = body.preferences;
-      if (!p || typeof p !== "object" || Array.isArray(p)) return fail(res, 400, "preferences must be an object.");
-      const allowed = ["theme", "compactMode", "reducedMotion"];
-      if (Object.keys(p).some((key) => !allowed.includes(key))) return fail(res, 400, "Unsupported appearance preference.");
-      if (p.theme !== undefined) {
-        if (!THEMES.has(p.theme)) return fail(res, 400, "Theme must be light, dark, or system.");
-        updates["preferences.theme"] = p.theme;
-      }
-      for (const key of ["compactMode", "reducedMotion"]) {
-        if (p[key] !== undefined) {
-          if (typeof p[key] !== "boolean") return fail(res, 400, `preferences.${key} must be boolean.`);
-          updates[`preferences.${key}`] = p[key];
-        }
+      const error = validatePreferences(body.preferences, updates);
+
+      if (error) {
+        return fail(res, 400, error);
       }
     }
 
     if (body.notifications !== undefined) {
-      const n = body.notifications;
-      const allowed = ["email", "mentions", "documentUpdates", "workspaceActivity"];
-      if (!n || typeof n !== "object" || Array.isArray(n)) return fail(res, 400, "notifications must be an object.");
-      if (Object.keys(n).some((key) => !allowed.includes(key))) return fail(res, 400, "Unsupported notification preference.");
-      for (const key of allowed) {
-        if (n[key] !== undefined) {
-          if (typeof n[key] !== "boolean") return fail(res, 400, `notifications.${key} must be boolean.`);
-          updates[`notificationPreferences.${key}`] = n[key];
-        }
+      const error = validateNotifications(body.notifications, updates);
+
+      if (error) {
+        return fail(res, 400, error);
       }
     }
 
-    if (!Object.keys(updates).length) return fail(res, 400, "No valid settings were provided.");
+    if (Object.keys(updates).length === 0) {
+      return fail(res, 400, "No valid settings were provided.");
+    }
+
+    updates.updatedAt = new Date();
+
     const user = await User.findOneAndUpdate(
-      { _id: id, deletedAt: null },
-      { $set: { ...updates, updatedAt: new Date() } },
-      { new: true, runValidators: true, projection: "preferences notificationPreferences" }
+      {
+        _id: id,
+        deletedAt: null,
+      },
+      {
+        $set: updates,
+      },
+      {
+        new: true,
+        runValidators: true,
+        select: "preferences notificationPreferences",
+      }
     );
-    if (!user) return fail(res, 404, "Account not found.");
-    return res.json({ success: true, message: "Settings saved.", data: serialize(user) });
-  } catch (error) { return next(error); }
+
+    if (!user) {
+      return fail(res, 404, "Account not found.");
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Settings saved successfully.",
+      data: serialize(user),
+    });
+  } catch (error) {
+    return next(error);
+  }
 };

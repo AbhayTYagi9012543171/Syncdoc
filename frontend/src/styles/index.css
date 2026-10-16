@@ -3816,3 +3816,19 @@ select:focus-visible {
 
 :focus-visible { outline: 3px solid rgba(91,92,226,.38); outline-offset: 3px; }
 ::selection { background: rgba(91,92,226,.18); color: var(--sd-ink); }
+
+/* Premium global foundation */
+:root {
+  --primary: #6558e8;
+  --primary-dark: #4f43c9;
+  --primary-hover: #594bdc;
+  --primary-light: #8277f1;
+  --primary-soft: #f0efff;
+  --primary-soft-hover: #e8e6ff;
+  --page-bg: #f6f7fc;
+  --surface-2: #f8f9fd;
+  --border: #e7eaf3;
+  --shadow-sm: 0 5px 18px rgba(25,35,65,.045);
+  --shadow-md: 0 14px 36px rgba(25,35,65,.075);
+}
+::selection { color: #332c83; background: rgba(130,119,241,.22); }
