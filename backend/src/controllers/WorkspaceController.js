@@ -7,26 +7,71 @@ const WorkspaceController = {
   // Create workspace
   async create(req, res, next) {
     try {
-      const { name, description, settings } = req.body;
-      const userId = req.user.id;
+      const { name, description, settings } = req.body || {};
+      const userId = String(req.user?.id || req.user?._id || '');
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          error: { code: 'AUTHENTICATION_REQUIRED', message: 'Authentication is required.' },
+        });
+      }
+
+      const normalizedName = typeof name === 'string' ? name.trim() : '';
+      if (!normalizedName) {
+        return res.status(400).json({
+          success: false,
+          error: { code: 'VALIDATION_ERROR', message: 'Workspace name is required.' },
+        });
+      }
+
+      // Slugs are unique in MongoDB. Append a short stable-per-create suffix
+      // so two users can create workspaces with the same display name.
+      const baseSlug = normalizedName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 70) || 'workspace';
+      let slug = baseSlug;
+      if (await Workspace.exists({ slug })) {
+        slug = `${baseSlug}-${require('crypto').randomBytes(3).toString('hex')}`;
+      }
+
+      const suppliedSettings = settings && typeof settings === 'object' && !Array.isArray(settings)
+        ? settings
+        : {};
+      const safeSettings = {};
+      if (typeof suppliedSettings.allowPublicAccess === 'boolean') {
+        safeSettings.allowPublicAccess = suppliedSettings.allowPublicAccess;
+      }
+      if (['viewer', 'editor', 'admin'].includes(suppliedSettings.defaultDocumentPermissions)) {
+        safeSettings.defaultDocumentPermissions = suppliedSettings.defaultDocumentPermissions;
+      }
 
       const workspace = new Workspace({
-        name,
-        description,
+        name: normalizedName,
+        description: typeof description === 'string' ? description.trim().slice(0, 500) : '',
         owner: userId,
-        settings: settings || {},
+        slug,
+        settings: safeSettings,
         members: [{
           user: userId,
           role: 'admin',
         }],
+        memberCount: 1,
       });
 
       await workspace.save();
 
-      res.status(201).json({
+      // Keep the API contract stable even if Mongoose virtual serialization
+      // settings change in a later schema revision.
+      const workspaceData = workspace.toObject({ virtuals: true });
+      workspaceData.id = String(workspace._id);
+      workspaceData.workspaceId = String(workspace._id);
+
+      return res.status(201).json({
         success: true,
         message: 'Workspace created successfully',
-        data: workspace,
+        data: workspaceData,
       });
     } catch (error) {
       logger.error('Create workspace error:', error);
@@ -158,8 +203,14 @@ const WorkspaceController = {
   async update(req, res, next) {
     try {
       const { workspaceId } = req.params;
-      const { name, description, settings } = req.body;
-      const userId = req.user.id;
+      const { name, description, settings } = req.body || {};
+      const userId = String(req.user?.id || req.user?._id || '');
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          error: { code: 'AUTHENTICATION_REQUIRED', message: 'Authentication is required.' },
+        });
+      }
 
       const workspace = await Workspace.findById(workspaceId);
       if (!workspace) {

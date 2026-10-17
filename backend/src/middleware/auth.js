@@ -324,7 +324,7 @@ const checkDocumentEditPermission = async (req, res, next) => {
 /**
  * Login rate limiter
  *
- * Up to 10 failed login attempts per IP within 15 minutes.
+ * Up to 5 failed login attempts per IP within 15 minutes.
  * Successful login responses are not counted against the limit.
  */
 const loginRateLimiter = authRateLimit({
@@ -346,10 +346,15 @@ const loginRateLimiter = authRateLimit({
     logger.warn(
       `[LOGIN_RATE_LIMITED] ${req.method} ${req.originalUrl} IP: ${req.ip}`
     );
+    const retryAfterSeconds = Math.max(1, Math.ceil((options.windowMs || 15 * 60 * 1000) / 1000));
+    res.setHeader('Retry-After', String(retryAfterSeconds));
 
     return res
       .status(options.statusCode || 429)
-      .json(options.message);
+      .json({
+        ...(options.message || {}),
+        retryAfter: retryAfterSeconds,
+      });
   },
 });
 

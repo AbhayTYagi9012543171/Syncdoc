@@ -33,7 +33,7 @@ router.get('/health', (req, res) => {
     data: {
       status: 'ok',
       service: 'syncdoc-api',
-      version: process.env.APP_VERSION || '2.0.0',
+      version: process.env.APP_VERSION || '6.2.0',
     },
     timestamp: new Date().toISOString(),
     requestId: req.requestId,

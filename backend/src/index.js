@@ -97,9 +97,17 @@ app.disable(
 // Render and other reverse-proxy deployments forward client IPs in
 // X-Forwarded-For. Trust the nearest proxy so express-rate-limit can
 // identify clients correctly. Keep this before all rate-limit middleware.
-const trustProxySetting = String(process.env.TRUST_PROXY ?? '1').trim().toLowerCase();
+const trustProxySetting = String(
+    process.env.TRUST_PROXY ??
+    (NODE_ENV === 'production' ? '1' : '0')
+).trim().toLowerCase();
+
 if (trustProxySetting === 'true') {
-    app.set('trust proxy', true);
+    // Do not trust an arbitrary-length forwarded chain. A single hop is the
+    // expected Render deployment topology; configure the exact hop count if
+    // your hosting architecture differs.
+    console.warn('[Security] TRUST_PROXY=true is broad; limiting trust to one proxy hop.');
+    app.set('trust proxy', 1);
 } else if (trustProxySetting === 'false' || trustProxySetting === '0') {
     app.set('trust proxy', false);
 } else if (/^\d+$/.test(trustProxySetting)) {
@@ -939,7 +947,7 @@ const start =
                 windowMs: 15 * 60 * 1000,
                 // express-rate-limit v6 uses "max" (not "limit").
                 max: globalRateLimit,
-                standardHeaders: 'draft-7',
+                standardHeaders: true,
                 legacyHeaders: false,
 
                 skip: (req) => {
@@ -964,20 +972,24 @@ const start =
                     return false;
                 },
 
-                handler: (req, res) => {
+                handler: (req, res, next, options) => {
                     logger.warn(
                         `[RATE_LIMITED] ${req.method} ${req.originalUrl} ` +
                         `IP: ${req.ip}`
                     );
 
+                    const retryAfterSeconds = Math.max(
+                        1,
+                        Math.ceil((options?.windowMs || 15 * 60 * 1000) / 1000)
+                    );
+                    res.setHeader('Retry-After', String(retryAfterSeconds));
+
                     return res.status(429).json({
                         success: false,
                         error: {
                             code: 'RATE_LIMITED',
-                            message:
-                                'Too many requests. Please try again later.',
-                            retryAfter:
-                                'Please wait before retrying.',
+                            message: 'Too many requests. Please try again later.',
+                            retryAfter: retryAfterSeconds,
                         },
                     });
                 },
@@ -1098,7 +1110,7 @@ const start =
 
                         version:
                             process.env.APP_VERSION ||
-                            '5.1.0',
+                            '6.2.0',
 
                         environment:
                             NODE_ENV,

@@ -19,18 +19,18 @@ const defaultOptions = {
     logger.warn(
       `[RATE_LIMITED] ${req.method} ${req.originalUrl} IP: ${req.ip}`
     );
+    const retryAfterSeconds = Math.max(1, Math.ceil((options.windowMs || 15 * 60 * 1000) / 1000));
+    res.setHeader('Retry-After', String(retryAfterSeconds));
 
-    return res.status(429).json(options.message);
+    return res.status(429).json({
+      ...(options.message || {}),
+      retryAfter: retryAfterSeconds,
+    });
   },
 
-  // Use a stable key for each authenticated user or anonymous IP.
-  // IPv6-aware IP handling is left to express-rate-limit's defaults
-  // where its default key generator is used.
-  keyGenerator: (req) => {
-    return req.user?.id
-      ? `user:${req.user.id}`
-      : `ip:${req.ip}`;
-  },
+  // Keep express-rate-limit's built-in IPv6-aware client-IP key generator.
+  // Custom generators that return req.ip directly can weaken IPv6 subnet
+  // handling and trigger validation errors on newer express-rate-limit versions.
 
   skip: (req) => req.user?.role === 'admin',
 };
@@ -135,18 +135,16 @@ const uploadLimiter = rateLimit({
 });
 
 /**
- * API key limiter: 1000 requests per hour.
+ * High-volume client limiter: 1000 requests per hour, keyed by client IP.
+ * API-key-specific accounting requires a real API-key auth contract/store.
  */
 const apiKeyLimiter = rateLimit({
   ...defaultOptions,
   windowMs: 60 * 60 * 1000,
   max: 1000,
 
-  keyGenerator: (req) => {
-    return req.headers['x-api-key']
-      ? `api-key:${req.headers['x-api-key']}`
-      : `ip:${req.ip}`;
-  },
+  // Use the package's default IPv6-aware key generator. API-key-specific
+  // accounting can be layered in a shared store when API-key auth is enabled.
 
   message: {
     success: false,
@@ -207,16 +205,22 @@ const roleBasedLimiter = (roleLimits = {}) => {
     guest: { windowMs: 60 * 1000, max: 20 },
     ...roleLimits,
   };
+  const limiterByRole = new Map();
 
-  return (req, res, next) => {
-    const role = req.user?.role || 'guest';
-    const limit = limits[role] || limits.guest;
-
-    return rateLimit({
+  // A limiter must be created once per role. Creating it inside each request
+  // resets its in-memory counter and silently defeats the intended limit.
+  Object.entries(limits).forEach(([role, limit]) => {
+    limiterByRole.set(role, rateLimit({
       ...defaultOptions,
       windowMs: limit.windowMs,
       max: limit.max,
-    })(req, res, next);
+    }));
+  });
+
+  return (req, res, next) => {
+    const role = req.user?.role || 'guest';
+    const limiter = limiterByRole.get(role) || limiterByRole.get('guest');
+    return limiter(req, res, next);
   };
 };
 

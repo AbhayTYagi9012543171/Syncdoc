@@ -55,7 +55,7 @@ const yjsUrl = normalizeUrl(
 
 const config = Object.freeze({
   appName: "SyncDoc",
-  appVersion: "5.1.0",
+  appVersion: "6.2.0",
 
   environment: getEnv(
     "REACT_APP_ENV",
