@@ -1,6 +1,7 @@
+
 // ============================================================
 // SYNCDOC BACKEND - MAIN SERVER
-// Production-ready Express + Socket.IO + Yjs server
+// Express + Socket.IO + Yjs + Static Uploads
 // ============================================================
 
 'use strict';
@@ -19,12 +20,12 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const WebSocket = require('ws');
 const jwt = require('jsonwebtoken');
+const path = require('path');
+const fs = require('fs');
 
 const { Server } = require('socket.io');
 
-const {
-    setupWSConnection,
-} = require('y-websocket/bin/utils');
+const { setupWSConnection } = require('y-websocket/bin/utils');
 
 // ============================================================
 // LOAD ENVIRONMENT
@@ -45,8 +46,7 @@ const {
 
 const loggerModule = require('./config/logger');
 
-const logger =
-    loggerModule?.logger || console;
+const logger = loggerModule?.logger || console;
 
 const {
     connectRedis,
@@ -54,66 +54,47 @@ const {
     isRedisConnected,
 } = require('./config/redis');
 
-const {
-    connectDB,
-} = require('./config/database');
+const { connectDB } = require('./config/database');
 
-const {
-    setupSocketHandlers,
-} = require('./socket');
+const { setupSocketHandlers } = require('./socket');
 
-const requestContext =
-    require('./middleware/requestContext');
+const requestContext = require('./middleware/requestContext');
 
 // ============================================================
 // EXPRESS APPLICATION
 // ============================================================
 
 const app = express();
-
-const server =
-    http.createServer(app);
+const server = http.createServer(app);
 
 // ============================================================
 // ENVIRONMENT
 // ============================================================
 
-const NODE_ENV =
-    process.env.NODE_ENV ||
-    'development';
+const NODE_ENV = process.env.NODE_ENV || 'development';
+const PORT = Number(process.env.PORT) || 5000;
 
-const PORT =
-    Number(process.env.PORT) ||
-    5000;
+app.disable('x-powered-by');
 
-app.disable(
-    'x-powered-by'
-);
+// ============================================================
+// TRUST PROXY
+// ============================================================
 
-// ------------------------------------------------------------
-// Trust proxy
-// ------------------------------------------------------------
-
-// Render and other reverse-proxy deployments forward client IPs in
-// X-Forwarded-For. Trust the nearest proxy so express-rate-limit can
-// identify clients correctly. Keep this before all rate-limit middleware.
 const trustProxySetting = String(
     process.env.TRUST_PROXY ??
     (NODE_ENV === 'production' ? '1' : '0')
 ).trim().toLowerCase();
 
 if (trustProxySetting === 'true') {
-    // Do not trust an arbitrary-length forwarded chain. A single hop is the
-    // expected Render deployment topology; configure the exact hop count if
-    // your hosting architecture differs.
-    console.warn('[Security] TRUST_PROXY=true is broad; limiting trust to one proxy hop.');
     app.set('trust proxy', 1);
-} else if (trustProxySetting === 'false' || trustProxySetting === '0') {
+} else if (
+    trustProxySetting === 'false' ||
+    trustProxySetting === '0'
+) {
     app.set('trust proxy', false);
 } else if (/^\d+$/.test(trustProxySetting)) {
     app.set('trust proxy', Number(trustProxySetting));
 } else {
-    // Named proxy ranges are supported by Express, e.g. loopback or linklocal.
     app.set('trust proxy', trustProxySetting);
 }
 
@@ -128,71 +109,37 @@ const allowedOrigins = [
     'http://127.0.0.1:5173',
 ];
 
-const configuredCorsOrigin =
-    process.env.CORS_ORIGIN
-        ? process.env.CORS_ORIGIN
-            .trim()
-            .replace(/\/$/, '')
-        : '';
+const configuredCorsOrigins = String(
+    process.env.CORS_ORIGIN || ''
+)
+    .split(',')
+    .map((origin) => origin.trim().replace(/\/$/, ''))
+    .filter(Boolean);
 
-const isAllowedOrigin = (
-    origin
-) => {
-    // Server-to-server, curl, Postman etc.
+const isAllowedOrigin = (origin) => {
     if (!origin) {
         return true;
     }
 
-    const normalizedOrigin =
-        origin
-            .trim()
-            .replace(/\/$/, '');
+    const normalizedOrigin = origin.trim().replace(/\/$/, '');
 
-    // Environment configured origin
-    if (
-        configuredCorsOrigin &&
-        normalizedOrigin ===
-        configuredCorsOrigin
-    ) {
+    if (configuredCorsOrigins.includes(normalizedOrigin)) {
         return true;
     }
 
-    // Local development
-    if (
-        allowedOrigins.includes(
-            normalizedOrigin
-        )
-    ) {
-        return true;
-    }
-
-    return false;
+    return allowedOrigins.includes(normalizedOrigin);
 };
 
 const corsOptions = {
-    origin: (
-        origin,
-        callback
-    ) => {
-        if (
-            isAllowedOrigin(origin)
-        ) {
-            return callback(
-                null,
-                true
-            );
+    origin(origin, callback) {
+        if (isAllowedOrigin(origin)) {
+            return callback(null, true);
         }
 
-        logger.warn(
-            `CORS blocked origin: ${origin || 'unknown'
-            }`
-        );
+        logger.warn(`CORS blocked origin: ${origin || 'unknown'}`);
 
         return callback(
-            new Error(
-                `CORS policy blocked origin: ${origin || 'unknown'
-                }`
-            )
+            new Error(`CORS policy blocked origin: ${origin || 'unknown'}`)
         );
     },
 
@@ -227,39 +174,54 @@ const corsOptions = {
     optionsSuccessStatus: 204,
 };
 
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+
 // ============================================================
-// EARLY CORS / PREFLIGHT
+// SECURITY HEADERS
 // ============================================================
 
 app.use(
-    cors(corsOptions)
+    helmet({
+        contentSecurityPolicy: false,
+        crossOriginEmbedderPolicy: false,
+    })
 );
 
-app.options(
-    '*',
-    cors(corsOptions)
+// ============================================================
+// RESPONSE COMPRESSION
+// ============================================================
+
+app.use(compression());
+
+// ============================================================
+// BODY PARSERS
+// ============================================================
+
+app.use(express.json({ limit: '10mb' }));
+
+app.use(
+    express.urlencoded({
+        extended: true,
+        limit: '10mb',
+    })
 );
 
 // ============================================================
 // YJS WEBSOCKET SERVER
 // ============================================================
 
-const yjsWss =
-    new WebSocket.Server({
-        noServer: true,
-    });
+const yjsWss = new WebSocket.Server({
+    noServer: true,
+});
 
 // ============================================================
 // YJS JWT VERIFICATION
 // ============================================================
 
-const verifyYjsToken = (
-    token
-) => {
+const verifyYjsToken = (token) => {
     if (!token) {
-        throw new Error(
-            'Yjs authentication token is missing'
-        );
+        throw new Error('Yjs authentication token is missing');
     }
 
     const jwtSecret =
@@ -272,1281 +234,669 @@ const verifyYjsToken = (
         );
     }
 
-    return jwt.verify(
-        token,
-        jwtSecret
-    );
+    return jwt.verify(token, jwtSecret);
 };
 
 // ============================================================
 // YJS DOCUMENT ID EXTRACTION
 // ============================================================
 
-const extractYjsDocumentId = (
-    pathname
-) => {
-    if (!pathname) {
+const extractYjsDocumentId = (pathname) => {
+    if (!pathname || !pathname.startsWith('/yjs/')) {
         return null;
     }
 
-    const prefix =
-        '/yjs/';
-
-    if (
-        !pathname.startsWith(
-            prefix
-        )
-    ) {
-        return null;
-    }
-
-    const documentId =
-        pathname
-            .slice(prefix.length)
-            .replace(/\/+$/, '');
-
-    return (
-        documentId || null
-    );
+    return pathname
+        .slice('/yjs/'.length)
+        .replace(/\/+$/, '') || null;
 };
 
 // ============================================================
 // YJS WEBSOCKET UPGRADE
 // ============================================================
 
-server.on(
-    'upgrade',
-    async (
-        request,
-        socket,
-        head
-    ) => {
+server.on('upgrade', async (request, socket, head) => {
+    try {
+        const host = request.headers.host || `localhost:${PORT}`;
+
+        const requestUrl = new URL(
+            request.url || '/',
+            `http://${host}`
+        );
+
+        const pathname = requestUrl.pathname;
+
+        // Socket.IO handles its own WebSocket endpoint.
+        if (!pathname.startsWith('/yjs/')) {
+            return;
+        }
+
+        const token = requestUrl.searchParams.get('token');
+
+        let decodedToken;
+
         try {
-            const host =
-                request.headers.host ||
-                `localhost:${PORT}`;
-
-            const requestUrl =
-                new URL(
-                    request.url || '/',
-                    `http://${host}`
-                );
-
-            const pathname =
-                requestUrl.pathname;
-
-            // --------------------------------------------------------
-            // Only handle Yjs.
-            // Socket.IO handles /socket.io/
-            // --------------------------------------------------------
-
-            if (
-                !pathname.startsWith(
-                    '/yjs/'
-                )
-            ) {
-                return;
-            }
-
-            // --------------------------------------------------------
-            // Extract JWT
-            // --------------------------------------------------------
-
-            const token =
-                requestUrl.searchParams.get(
-                    'token'
-                );
-
-            // --------------------------------------------------------
-            // Authenticate JWT
-            // --------------------------------------------------------
-
-            let decodedToken;
-
-            try {
-                decodedToken =
-                    verifyYjsToken(
-                        token
-                    );
-            } catch (error) {
-                logger.error(
-                    `Yjs authentication failed: ${error?.message ||
-                    error
-                    }`
-                );
-
-                socket.write(
-                    'HTTP/1.1 401 Unauthorized\r\n' +
-                    'Connection: close\r\n' +
-                    'Content-Type: text/plain\r\n' +
-                    '\r\n' +
-                    'Unauthorized'
-                );
-
-                socket.destroy();
-
-                return;
-            }
-
-            // --------------------------------------------------------
-            // Document ID
-            // --------------------------------------------------------
-
-            const documentId =
-                extractYjsDocumentId(
-                    pathname
-                );
-
-            if (!documentId) {
-                logger.error(
-                    'Yjs connection rejected: document ID missing'
-                );
-
-                socket.write(
-                    'HTTP/1.1 400 Bad Request\r\n' +
-                    'Connection: close\r\n' +
-                    'Content-Type: text/plain\r\n' +
-                    '\r\n' +
-                    'Document ID is required'
-                );
-
-                socket.destroy();
-
-                return;
-            }
-
-            // --------------------------------------------------------
-            // Authenticated user
-            // --------------------------------------------------------
-
-            const userId =
-                decodedToken.id ||
-                decodedToken.userId ||
-                decodedToken._id ||
-                decodedToken.sub ||
-                null;
-
-            // A valid JWT is not sufficient: verify the account still exists
-            // and the user is allowed to access this specific document.
-            const mongoose = require('mongoose');
-            const User = require('./models/User');
-            const Document = require('./models/Document');
-            if (!mongoose.Types.ObjectId.isValid(String(userId)) || !mongoose.Types.ObjectId.isValid(String(documentId))) {
-                socket.write('HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\nInvalid document or user identifier');
-                socket.destroy();
-                return;
-            }
-            const [activeUser, targetDocument] = await Promise.all([
-                User.findById(userId).select('_id deletedAt role'),
-                Document.findById(documentId).select('_id owner collaborators deletedAt'),
-            ]);
-            if (!activeUser || activeUser.deletedAt) {
-                socket.write('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\nAccount is not active');
-                socket.destroy();
-                return;
-            }
-            if (!targetDocument || targetDocument.deletedAt) {
-                socket.write('HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\nDocument not found');
-                socket.destroy();
-                return;
-            }
-            const ownsDocument = String(targetDocument.owner) === String(activeUser._id);
-            const collaborator = Array.isArray(targetDocument.collaborators) ? targetDocument.collaborators.find((item) => String(item.user) === String(activeUser._id)) : null;
-            const isCollaborator = Boolean(collaborator);
-            if (!ownsDocument && !isCollaborator && activeUser.role !== 'admin') {
-                socket.write('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\nDocument access denied');
-                socket.destroy();
-                return;
-            }
-            // Yjs accepts incoming document updates, so only grant a writable
-            // provider to owners/admins/editors. Viewers can still use read APIs.
-            const canEdit = ownsDocument || activeUser.role === 'admin' || (collaborator && (['editor', 'admin'].includes(collaborator.role) || (Array.isArray(collaborator.permissions) && collaborator.permissions.includes('write'))));
-            if (!canEdit) {
-                socket.write('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\nLive editing permission required');
-                socket.destroy();
-                return;
-            }
-
-            const email =
-                decodedToken.email ||
-                null;
-
-            const role =
-                decodedToken.role ||
-                'user';
-
-            if (!userId) {
-                logger.error(
-                    'Yjs authentication failed: user ID missing from JWT'
-                );
-
-                socket.write(
-                    'HTTP/1.1 401 Unauthorized\r\n' +
-                    'Connection: close\r\n' +
-                    'Content-Type: text/plain\r\n' +
-                    '\r\n' +
-                    'Invalid authentication token'
-                );
-
-                socket.destroy();
-
-                return;
-            }
-
-            // --------------------------------------------------------
-            // Attach authentication
-            // --------------------------------------------------------
-
-            request.yjsAuth = {
-                userId:
-                    String(userId),
-                email,
-                role,
-                documentId,
-                token,
-            };
-
-            // --------------------------------------------------------
-            // Accept WebSocket
-            // --------------------------------------------------------
-
-            yjsWss.handleUpgrade(
-                request,
-                socket,
-                head,
-                (ws) => {
-                    yjsWss.emit(
-                        'connection',
-                        ws,
-                        request
-                    );
-                }
-            );
+            decodedToken = verifyYjsToken(token);
         } catch (error) {
-            logger.error(
-                'Yjs WebSocket upgrade error:',
-                error
+            logger.warn(
+                `Yjs authentication failed: ${error.message}`
             );
 
-            try {
-                socket.destroy();
-            } catch (socketError) {
-                logger.error(
-                    'Yjs socket destroy error:',
-                    socketError
-                );
-            }
+            socket.write(
+                'HTTP/1.1 401 Unauthorized\r\n' +
+                'Connection: close\r\n' +
+                'Content-Type: text/plain\r\n\r\n' +
+                'Unauthorized'
+            );
+
+            socket.destroy();
+            return;
+        }
+
+        const documentId = extractYjsDocumentId(pathname);
+
+        if (!documentId) {
+            socket.write(
+                'HTTP/1.1 400 Bad Request\r\n' +
+                'Connection: close\r\n\r\n' +
+                'Document ID is required'
+            );
+
+            socket.destroy();
+            return;
+        }
+
+        const userId =
+            decodedToken.id ||
+            decodedToken.userId ||
+            decodedToken._id ||
+            decodedToken.sub;
+
+        if (
+            !userId ||
+            !mongoose.Types.ObjectId.isValid(String(userId)) ||
+            !mongoose.Types.ObjectId.isValid(String(documentId))
+        ) {
+            socket.write(
+                'HTTP/1.1 400 Bad Request\r\n' +
+                'Connection: close\r\n\r\n' +
+                'Invalid user or document identifier'
+            );
+
+            socket.destroy();
+            return;
+        }
+
+        const User = require('./models/User');
+        const Document = require('./models/Document');
+
+        const [activeUser, targetDocument] = await Promise.all([
+            User.findById(userId).select('_id deletedAt role'),
+            Document.findById(documentId).select(
+                '_id owner collaborators deletedAt'
+            ),
+        ]);
+
+        if (!activeUser || activeUser.deletedAt) {
+            socket.write(
+                'HTTP/1.1 401 Unauthorized\r\n' +
+                'Connection: close\r\n\r\n' +
+                'Account is not active'
+            );
+
+            socket.destroy();
+            return;
+        }
+
+        if (!targetDocument || targetDocument.deletedAt) {
+            socket.write(
+                'HTTP/1.1 404 Not Found\r\n' +
+                'Connection: close\r\n\r\n' +
+                'Document not found'
+            );
+
+            socket.destroy();
+            return;
+        }
+
+        const ownsDocument =
+            String(targetDocument.owner) === String(activeUser._id);
+
+        const collaborator = Array.isArray(targetDocument.collaborators)
+            ? targetDocument.collaborators.find(
+                (item) => String(item.user) === String(activeUser._id)
+            )
+            : null;
+
+        const isCollaborator = Boolean(collaborator);
+
+        if (
+            !ownsDocument &&
+            !isCollaborator &&
+            activeUser.role !== 'admin'
+        ) {
+            socket.write(
+                'HTTP/1.1 403 Forbidden\r\n' +
+                'Connection: close\r\n\r\n' +
+                'Document access denied'
+            );
+
+            socket.destroy();
+            return;
+        }
+
+        const canEdit =
+            ownsDocument ||
+            activeUser.role === 'admin' ||
+            Boolean(
+                collaborator &&
+                (
+                    ['editor', 'admin'].includes(collaborator.role) ||
+                    (
+                        Array.isArray(collaborator.permissions) &&
+                        collaborator.permissions.includes('write')
+                    )
+                )
+            );
+
+        if (!canEdit) {
+            socket.write(
+                'HTTP/1.1 403 Forbidden\r\n' +
+                'Connection: close\r\n\r\n' +
+                'Live editing permission required'
+            );
+
+            socket.destroy();
+            return;
+        }
+
+        request.yjsAuth = {
+            userId: String(userId),
+            email: decodedToken.email || null,
+            role: decodedToken.role || 'user',
+            documentId,
+            token,
+        };
+
+        yjsWss.handleUpgrade(request, socket, head, (ws) => {
+            yjsWss.emit('connection', ws, request);
+        });
+    } catch (error) {
+        logger.error('Yjs WebSocket upgrade error:', error);
+
+        try {
+            socket.destroy();
+        } catch (socketError) {
+            logger.error('Yjs socket destroy error:', socketError);
         }
     }
-);
+});
 
 // ============================================================
 // YJS CONNECTION HANDLER
 // ============================================================
 
-yjsWss.on(
-    'connection',
-    (
-        ws,
-        request
-    ) => {
-        try {
-            const auth =
-                request.yjsAuth;
-                            if (!auth) {
-                logger.error(
-                    'Yjs connection rejected: authentication missing'
-                );
+yjsWss.on('connection', (ws, request) => {
+    try {
+        const auth = request.yjsAuth;
 
-                ws.close(
-                    1008,
-                    'Authentication required'
-                );
+        if (!auth) {
+            ws.close(1008, 'Authentication required');
+            return;
+        }
 
-                return;
-            }
+        logger.info(
+            `Yjs connected: document=${auth.documentId}, user=${auth.userId}`
+        );
 
-            // --------------------------------------------------------
-            // Connection logging
-            // --------------------------------------------------------
+        ws.yjsAuth = auth;
 
+        setupWSConnection(ws, request, { gc: true });
+
+        ws.on('close', () => {
             logger.info(
-                '============================================================'
+                `Yjs disconnected: ${auth.documentId} / ${auth.userId}`
             );
+        });
 
-            logger.info(
-                'Yjs WebSocket connected'
-            );
-
-            logger.info(
-                `Document: ${auth.documentId}`
-            );
-
-            logger.info(
-                `User: ${auth.userId}`
-            );
-
-            logger.info(
-                `Email: ${auth.email || 'unknown'}`
-            );
-
-            logger.info(
-                `Role: ${auth.role || 'user'}`
-            );
-
-            logger.info(
-                '============================================================'
-            );
-
-            // --------------------------------------------------------
-            // Attach authentication
-            // --------------------------------------------------------
-
-            ws.yjsAuth =
-                auth;
-
-            // --------------------------------------------------------
-            // Initialize Yjs
-            // --------------------------------------------------------
-
-            setupWSConnection(
-                ws,
-                request,
-                {
-                    gc: true,
-                }
-            );
-
-            // --------------------------------------------------------
-            // Close
-            // --------------------------------------------------------
-
-            ws.on(
-                'close',
-                () => {
-                    logger.info(
-                        `Yjs disconnected: ${auth.documentId} / ${auth.userId}`
-                    );
-                }
-            );
-
-            // --------------------------------------------------------
-            // Error
-            // --------------------------------------------------------
-
-            ws.on(
-                'error',
-                (error) => {
-                    logger.error(
-                        `Yjs WebSocket error for document ${auth.documentId}:`,
-                        error
-                    );
-                }
-            );
-        } catch (error) {
+        ws.on('error', (error) => {
             logger.error(
-                'Yjs connection initialization error:',
+                `Yjs WebSocket error for document ${auth.documentId}:`,
                 error
             );
+        });
+    } catch (error) {
+        logger.error('Yjs connection initialization error:', error);
 
-            try {
-                ws.close(
-                    1011,
-                    'Yjs server error'
-                );
-            } catch (closeError) {
-                logger.error(
-                    'Yjs close error:',
-                    closeError
-                );
-            }
+        try {
+            ws.close(1011, 'Yjs server error');
+        } catch (closeError) {
+            logger.error('Yjs close error:', closeError);
         }
     }
-);
+});
 
 // ============================================================
-// HEALTH ENDPOINT
+// HEALTH ENDPOINTS
 // ============================================================
 
-app.get(
-    '/api/health',
-    (req, res) => {
-        res.status(200).json({
-            success: true,
+app.get('/api/health', (req, res) => {
+    res.status(200).json({
+        success: true,
+        status: 'healthy',
+        service: 'syncdoc-api',
+        timestamp: new Date().toISOString(),
+        mongoDB: mongoose.connection.readyState === 1
+            ? 'connected'
+            : 'disconnected',
+        redis: isRedisConnected()
+            ? 'connected'
+            : 'optional/unavailable',
+        websocket: {
+            socketIO: 'enabled',
+            yjs: 'enabled',
+        },
+        environment: NODE_ENV,
+        port: PORT,
+    });
+});
 
-            status:
-                'healthy',
+app.get('/api/system/status', (req, res) => {
+    const memory = process.memoryUsage();
 
-            service:
-                'syncdoc-api',
-
-            timestamp:
-                new Date().toISOString(),
-
-            mongoDB:
-                mongoose.connection
-                    .readyState === 1
-                    ? 'connected'
-                    : 'disconnected',
-
-            redis:
-                isRedisConnected()
-                    ? 'connected'
-                    : 'optional/unavailable',
-
-            websocket: {
-                socketIO:
-                    'enabled',
-                yjs:
-                    'enabled',
-            },
-
-            environment:
-                NODE_ENV,
-
-            port:
-                PORT,
-        });
-    }
-);
-
-// ============================================================
-// SYSTEM STATUS
-// ============================================================
-
-app.get(
-    '/api/system/status',
-    (req, res) => {
-        const memory =
-            process.memoryUsage();
-
-        res.status(200).json({
-            success:
-                true,
-
-            status:
-                'operational',
-
-            service:
-                'SyncDoc API',
-
-            version:
-                process.env.APP_VERSION ||
-                '5.1.0',
-
-            environment:
-                NODE_ENV,
-
-            uptime:
-                Math.round(
-                    process.uptime()
-                ),
-
-            node:
-                process.version,
-
-            database: {
-                provider:
-                    'MongoDB',
-
-                status:
-                    mongoose.connection
-                        .readyState === 1
-                        ? 'connected'
-                        : 'disconnected',
-            },
-
-            redis: {
-                status:
-                    isRedisConnected()
-                        ? 'connected'
-                        : 'optional/unavailable',
-            },
-
-            realtime: {
-                socketIO:
-                    true,
-
-                yjs:
-                    true,
-            },
-
-            memory: {
-                rss:
-                    memory.rss,
-
-                heapUsed:
-                    memory.heapUsed,
-
-                heapTotal:
-                    memory.heapTotal,
-            },
-
-            timestamp:
-                new Date().toISOString(),
-        });
-    }
-);
+    res.status(200).json({
+        success: true,
+        status: 'operational',
+        service: 'SyncDoc API',
+        version: process.env.APP_VERSION || '6.2.0',
+        environment: NODE_ENV,
+        uptime: Math.round(process.uptime()),
+        node: process.version,
+        database: {
+            provider: 'MongoDB',
+            status: mongoose.connection.readyState === 1
+                ? 'connected'
+                : 'disconnected',
+        },
+        redis: {
+            status: isRedisConnected()
+                ? 'connected'
+                : 'optional/unavailable',
+        },
+        realtime: {
+            socketIO: true,
+            yjs: true,
+        },
+        memory: {
+            rss: memory.rss,
+            heapUsed: memory.heapUsed,
+            heapTotal: memory.heapTotal,
+        },
+        timestamp: new Date().toISOString(),
+    });
+});
 
 // ============================================================
 // START APPLICATION
 // ============================================================
 
-const start =
-    async () => {
+const start = async () => {
+    try {
+        // --------------------------------------------------------
+        // DATABASE
+        // --------------------------------------------------------
+
+        await connectDB();
+
+        logger.info('MongoDB connected successfully');
+
+        // --------------------------------------------------------
+        // REDIS
+        // --------------------------------------------------------
+
         try {
-            // ======================================================
-            // DATABASE
-            // ======================================================
+            await connectRedis();
 
-            await connectDB();
-
-            logger.info(
-                'MongoDB connected successfully'
-            );
-
-            // ======================================================
-            // REDIS
-            // ======================================================
-
-            try {
-                await connectRedis();
-
-                if (
-                    isRedisConnected()
-                ) {
-                    logger.info(
-                        'Redis connected successfully'
-                    );
-                } else {
-                    logger.warn(
-                        'Redis unavailable. Continuing without Redis.'
-                    );
-                }
-            } catch (
-            redisError
-            ) {
+            if (isRedisConnected()) {
+                logger.info('Redis connected successfully');
+            } else {
                 logger.warn(
-                    `Redis unavailable. Continuing without Redis: ${redisError?.message ||
-                    redisError
-                    }`
+                    'Redis unavailable. Continuing without Redis.'
                 );
             }
-
-            // ======================================================
-            // REQUEST CONTEXT
-            // ======================================================
-
-            app.use(
-                requestContext
-            );
-
-            // ======================================================
-            // RATE LIMITING
-            // ======================================================
-
-            /*
-             * IMPORTANT
-             *
-             * The previous configuration could produce 429 responses
-             * during React development.
-             *
-             * React development can generate many requests because of:
-             *
-             * - StrictMode
-             * - HMR
-             * - AuthContext
-             * - WorkspaceContext
-             * - Dashboard requests
-             * - Document requests
-             * - Multiple mounted components
-             *
-             * Therefore:
-             *
-             * DEVELOPMENT:
-             * Local requests bypass the GLOBAL limiter.
-             *
-             * PRODUCTION:
-             * Global rate limiter remains active.
-             */
-
-            const parseGlobalRateLimit = (
-                value,
-                fallback,
-                variableName
-            ) => {
-                const raw = value == null
-                    ? ''
-                    : String(value).trim();
-
-                if (!raw) {
-                    return fallback;
-                }
-
-                const parsed = Number(raw);
-
-                if (
-                    !Number.isSafeInteger(parsed) ||
-                    parsed < 100
-                ) {
-                    logger.warn(
-                        `[Rate Limit] Invalid ${variableName}="${raw}". ` +
-                        `Using fallback ${fallback}.`
-                    );
-                    return fallback;
-                }
-
-                return parsed;
-            };
-
-            const configuredDevelopmentLimit =
-                parseGlobalRateLimit(
-                    process.env.DEV_GLOBAL_RATE_LIMIT,
-                    50000,
-                    'DEV_GLOBAL_RATE_LIMIT'
-                );
-
-            const configuredProductionLimit =
-                parseGlobalRateLimit(
-                    process.env.GLOBAL_RATE_LIMIT,
-                    1200,
-                    'GLOBAL_RATE_LIMIT'
-                );
-
-            const globalRateLimit =
-                NODE_ENV === 'development'
-                    ? configuredDevelopmentLimit
-                    : configuredProductionLimit;
-
-            const isLocalRequest = (req) => {
-                const hostname = String(
-                    req.hostname || ''
-                ).toLowerCase();
-
-                const remoteAddress = String(
-                    req.ip || ''
-                ).toLowerCase();
-
-                return (
-                    hostname === 'localhost' ||
-                    hostname === '127.0.0.1' ||
-                    remoteAddress === '127.0.0.1' ||
-                    remoteAddress === '::1' ||
-                    remoteAddress === '::ffff:127.0.0.1'
-                );
-            };
-
-            const excludedHealthPaths = new Set([
-                '/health',
-                '/system/status',
-                '/api/health',
-                '/api/system/status',
-            ]);
-
-            const globalRateLimiter = rateLimit({
-                windowMs: 15 * 60 * 1000,
-                // express-rate-limit v6 uses "max" (not "limit").
-                max: globalRateLimit,
-                standardHeaders: true,
-                legacyHeaders: false,
-
-                skip: (req) => {
-                    // Browser CORS preflight should not consume the limit.
-                    if (req.method === 'OPTIONS') {
-                        return true;
-                    }
-
-                    // Keep monitoring endpoints available.
-                    if (excludedHealthPaths.has(req.path)) {
-                        return true;
-                    }
-
-                    // Bypass only local requests during development.
-                    if (
-                        NODE_ENV === 'development' &&
-                        isLocalRequest(req)
-                    ) {
-                        return true;
-                    }
-
-                    return false;
-                },
-
-                handler: (req, res, next, options) => {
-                    logger.warn(
-                        `[RATE_LIMITED] ${req.method} ${req.originalUrl} ` +
-                        `IP: ${req.ip}`
-                    );
-
-                    const retryAfterSeconds = Math.max(
-                        1,
-                        Math.ceil((options?.windowMs || 15 * 60 * 1000) / 1000)
-                    );
-                    res.setHeader('Retry-After', String(retryAfterSeconds));
-
-                    return res.status(429).json({
-                        success: false,
-                        error: {
-                            code: 'RATE_LIMITED',
-                            message: 'Too many requests. Please try again later.',
-                            retryAfter: retryAfterSeconds,
-                        },
-                    });
-                },
-            });
-
-            app.use(globalRateLimiter);
-
-            logger.info(
-                `Global API rate limit: ${globalRateLimit} requests / 15 minutes (${NODE_ENV})`
-            );
-
-            if (NODE_ENV === 'development') {
-                logger.info(
-                    'Development mode: localhost global rate limiting is bypassed.'
-                );
-            }
-
-// ======================================================
-            // HELMET
-            // ======================================================
-
-            app.use(
-                helmet({
-                    contentSecurityPolicy:
-                        false,
-
-                    crossOriginEmbedderPolicy:
-                        false,
-                })
-            );
-
-            // ======================================================
-            // COMPRESSION
-            // ======================================================
-
-            app.use(
-                compression()
-            );
-
-            // ======================================================
-            // BODY PARSERS
-            // ======================================================
-
-            app.use(
-                express.json({
-                    limit:
-                        '10mb',
-                })
-            );
-
-            app.use(
-                express.urlencoded({
-                    extended:
-                        true,
-
-                    limit:
-                        '10mb',
-                })
-            );
-
-            // ======================================================
-            // REQUEST LOGGER
-            // ======================================================
-
-            app.use(
-                (
-                    req,
-                                        res,
-                    next
-                ) => {
-                    try {
-                        logger.info(
-                            `[${req.method}] ${req.originalUrl}`
-                        );
-                    } catch (
-                    error
-                    ) {
-                        console.log(
-                            `[${req.method}] ${req.originalUrl}`
-                        );
-                    }
-
-                    next();
-                }
-            );
-
-            // ======================================================
-            // API ROUTES
-            // ======================================================
-
-            app.use(
-                '/api',
-                routes
-            );
-
-            logger.info(
-                'API routes mounted at /api; profile endpoints: GET/PATCH /api/profile, POST/DELETE /api/profile/avatar'
-            );
-
-            // ======================================================
-            // ROOT
-            // ======================================================
-
-            app.get(
-                '/',
-                (
-                    req,
-                    res
-                ) => {
-                    res.status(
-                        200
-                    ).json({
-                        success:
-                            true,
-
-                        message:
-                            'SyncDoc API is running',
-
-                        version:
-                            process.env.APP_VERSION ||
-                            '6.2.0',
-
-                        environment:
-                            NODE_ENV,
-
-                        timestamp:
-                            new Date().toISOString(),
-                    });
-                }
-            );
-
-            // ======================================================
-            // 404
-            // ======================================================
-
-            app.use(
-                notFoundHandler
-            );
-
-            // ======================================================
-            // GLOBAL ERROR HANDLER
-            // ======================================================
-
-            app.use(
-                errorHandler
-            );
-
-            // ======================================================
-            // SOCKET.IO
-            // ======================================================
-
-            const io =
-                new Server(
-                    server,
-                    {
-                        cors: {
-                            origin: (
-                                origin,
-                                callback
-                            ) => {
-                                if (
-                                    isAllowedOrigin(
-                                        origin
-                                    )
-                                ) {
-                                    return callback(
-                                        null,
-                                        true
-                                    );
-                                }
-
-                                logger.warn(
-                                    `Socket.IO CORS blocked origin: ${origin ||
-                                    'unknown'
-                                    }`
-                                );
-
-                                return callback(
-                                    new Error(
-                                        'Socket.IO CORS blocked'
-                                    )
-                                );
-                            },
-
-                            methods: [
-                                'GET',
-                                'POST',
-                            ],
-
-                            credentials:
-                                true,
-                        },
-
-                        transports: [
-                            'websocket',
-                            'polling',
-                        ],
-
-                        pingTimeout:
-                            60000,
-
-                        pingInterval:
-                            25000,
-
-                        perMessageDeflate: {
-                            threshold:
-                                1024,
-                        },
-                    }
-                );
-
-            // ======================================================
-            // SOCKET HANDLERS
-            // ======================================================
-
-            const collaborationService =
-                setupSocketHandlers(
-                    io
-                );
-
-            // ======================================================
-            // APPLICATION REFERENCES
-            // ======================================================
-
-            app.set(
-                'io',
-                io
-            );
-
-            app.set(
-                'yjsWss',
-                yjsWss
-            );
-
-            app.set(
-                'collaborationService',
-                collaborationService
-            );
-
-            // ======================================================
-            // START HTTP SERVER
-            // ======================================================
-
-            server.listen(
-                PORT,
-                () => {
-                    logger.info(
-                        '============================================================'
-                    );
-
-                    logger.info(
-                        'SyncDoc Backend Started'
-                    );
-
-                    logger.info(
-                        `Server: http://localhost:${PORT}`
-                    );
-
-                    logger.info(
-                        `Health: http://localhost:${PORT}/api/health`
-                    );
-
-                    logger.info(
-                        `System Status: http://localhost:${PORT}/api/system/status`
-                    );
-
-                    logger.info(
-                        `API: http://localhost:${PORT}/api`
-                    );
-
-                    logger.info(
-                        'Socket.IO: enabled'
-                    );
-
-                    logger.info(
-                        'Yjs WebSocket: enabled'
-                    );
-
-                    logger.info(
-                        `Yjs URL: ws://localhost:${PORT}/yjs/:documentId?token=JWT`
-                    );
-
-                    logger.info(
-                        `MongoDB: ${mongoose.connection
-                            .readyState === 1
-                            ? 'connected'
-                            : 'disconnected'
-                        }`
-                    );
-
-                    logger.info(
-                        `Redis: ${isRedisConnected()
-                            ? 'connected'
-                            : 'optional/unavailable'
-                        }`
-                    );
-
-                    logger.info(
-                        `Environment: ${NODE_ENV}`
-                    );
-
-                    logger.info(
-                        `Rate Limit: ${globalRateLimit
-                        } requests / 15 minutes`
-                    );
-
-                    if (
-                        NODE_ENV ===
-                        'development'
-                    ) {
-                        logger.info(
-                            'Localhost development rate limiting: BYPASSED'
-                        );
-                    }
-
-                    logger.info(
-                        '============================================================'
-                    );
-                }
-            );
-
-            // ======================================================
-            // GRACEFUL SHUTDOWN
-            // ======================================================
-
-            let isShuttingDown =
-                false;
-
-            const shutdown =
-                async (
-                    signal
-                ) => {
-                    if (
-                        isShuttingDown
-                    ) {
-                        return;
-                    }
-
-                    isShuttingDown =
-                        true;
-
-                    logger.info(
-                        `${signal} received. Shutting down gracefully...`
-                    );
-
-                    try {
-                        // ------------------------------------------------
-                        // Stop HTTP server
-                        // ------------------------------------------------
-
-                        server.close(
-                            async () => {
-                                logger.info(
-                                    'HTTP server closed'
-                                );
-
-                                try {
-                                    // ------------------------------------------
-                                    // Socket.IO
-                                    // ------------------------------------------
-
-                                    io.close();
-
-                                    logger.info(
-                                        'Socket.IO closed'
-                                    );
-
-                                    // ------------------------------------------
-                                    // Yjs clients
-                                    // ------------------------------------------
-
-                                    yjsWss.clients.forEach(
-                                        (
-                                            client
-                                        ) => {
-                                            try {
-                                                client.close(
-                                                    1001,
-                                                    'Server shutting down'
-                                                );
-                                            } catch (
-                                            error
-                                            ) {
-                                                logger.error(
-                                                    'Yjs client close error:',
-                                                    error
-                                                );
-                                            }
-                                        }
-                                    );
-
-                                    // ------------------------------------------
-                                    // Yjs server
-                                    // ------------------------------------------
-
-                                    await new Promise(
-                                        (
-                                            resolve
-                                        ) => {
-                                            yjsWss.close(
-                                                (
-                                                    error
-                                                ) => {
-                                                    if (
-                                                        error
-                                                    ) {
-                                                        logger.error(
-                                                            'Yjs WebSocket shutdown error:',
-                                                            error
-                                                        );
-                                                    }
-
-                                                    resolve();
-                                                }
-                                            );
-                                        }
-                                    );
-
-                                    // ------------------------------------------
-                                    // Redis
-                                    // ------------------------------------------
-
-                                    try {
-                                        await disconnectRedis();
-
-                                        logger.info(
-                                            'Redis disconnected'
-                                        );
-                                    } catch (
-                                    redisError
-                                    ) {
-                                        logger.error(
-                                            'Redis shutdown error:',
-                                            redisError
-                                        );
-                                    }
-
-                                    // ------------------------------------------
-                                    // MongoDB
-                                    // ------------------------------------------
-
-                                    await mongoose.disconnect();
-
-                                    logger.info(
-                                        'MongoDB disconnected'
-                                    );
-
-                                    logger.info(
-                                        'SyncDoc shutdown completed successfully'
-                                    );
-
-                                    process.exit(
-                                        0
-                                    );
-                                } catch (
-                                error
-                                ) {
-                                    logger.error(
-                                        'Shutdown cleanup error:',
-                                        error
-                                    );
-
-                                    process.exit(
-                                        1
-                                    );
-                                }
-                            }
-                        );
-                    } catch (
-                    error
-                    ) {
-                        logger.error(
-                            'Shutdown error:',
-                            error
-                        );
-
-                        process.exit(
-                            1
-                        );
-                    }
-                };
-
-            // ======================================================
-            // PROCESS SIGNALS
-            // ======================================================
-
-            process.once(
-                'SIGTERM',
-                () =>
-                    shutdown(
-                        'SIGTERM'
-                    )
-            );
-
-            process.once(
-                'SIGINT',
-                () =>
-                    shutdown(
-                        'SIGINT'
-                    )
-            );
-        } catch (
-        error
-        ) {
-            logger.error(
-                '============================================================'
-            );
-
-            logger.error(
-                'Failed to start SyncDoc backend'
-            );
-
-            logger.error(
-                error
-            );
-
-            logger.error(
-                '============================================================'
-            );
-
-            process.exit(
-                1
+        } catch (redisError) {
+            logger.warn(
+                `Redis unavailable. Continuing without Redis: ${redisError.message}`
             );
         }
-    };
 
-// ============================================================
-// UNHANDLED PROMISE REJECTION
-// ============================================================
+        // --------------------------------------------------------
+        // REQUEST CONTEXT
+        // --------------------------------------------------------
 
-process.on(
-    'unhandledRejection',
-    (error) => {
-        logger.error(
-            'Unhandled Promise Rejection:',
-            error
+        app.use(requestContext);
+
+        // --------------------------------------------------------
+        // GLOBAL RATE LIMITING
+        // --------------------------------------------------------
+
+        const parseGlobalRateLimit = (
+            value,
+            fallback,
+            variableName
+        ) => {
+            const raw = value == null ? '' : String(value).trim();
+
+            if (!raw) {
+                return fallback;
+            }
+
+            const parsed = Number(raw);
+
+            if (
+                !Number.isSafeInteger(parsed) ||
+                parsed < 100
+            ) {
+                logger.warn(
+                    `[Rate Limit] Invalid ${variableName}="${raw}". ` +
+                    `Using fallback ${fallback}.`
+                );
+
+                return fallback;
+            }
+
+            return parsed;
+        };
+
+        const configuredDevelopmentLimit = parseGlobalRateLimit(
+            process.env.DEV_GLOBAL_RATE_LIMIT,
+            50000,
+            'DEV_GLOBAL_RATE_LIMIT'
         );
+
+        const configuredProductionLimit = parseGlobalRateLimit(
+            process.env.GLOBAL_RATE_LIMIT,
+            1200,
+            'GLOBAL_RATE_LIMIT'
+        );
+
+        const globalRateLimit = NODE_ENV === 'development'
+            ? configuredDevelopmentLimit
+            : configuredProductionLimit;
+
+        const excludedHealthPaths = new Set([
+            '/health',
+            '/system/status',
+            '/api/health',
+            '/api/system/status',
+        ]);
+
+        const globalRateLimiter = rateLimit({
+            windowMs: 15 * 60 * 1000,
+            max: globalRateLimit,
+            standardHeaders: true,
+            legacyHeaders: false,
+
+            skip(req) {
+                if (req.method === 'OPTIONS') {
+                    return true;
+                }
+
+                if (excludedHealthPaths.has(req.path)) {
+                    return true;
+                }
+
+                return false;
+            },
+
+            handler(req, res) {
+                logger.warn(
+                    `[RATE_LIMITED] ${req.method} ${req.originalUrl} IP: ${req.ip}`
+                );
+
+                const retryAfterSeconds = 15 * 60;
+
+                res.setHeader(
+                    'Retry-After',
+                    String(retryAfterSeconds)
+                );
+
+                return res.status(429).json({
+                    success: false,
+                    error: {
+                        code: 'RATE_LIMITED',
+                        message: 'Too many requests. Please try again later.',
+                        retryAfter: retryAfterSeconds,
+                    },
+                });
+            },
+        });
+
+        app.use(globalRateLimiter);
+
+        logger.info(
+            `Global API rate limit: ${globalRateLimit} requests / 15 minutes (${NODE_ENV})`
+        );
+
+        // --------------------------------------------------------
+        // REQUEST LOGGER
+        // --------------------------------------------------------
+
+        app.use((req, res, next) => {
+            logger.info(`[${req.method}] ${req.originalUrl}`);
+            next();
+        });
+
+        // --------------------------------------------------------
+        // STATIC UPLOADS — AVATARS AND OTHER UPLOADS
+        // --------------------------------------------------------
+
+        // Expected layout:
+        // backend/
+        //   uploads/
+        //     profile-avatars/
+        //
+        // The directory must match your Multer/upload destination.
+        const uploadsDirectory = path.resolve(__dirname, '../uploads');
+
+        if (fs.existsSync(uploadsDirectory)) {
+            logger.info(
+                `[Uploads] Serving static files from ${uploadsDirectory}`
+            );
+        } else {
+            logger.warn(
+                `[Uploads] Directory not found: ${uploadsDirectory}. ` +
+                'Check the configured upload destination.'
+            );
+        }
+
+        app.use(
+            '/api/uploads',
+            express.static(uploadsDirectory, {
+                index: false,
+                dotfiles: 'deny',
+                fallthrough: true,
+                maxAge: '1d',
+
+                setHeaders(res) {
+                    res.setHeader(
+                        'X-Content-Type-Options',
+                        'nosniff'
+                    );
+                },
+            })
+        );
+
+        // --------------------------------------------------------
+        // API ROUTES
+        // --------------------------------------------------------
+
+        app.use('/api', routes);
+
+        logger.info(
+            'API routes mounted at /api; profile endpoints: ' +
+            'GET/PATCH /api/profile, POST/DELETE /api/profile/avatar'
+        );
+
+        // --------------------------------------------------------
+        // ROOT
+        // --------------------------------------------------------
+
+        app.get('/', (req, res) => {
+            res.status(200).json({
+                success: true,
+                message: 'SyncDoc API is running',
+                version: process.env.APP_VERSION || '6.2.0',
+                environment: NODE_ENV,
+                timestamp: new Date().toISOString(),
+            });
+        });
+
+        // --------------------------------------------------------
+        // 404 AND ERROR HANDLERS
+        // --------------------------------------------------------
+
+        app.use(notFoundHandler);
+        app.use(errorHandler);
+
+        // --------------------------------------------------------
+        // SOCKET.IO
+        // --------------------------------------------------------
+
+        const io = new Server(server, {
+            cors: {
+                origin(origin, callback) {
+                    if (isAllowedOrigin(origin)) {
+                        return callback(null, true);
+                    }
+
+                    logger.warn(
+                        `Socket.IO CORS blocked origin: ${origin || 'unknown'}`
+                    );
+
+                    return callback(
+                        new Error('Socket.IO CORS blocked')
+                    );
+                },
+
+                methods: ['GET', 'POST'],
+                credentials: true,
+            },
+
+            transports: ['websocket', 'polling'],
+            pingTimeout: 60000,
+            pingInterval: 25000,
+
+            perMessageDeflate: {
+                threshold: 1024,
+            },
+        });
+
+        // --------------------------------------------------------
+        // SOCKET HANDLERS
+        // --------------------------------------------------------
+
+        const collaborationService = setupSocketHandlers(io);
+
+        app.set('io', io);
+        app.set('yjsWss', yjsWss);
+        app.set('collaborationService', collaborationService);
+
+        // --------------------------------------------------------
+        // START HTTP SERVER
+        // --------------------------------------------------------
+
+        server.listen(PORT, () => {
+            logger.info('============================================================');
+            logger.info('SyncDoc Backend Started');
+            logger.info(`Port: ${PORT}`);
+            logger.info(`Environment: ${NODE_ENV}`);
+            logger.info(`Global rate limit: ${globalRateLimit} / 15 minutes`);
+            logger.info(`MongoDB: ${mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'}`);
+            logger.info(`Redis: ${isRedisConnected() ? 'connected' : 'optional/unavailable'}`);
+            logger.info('Socket.IO: enabled');
+            logger.info('Yjs WebSocket: enabled');
+            logger.info(`Uploads: ${uploadsDirectory}`);
+            logger.info('============================================================');
+        });
+
+        // --------------------------------------------------------
+        // GRACEFUL SHUTDOWN
+        // --------------------------------------------------------
+
+        let isShuttingDown = false;
+
+        const shutdown = async (signal) => {
+            if (isShuttingDown) {
+                return;
+            }
+
+            isShuttingDown = true;
+
+            logger.info(`${signal} received. Shutting down gracefully...`);
+
+            server.close(async () => {
+                try {
+                    io.close();
+
+                    for (const client of yjsWss.clients) {
+                        try {
+                            client.close(1001, 'Server shutting down');
+                        } catch (error) {
+                            logger.error('Yjs client close error:', error);
+                        }
+                    }
+
+                    await new Promise((resolve) => {
+                        yjsWss.close((error) => {
+                            if (error) {
+                                logger.error(
+                                    'Yjs WebSocket shutdown error:',
+                                    error
+                                );
+                            }
+
+                            resolve();
+                        });
+                    });
+
+                    try {
+                        await disconnectRedis();
+                    } catch (error) {
+                        logger.error('Redis shutdown error:', error);
+                    }
+
+                    await mongoose.disconnect();
+
+                    logger.info('SyncDoc shutdown completed successfully');
+                    process.exit(0);
+                } catch (error) {
+                    logger.error('Shutdown cleanup error:', error);
+                    process.exit(1);
+                }
+            });
+        };
+
+        process.once('SIGTERM', () => shutdown('SIGTERM'));
+        process.once('SIGINT', () => shutdown('SIGINT'));
+    } catch (error) {
+        logger.error('Failed to start SyncDoc backend', error);
+        process.exit(1);
     }
-);
+};
 
 // ============================================================
-// UNCAUGHT EXCEPTION
+// PROCESS ERROR HANDLERS
 // ============================================================
 
-process.on(
-    'uncaughtException',
-    (error) => {
-        logger.error(
-            'Uncaught Exception:',
-            error
-        );
+process.on('unhandledRejection', (error) => {
+    logger.error('Unhandled Promise Rejection:', error);
+});
 
-        process.exit(
-            1
-        );
-    }
-);
+process.on('uncaughtException', (error) => {
+    logger.error('Uncaught Exception:', error);
+    process.exit(1);
+});
 
 // ============================================================
 // START SERVER

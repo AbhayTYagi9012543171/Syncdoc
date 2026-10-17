@@ -1,6 +1,8 @@
 import "./pages-premium.css";
 import "./profile-premium.css";
 
+import resolveAssetUrl from '../utils/resolveAssetUrl';
+
 import React, {
   useCallback,
   useEffect,
@@ -568,7 +570,7 @@ export default function Profile() {
           <div className="profile-avatar-wrap">
             <div className="profile-avatar-ring">
               {user?.avatar ? (
-                <img src={user.avatar} alt={`${name}'s profile`} />
+                <img src={resolveAssetUrl(user.avatar)} alt={`${name}'s profile`} />
               ) : (
                 <span className="profile-avatar-fallback">
                   {initials(name)}
@@ -899,7 +901,7 @@ export default function Profile() {
                 <div className="profile-photo-upload-preview">
                   {photoPreview || user?.avatar ? (
                     <img
-                      src={photoPreview || user.avatar}
+                      src={photoPreview || resolveAssetUrl(user.avatar)}
                       alt="Profile photo preview"
                     />
                   ) : (

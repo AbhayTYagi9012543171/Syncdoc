@@ -121,11 +121,8 @@ router.use(
         'nosniff'
       );
 
-      // Allow cross-origin image requests without credentials.
-      res.setHeader(
-        'Access-Control-Allow-Origin',
-        'http://localhost:3000'
-      );
+      // These public image assets do not require credentialed CORS.
+      // Cross-Origin-Resource-Policy above permits embedding from the frontend.
     },
   })
 );

@@ -64,15 +64,21 @@ function detectImage(buffer) {
 }
 
 function publicAvatarUrl(req, filename) {
-  // Set PUBLIC_API_URL to e.g. https://app.example.com/api when running
-  // behind a reverse proxy or when the API is exposed on a separate host.
+  // PUBLIC_API_URL should normally include /api, for example:
+  // https://syncdoc-backend.example.com/api
+  // Always generate the same public path served by routes/index.js and
+  // src/index.js: /api/uploads/profile-avatars/<filename>.
   const configuredBase = String(process.env.PUBLIC_API_URL || "").trim();
-  const origin = configuredBase
-    ? configuredBase.replace(/\/$/, "")
-    : `${req.protocol}://${req.get("host")}${String(req.baseUrl || "").replace(/\/profile$/, "")}`;
 
-  const baseWithApi = origin.replace(/\/$/, "");
-  return `${baseWithApi}/uploads/profile-avatars/${filename}`;
+  let apiBase = configuredBase
+    ? configuredBase.replace(/\/+$/, "")
+    : `${req.protocol}://${req.get("host")}/api`;
+
+  if (!/\/api$/i.test(apiBase)) {
+    apiBase = `${apiBase}/api`;
+  }
+
+  return `${apiBase}/uploads/profile-avatars/${encodeURIComponent(filename)}`;
 }
 
 async function removeStoredAvatar(avatarUrl) {

@@ -1,4 +1,5 @@
 import './CommonPremium.css';
+import resolveAssetUrl from '../../utils/resolveAssetUrl';
 import React, { useMemo, useState } from 'react';
 
 /* ============================================================
@@ -164,10 +165,12 @@ const Avatar = ({
      AVATAR IMAGE
   ========================================================== */
 
-  const imageUrl =
+  const rawImageUrl =
     src ||
     avatar ||
     getAvatarUrl(person);
+
+  const imageUrl = resolveAssetUrl(rawImageUrl);
 
   const hasImage =
     Boolean(imageUrl) &&

@@ -4,6 +4,8 @@ import React, {
   useState,
 } from 'react';
 
+import resolveAssetUrl from '../../utils/resolveAssetUrl';
+
 import Avatar from '../common/Avatar';
 import Button from '../common/Button';
 
@@ -331,7 +333,7 @@ export default function CommentsPanel({
                         : undefined
                     }
                     name={authorName}
-                    src={avatar}
+                    src={resolveAssetUrl(avatar)}
                     size="sm"
                   />
 

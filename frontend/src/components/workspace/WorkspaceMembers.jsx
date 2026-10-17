@@ -1,6 +1,7 @@
 import "./WorkspacePremium.css";
 import React, { useCallback, useMemo } from "react";
 import Avatar from "../common/Avatar";
+import resolveAssetUrl from '../../utils/resolveAssetUrl';
 
 /* ============================================================
    HELPERS
@@ -401,7 +402,7 @@ const MemberItem = ({
       <div className="workspace-member-user">
         <Avatar
           user={user || { displayName: name }}
-          src={avatar}
+          src={resolveAssetUrl(avatar)}
           size="md"
           online={online}
           showStatus

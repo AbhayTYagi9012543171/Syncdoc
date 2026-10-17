@@ -2,6 +2,7 @@
 import React, { useMemo } from 'react';
 
 import Avatar from '../common/Avatar';
+import resolveAssetUrl from '../../utils/resolveAssetUrl';
 
 const DEFAULT_COLLABORATORS = [];
 
@@ -276,7 +277,7 @@ export default function Collaborators({
                     : undefined
                 }
                 name={name}
-                src={avatar}
+                src={resolveAssetUrl(avatar)}
                 size={size}
                 status={status}
                 online={
