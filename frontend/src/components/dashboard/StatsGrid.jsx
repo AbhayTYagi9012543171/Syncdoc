@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, Share2, FolderKanban, Users, BarChart3 } from 'lucide-react';
+import { FileText, Share2, FolderKanban, Users, BarChart3, TrendingUp, TrendingDown } from 'lucide-react';
 import Skeleton from '../common/Skeleton';
 import './DashboardPremium.css';
 
@@ -85,6 +85,7 @@ export default function StatsGrid({
             key={stat.id}
             type={clickable ? 'button' : undefined}
             className={`stat-card ${clickable ? 'stat-card-clickable' : ''}`.trim()}
+            aria-label={clickable ? `${stat.label}: ${stat.value}. Open details` : undefined}
             onClick={
               clickable
                 ? () => {
@@ -104,6 +105,7 @@ export default function StatsGrid({
 
               {stat.change !== '' && (
                 <span className={`stat-change stat-change-${stat.changeType}`}>
+                  {stat.changeType === 'positive' ? <TrendingUp size={12} aria-hidden="true" /> : stat.changeType === 'negative' ? <TrendingDown size={12} aria-hidden="true" /> : null}
                   {stat.change}
                 </span>
               )}

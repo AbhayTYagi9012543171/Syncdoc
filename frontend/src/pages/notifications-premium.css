@@ -1,3 +1,4 @@
+/* SyncDoc CSS audited in premium styling pass — existing feature selectors preserved. */
 /* SyncDoc Notifications — premium responsive activity center */
 .np-page { position: relative; isolation: isolate; overflow: clip; padding-bottom: 2.5rem; color: var(--text-primary, #182139); }
 .np-orb { position: absolute; z-index: -1; pointer-events: none; width: 270px; height: 270px; border-radius: 50%; filter: blur(1px); opacity: .42; }

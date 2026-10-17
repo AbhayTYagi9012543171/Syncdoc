@@ -1,0 +1,85 @@
+/* ================================================================
+   SYNCDOC — PREMIUM DESIGN SYSTEM 2026
+   Shared polish layer: responsive surfaces, interaction states,
+   accessible motion, focus visibility, and consistent visual rhythm.
+   This file is intentionally additive and does not replace feature CSS.
+================================================================ */
+:root {
+  color-scheme: light;
+  --sd-brand: #635bff;
+  --sd-brand-strong: #4f46e5;
+  --sd-brand-soft: rgba(99, 91, 255, .10);
+  --sd-ink: #172033;
+  --sd-muted: #667085;
+  --sd-border: rgba(148, 163, 184, .24);
+  --sd-surface: #ffffff;
+  --sd-surface-soft: #f8fafc;
+  --sd-radius-sm: 10px;
+  --sd-radius-md: 16px;
+  --sd-radius-lg: 22px;
+  --sd-shadow-sm: 0 2px 8px rgba(15, 23, 42, .045);
+  --sd-shadow-md: 0 12px 32px rgba(15, 23, 42, .08);
+  --sd-shadow-brand: 0 10px 26px rgba(99, 91, 255, .20);
+  --sd-ease: cubic-bezier(.2, .75, .25, 1);
+  --sd-fast: 160ms;
+  --sd-normal: 240ms;
+}
+html { scroll-behavior: smooth; text-size-adjust: 100%; -webkit-text-size-adjust: 100%; }
+body { text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+*, *::before, *::after { box-sizing: border-box; }
+img, video, canvas, svg { max-width: 100%; }
+img, video { height: auto; }
+button, input, textarea, select { font: inherit; }
+button, [role="button"], a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
+:where(button, [role="button"], a, input, textarea, select, summary, [tabindex]):focus-visible {
+  outline: 3px solid rgba(99, 91, 255, .48);
+  outline-offset: 3px;
+}
+:where(button, [role="button"]) { transition: transform var(--sd-fast) var(--sd-ease), box-shadow var(--sd-fast) var(--sd-ease), border-color var(--sd-fast) var(--sd-ease), background-color var(--sd-fast) var(--sd-ease), color var(--sd-fast) var(--sd-ease); }
+@media (hover: hover) and (pointer: fine) {
+  :where(button:not(:disabled), [role="button"]:not([aria-disabled="true"])):hover { transform: translateY(-1px); }
+  :where(a, button, [role="button"]) { cursor: pointer; }
+}
+:where(button, input, textarea, select):disabled { cursor: not-allowed; opacity: .62; }
+:where(input, textarea, select) { max-width: 100%; }
+:where(textarea) { resize: vertical; }
+:where(table) { max-width: 100%; border-collapse: collapse; }
+:where(pre, code) { overflow-wrap: anywhere; }
+:where(p, h1, h2, h3, h4, h5, h6) { overflow-wrap: break-word; }
+/* Common component affordances; existing feature-specific rules retain precedence. */
+:where(.card, .premium-card, .document-card, .stat-card, .analytics-card, .workspace-card, .project-card, .settings-card) {
+  transition: box-shadow var(--sd-normal) var(--sd-ease), border-color var(--sd-normal) var(--sd-ease), transform var(--sd-normal) var(--sd-ease);
+}
+@media (hover: hover) and (pointer: fine) {
+  :where(.premium-card, .document-card, .stat-card, .analytics-card, .workspace-card, .project-card):hover { box-shadow: var(--sd-shadow-md); }
+}
+:where(.btn-primary, .button-primary, .primary-button, .premium-button) { box-shadow: var(--sd-shadow-brand); }
+:where(.badge, .status-badge, .chip, .tag) { max-width: 100%; overflow-wrap: anywhere; }
+:where(.empty-state, .error-state, .loading-state) { min-width: 0; }
+:where(.skeleton, .loading-skeleton) { background-size: 200% 100%; animation: sd-shimmer 1.5s linear infinite; }
+@keyframes sd-shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+@keyframes sd-fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes sd-soft-pop { from { opacity: 0; transform: scale(.985); } to { opacity: 1; transform: scale(1); } }
+:where(.premium-page, .page-enter, .animate-in) { animation: sd-fade-up 360ms var(--sd-ease) both; }
+@media (max-width: 1024px) {
+  :where(.page-container, .page-content, .dashboard-container, .analytics-container) { max-width: 100%; }
+  :where(.page-header, .section-header, .toolbar, .page-toolbar) { flex-wrap: wrap; }
+}
+@media (max-width: 768px) {
+  :where(.page-container, .page-content, .dashboard-container, .analytics-container, .documents-page, .settings-page) { padding-left: max(14px, env(safe-area-inset-left)); padding-right: max(14px, env(safe-area-inset-right)); }
+  :where(.page-header, .section-header) { align-items: flex-start; gap: 12px; }
+  :where(.page-header h1, .page-title, h1.page-title) { font-size: clamp(1.55rem, 6vw, 2rem); line-height: 1.18; }
+  :where(.toolbar, .filters-row, .search-toolbar) { width: 100%; }
+  :where(.toolbar input, .filters-row input, .search-toolbar input) { min-width: 0; }
+  :where(.modal, .dialog, .popover-panel) { max-width: calc(100vw - 24px); }
+  :where(table) { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+}
+@media (max-width: 480px) {
+  :where(.page-container, .page-content, .dashboard-container, .analytics-container, .documents-page, .settings-page) { padding-left: 12px; padding-right: 12px; }
+  :where(.page-actions, .header-actions, .toolbar-actions) { width: 100%; }
+  :where(.page-actions > button, .header-actions > button, .toolbar-actions > button) { max-width: 100%; }
+  :where(.modal, .dialog) { width: calc(100vw - 20px); max-height: calc(100dvh - 24px); overflow: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}

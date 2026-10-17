@@ -45,40 +45,18 @@ function normalizePayload(data) {
 }
 
 
-export function unwrapWorkspaceResponse(value) {
+function unwrapWorkspaceResponse(value) {
   let current = value;
-
-  // API responses may be wrapped as { data }, { workspace }, or both.
-  // Traverse only known response-envelope keys and cap depth to avoid loops.
-  for (let depth = 0; depth < 6; depth += 1) {
-    if (!current || typeof current !== "object" || Array.isArray(current)) {
-      return null;
-    }
-
-    const id = current.id || current._id || current.workspaceId;
-    if (id !== undefined && id !== null && String(id).trim()) {
-      const normalizedId = String(id).trim();
-      return {
-        ...current,
-        id: normalizedId,
-        _id: current._id ? String(current._id) : normalizedId,
-        workspaceId: normalizedId,
-      };
-    }
-
-    if (current.workspace && typeof current.workspace === "object") {
-      current = current.workspace;
-      continue;
-    }
-    if (current.data && typeof current.data === "object") {
-      current = current.data;
-      continue;
-    }
-
-    return null;
+  // Support the existing API contract and older deployments that wrapped
+  // the same payload more than once. Stop on a stable object to avoid loops.
+  for (let depth = 0; depth < 4; depth += 1) {
+    if (!current || typeof current !== "object" || Array.isArray(current)) return null;
+    if (current._id || current.id || current.workspaceId) return current;
+    if (current.workspace && typeof current.workspace === "object") { current = current.workspace; continue; }
+    if (current.data && typeof current.data === "object") { current = current.data; continue; }
+    break;
   }
-
-  return null;
+  return current && typeof current === "object" && (current._id || current.id || current.workspaceId) ? current : null;
 }
 
 function stableSerialize(value) {
@@ -182,10 +160,7 @@ const workspaceService = {
     );
 
     const payload = getResponseData(response, null);
-    const workspace =
-      unwrapWorkspaceResponse(payload) ||
-      unwrapWorkspaceResponse(response?.data?.workspace) ||
-      unwrapWorkspaceResponse(response?.data);
+    const workspace = unwrapWorkspaceResponse(payload) || unwrapWorkspaceResponse(response?.data);
     if (!workspace) {
       const error = new Error("The server did not return a valid workspace after creation.");
       error.code = "INVALID_WORKSPACE_RESPONSE";

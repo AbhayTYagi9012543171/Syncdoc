@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { FileText, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import Avatar from '../common/Avatar';
@@ -86,15 +87,7 @@ const formatUpdatedAt = (value) => {
   });
 };
 
-const getDocumentInitial = (title) => {
-  const normalizedTitle = String(title || '').trim();
 
-  if (!normalizedTitle) {
-    return 'D';
-  }
-
-  return normalizedTitle.charAt(0).toUpperCase();
-};
 
 function DocumentSkeleton() {
   return (
@@ -174,7 +167,7 @@ function EmptyDocuments() {
         className="empty-state-icon"
         aria-hidden="true"
       >
-        📄
+        <FileText size={24} />
       </div>
 
       <strong>No recent documents</strong>
@@ -201,7 +194,7 @@ function DocumentsError({ onRetry }) {
         className="empty-state-icon"
         aria-hidden="true"
       >
-        ⚠
+        <RefreshCw size={22} />
       </div>
 
       <strong>
@@ -396,9 +389,7 @@ function RecentDocuments({
                             className="file-icon"
                             aria-hidden="true"
                           >
-                            {getDocumentInitial(
-                              title
-                            )}
+                            <FileText size={17} />
                           </span>
 
                           <span className="doc-name-text">
@@ -422,10 +413,7 @@ function RecentDocuments({
 
                       <td>
                         <time
-                          dateTime={
-                            document?.updatedAt ||
-                            undefined
-                          }
+                          dateTime={document?.updatedAt && !Number.isNaN(new Date(document.updatedAt).getTime()) ? new Date(document.updatedAt).toISOString() : undefined}
                         >
                           {formatUpdatedAt(
                             document?.updatedAt

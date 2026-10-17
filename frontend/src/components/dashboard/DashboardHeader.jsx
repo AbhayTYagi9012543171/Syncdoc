@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { Sparkles } from 'lucide-react';
 
 import Button from '../common/Button';
 import './DashboardPremium.css';
@@ -15,6 +16,7 @@ export default function DashboardHeader({
   disabled = false,
   secondaryAction = null,
   className = '',
+  status = 'Workspace overview',
 }) {
   const classes = [
     'dashboard-header',
@@ -37,6 +39,7 @@ export default function DashboardHeader({
     <header className={classes}>
       <div className="dashboard-header-content">
         <span className="eyebrow">
+          <Sparkles size={13} aria-hidden="true" />
           {eyebrow}
         </span>
 
@@ -47,6 +50,7 @@ export default function DashboardHeader({
         <p>
           {subtitle}
         </p>
+        <div className="dashboard-header-status"><span className="dashboard-header-status-dot" />{status}</div>
       </div>
 
       <div className="dashboard-header-actions">

@@ -21,6 +21,7 @@ import "./styles/settings.css";
 import "./styles/premium.css";
 import "./styles/editor.css";
 import "./styles/responsive.css";
+import "./styles/premium-system.css";
 
 /**
  * SyncDoc — Main Entry Point

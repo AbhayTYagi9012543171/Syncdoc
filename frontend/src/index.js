@@ -36,6 +36,7 @@ import "./styles/v5-product.css";
 import "./styles/editor.css";
 import "./styles/responsive.css";
 import "./styles/enterprise-polish.css";
+import "./styles/premium-system.css";
 
 /* ============================================================
    ROOT ELEMENT

@@ -3,6 +3,7 @@ import Card from '../common/Card';
 import './DashboardPremium.css';
 
 const Y_AXIS_VALUES = [100, 75, 50, 25, 0];
+const PERIODS = [{ value: '7', label: 'Last 7 days' }, { value: '30', label: 'Last 30 days' }, { value: '90', label: 'Last 90 days' }, { value: '180', label: 'Last 6 months' }, { value: '365', label: 'Last year' }];
 
 function normalizeValue(value) {
   const number = Number(value);
@@ -19,7 +20,7 @@ export default function ProductivityChart({
   const [period, setPeriod] = useState('7');
 
   const currentData = useMemo(() => {
-    const list = data?.[period];
+    const list = Array.isArray(data) ? data : data?.[period] ?? data?.[Number(period)] ?? data?.['7'];
     if (!Array.isArray(list)) return [];
 
     return list.map((item, index) => ({
@@ -54,7 +55,7 @@ export default function ProductivityChart({
             disabled={loading}
             aria-label="Select activity period"
           >
-            <option value="7">Last 7 days</option>
+            {PERIODS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
           </select>
         </label>
       }
@@ -104,7 +105,7 @@ export default function ProductivityChart({
                     <div
                       className="chart-bar"
                       style={{
-                        height: `${Math.min((item.value / chartMax) * 82, 82)}%`,
+                        height: `${Math.max(item.value > 0 ? 3 : 0, Math.min((item.value / chartMax) * 82, 82))}%`,
                       }}
                       title={`${item.label}: ${item.value} edits`}
                     />

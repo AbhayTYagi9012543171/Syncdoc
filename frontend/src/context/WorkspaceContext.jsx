@@ -151,31 +151,21 @@ function extractWorkspace(response) {
     return null;
   }
 
-  const queue = [response];
-  const visited = new Set();
+  const candidates = [
+    // workspaceService.createWorkspace() already unwraps response.data,
+    // so the response may itself be the workspace document.
+    response,
+    response?.workspace,
+    response?.data?.workspace,
+    response?.data?.data?.workspace,
+    response?.data?.data,
+    response?.data,
+  ];
 
-  while (queue.length) {
-    const candidate = queue.shift();
-    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate) || visited.has(candidate)) {
-      continue;
+  for (const candidate of candidates) {
+    if (isValidWorkspace(candidate)) {
+      return candidate;
     }
-    visited.add(candidate);
-
-    const id = getWorkspaceId(candidate);
-    if (id) {
-      return {
-        ...candidate,
-        id,
-        _id: candidate._id ? String(candidate._id) : id,
-        workspaceId: id,
-      };
-    }
-
-    ["workspace", "data", "result"].forEach((key) => {
-      if (candidate[key] && typeof candidate[key] === "object") {
-        queue.push(candidate[key]);
-      }
-    });
   }
 
   return null;

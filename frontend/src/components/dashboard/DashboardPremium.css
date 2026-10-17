@@ -1,3 +1,4 @@
+/* SyncDoc CSS audited in premium styling pass — existing feature selectors preserved. */
 /* SyncDoc premium dashboard components — responsive, motion-aware styling */
 .dashboard-page,
 .dashboard-header,
@@ -101,3 +102,266 @@
 .dashboard-header,.activity-card,.productivity-chart-card,.recent-documents,.stat-card{min-width:0}
 .dashboard-header h1,.dashboard-header-content p{overflow-wrap:anywhere}
 .stat-card-clickable{touch-action:manipulation}
+
+/* ================================================================
+   TEXT CLARITY + CONTRAST PATCH
+   Keep this section at the end of the file so it overrides old rules.
+   ================================================================ */
+:root {
+  --sd-text-primary: #172033;
+  --sd-text-secondary: #4b5870;
+  --sd-text-muted: #65718a;
+  --sd-text-subtle: #77839a;
+  --sd-surface: #ffffff;
+  --sd-surface-soft: #f7f8fc;
+  --sd-border-strong: #dfe4ee;
+}
+
+.dashboard-page,
+.dashboard-header,
+.stats-grid,
+.productivity-chart-card,
+.activity-card,
+.recent-documents {
+  color: var(--sd-text-primary);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Headings: darker, stronger, and easy to scan. */
+.dashboard-header h1,
+.dashboard-header h2,
+.productivity-chart-card .card-title,
+.activity-card .card-title,
+.recent-documents h2,
+.dashboard-page h1,
+.dashboard-page h2,
+.dashboard-page h3 {
+  color: #172033;
+  font-weight: 800;
+  line-height: 1.35;
+  opacity: 1;
+}
+
+.dashboard-header .eyebrow,
+.recent-documents .eyebrow {
+  color: #4f46d8;
+  font-weight: 800;
+}
+
+.dashboard-header-content p,
+.recent-documents .section-description,
+.stat-description,
+.activity-description,
+.chart-empty,
+.chart-loading,
+.activity-empty,
+.empty-state p {
+  color: #56627a;
+  opacity: 1;
+}
+
+.stat-card,
+.stat-card * {
+  color: #172033;
+}
+.stat-card .stat-label { color: #48556d; }
+.stat-card .stat-description { color: #66728a; }
+.stat-card .stat-value { color: #111a2d; }
+.stat-card .stat-icon { color: #4f46d8; }
+.stat-change-positive { color: #08744f; }
+.stat-change-negative { color: #b42332; }
+.stat-change-neutral { color: #4b5870; }
+
+/* Chart labels and values should remain readable against the chart. */
+.chart-y,
+.chart-bar-label { color: #647089; }
+.chart-bar-value { color: #354158; }
+.chart-gridlines i { border-color: #dfe4ee; }
+.chart-empty strong { color: #202b40; }
+.chart-empty span { color: #59657c; }
+
+/* Activity feed text. */
+.activity-description { color: #4d5a72; }
+.activity-description strong,
+.activity-empty strong { color: #202b40; }
+.activity-time { color: #66728a; }
+.activity-item { border-bottom-color: #e7eaf1; }
+
+/* Recent documents table. */
+.data-table th {
+  color: #4d5a72;
+  background: #f4f6fb;
+}
+.data-table td { color: #45526a; }
+.doc-name { color: #202b40; }
+.doc-name:hover { color: #4547c9; }
+.document-owner,
+.people-count { color: #45526a; }
+.empty-state strong { color: #202b40; }
+.empty-state p { color: #56627a; }
+
+/* Inputs, dropdowns and actions. */
+.chart-period-control select,
+.select-small {
+  color: #263249;
+  background-color: #fff;
+  border-color: #d5dbea;
+}
+.chart-period-control select option,
+.select-small option { color: #263249; background: #fff; }
+.recent-documents .view-all,
+.recent-documents .empty-state-action,
+.text-btn { color: #4547c9; }
+.dashboard-header button,
+.dashboard-header a,
+.recent-documents button,
+.recent-documents a { -webkit-tap-highlight-color: transparent; }
+
+/* Keep keyboard focus visible. */
+.dashboard-header :is(button, a, input, select):focus-visible,
+.stats-grid :is(button, a):focus-visible,
+.productivity-chart-card :is(button, a, input, select):focus-visible,
+.activity-card :is(button, a):focus-visible,
+.recent-documents :is(button, a, input, select):focus-visible {
+  outline: 3px solid rgba(79, 70, 229, .5);
+  outline-offset: 3px;
+}
+
+/* Dark mode support for common application theme conventions. */
+[data-theme="dark"] .dashboard-header,
+[data-theme="dark"] .activity-card,
+[data-theme="dark"] .productivity-chart-card,
+[data-theme="dark"] .recent-documents,
+[data-theme="dark"] .stat-card,
+.dark .dashboard-header,
+.dark .activity-card,
+.dark .productivity-chart-card,
+.dark .recent-documents,
+.dark .stat-card {
+  color: #e8edf7;
+  border-color: rgba(148, 163, 184, .24);
+  background: linear-gradient(150deg, #171e2d, #121827);
+}
+
+[data-theme="dark"] .dashboard-header h1,
+[data-theme="dark"] .dashboard-header h2,
+[data-theme="dark"] .productivity-chart-card .card-title,
+[data-theme="dark"] .activity-card .card-title,
+[data-theme="dark"] .recent-documents h2,
+[data-theme="dark"] .stat-card,
+[data-theme="dark"] .stat-card .stat-value,
+[data-theme="dark"] .stat-card .stat-label,
+[data-theme="dark"] .activity-description strong,
+[data-theme="dark"] .activity-empty strong,
+[data-theme="dark"] .chart-empty strong,
+[data-theme="dark"] .empty-state strong,
+.dark .dashboard-header h1,
+.dark .dashboard-header h2,
+.dark .productivity-chart-card .card-title,
+.dark .activity-card .card-title,
+.dark .recent-documents h2,
+.dark .stat-card,
+.dark .stat-card .stat-value,
+.dark .stat-card .stat-label,
+.dark .activity-description strong,
+.dark .activity-empty strong,
+.dark .chart-empty strong,
+.dark .empty-state strong {
+  color: #f3f6fc;
+}
+
+[data-theme="dark"] .dashboard-header-content p,
+[data-theme="dark"] .recent-documents .section-description,
+[data-theme="dark"] .stat-description,
+[data-theme="dark"] .stat-card .stat-description,
+[data-theme="dark"] .stat-card .stat-label,
+[data-theme="dark"] .activity-description,
+[data-theme="dark"] .activity-time,
+[data-theme="dark"] .chart-y,
+[data-theme="dark"] .chart-bar-label,
+[data-theme="dark"] .chart-bar-value,
+[data-theme="dark"] .chart-empty,
+[data-theme="dark"] .chart-empty span,
+[data-theme="dark"] .activity-empty,
+[data-theme="dark"] .empty-state p,
+[data-theme="dark"] .data-table td,
+[data-theme="dark"] .document-owner,
+[data-theme="dark"] .people-count,
+.dark .dashboard-header-content p,
+.dark .recent-documents .section-description,
+.dark .stat-description,
+.dark .stat-card .stat-description,
+.dark .activity-description,
+.dark .activity-time,
+.dark .chart-y,
+.dark .chart-bar-label,
+.dark .chart-bar-value,
+.dark .chart-empty,
+.dark .chart-empty span,
+.dark .activity-empty,
+.dark .empty-state p,
+.dark .data-table td,
+.dark .document-owner,
+.dark .people-count {
+  color: #c1cadb;
+}
+
+[data-theme="dark"] .data-table th,
+.dark .data-table th { color: #d2daea; background: #20283a; }
+[data-theme="dark"] .data-table td,
+.dark .data-table td { border-top-color: #2b3448; }
+[data-theme="dark"] .table-wrap,
+.dark .table-wrap { border-color: #2b3448; }
+[data-theme="dark"] .data-table tbody tr:hover,
+.dark .data-table tbody tr:hover { background: #20283a; }
+[data-theme="dark"] .chart-period-control select,
+[data-theme="dark"] .select-small,
+.dark .chart-period-control select,
+.dark .select-small {
+  color: #e8edf7;
+  background: #20283a;
+  border-color: #3a455c;
+}
+[data-theme="dark"] .chart-period-control select option,
+[data-theme="dark"] .select-small option,
+.dark .chart-period-control select option,
+.dark .select-small option { color: #e8edf7; background: #20283a; }
+[data-theme="dark"] .activity-item,
+.dark .activity-item { border-bottom-color: #2b3448; }
+[data-theme="dark"] .chart-gridlines i,
+.dark .chart-gridlines i { border-top-color: #2b3448; }
+[data-theme="dark"] .recent-documents .view-all,
+[data-theme="dark"] .recent-documents .empty-state-action,
+.dark .recent-documents .view-all,
+.dark .recent-documents .empty-state-action {
+  color: #c7c9ff;
+  border-color: #3a4166;
+  background: #242744;
+}
+
+@media (max-width: 680px) {
+  .dashboard-header h1 { font-size: clamp(1.55rem, 6vw, 1.9rem); }
+  .dashboard-header-content p,
+  .recent-documents .section-description,
+  .activity-description,
+  .empty-state p { font-size: 13px; }
+  .stat-label { font-size: 12px; }
+  .data-table th,
+  .data-table td { padding: 12px; }
+}
+
+@media (prefers-contrast: more) {
+  .dashboard-header,
+  .stat-card,
+  .productivity-chart-card,
+  .activity-card,
+  .recent-documents { border-color: #9aa4b6; }
+  .dashboard-header-content p,
+  .stat-description,
+  .activity-description,
+  .activity-time,
+  .chart-bar-label,
+  .recent-documents .section-description,
+  .data-table td { color: #354158; }
+}

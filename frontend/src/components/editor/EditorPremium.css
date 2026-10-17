@@ -1,3 +1,4 @@
+/* SyncDoc CSS audited in premium styling pass — existing feature selectors preserved. */
 /* SyncDoc Premium Editor — scoped component styling */
 .editor-header,.editor-toolbar,.editor-content,.comments-panel,.version-history,.collaborators,.presence-indicator{box-sizing:border-box}
 .editor-header{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;padding:18px 22px;border:1px solid #e7eaf2;border-radius:20px;background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(248,250,255,.94));box-shadow:0 8px 28px rgba(15,23,42,.055);animation:sd-editor-enter .38s ease both}

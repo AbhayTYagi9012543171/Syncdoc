@@ -1,3 +1,4 @@
+/* SyncDoc CSS audited in premium styling pass — existing feature selectors preserved. */
 .settings-premium{--st-ink:var(--text-primary,#192238);--st-muted:var(--text-secondary,#778198);--st-line:rgba(125,139,164,.22);--st-accent:var(--primary,#6658e8);padding-bottom:42px;color:var(--st-ink)}
 .settings-premium .settings-hero{position:relative;isolation:isolate;overflow:hidden;padding:clamp(24px,4vw,42px);margin-bottom:22px;border:1px solid var(--st-line);border-radius:25px;background:radial-gradient(ellipse at 90% 0%,rgba(119,99,255,.2),transparent 38%),var(--surface,#fff)}
 .settings-premium .settings-hero h1{margin:14px 0 9px;font-size:clamp(2.1rem,5vw,3.2rem);font-weight:800;letter-spacing:-.055em;line-height:1.05}

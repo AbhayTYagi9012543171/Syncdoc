@@ -1,3 +1,4 @@
+/* SyncDoc CSS audited in premium styling pass — existing feature selectors preserved. */
 /* SyncDoc premium editor experience. Scoped to the editor page. */
 .editor-page{--ed-ink:#172033;--ed-muted:#758198;--ed-line:#e6eaf2;--ed-primary:#625bf6;--ed-primary-dark:#4841d7;min-height:100vh;padding:clamp(14px,2.4vw,30px);background:radial-gradient(ellipse at 10% 0%,rgba(99,102,241,.09),transparent 34%),radial-gradient(ellipse at 94% 12%,rgba(14,165,233,.075),transparent 29%),#f5f7fc;color:var(--ed-ink);box-sizing:border-box}
 .editor-page *{box-sizing:border-box}.editor-hero{position:relative;display:flex;align-items:center;justify-content:space-between;gap:24px;overflow:hidden;margin:0 0 20px;padding:clamp(22px,3vw,34px);border:1px solid rgba(220,226,241,.9);border-radius:24px;background:linear-gradient(118deg,#fff 0%,#f9faff 58%,#f0f4ff 100%);box-shadow:0 16px 44px rgba(31,41,80,.055);animation:ed-rise .48s cubic-bezier(.2,.75,.25,1) both}

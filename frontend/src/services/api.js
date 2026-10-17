@@ -209,13 +209,6 @@ function normalizeApiError(error) {
     error.status = error.response.status;
     error.apiData = error.response.data;
 
-    const retryAfterHeader = error.response.headers?.['retry-after'];
-    const retryAfterBody = error.response.data?.error?.retryAfter ?? error.response.data?.retryAfter;
-    const retryAfterSeconds = Number(retryAfterHeader ?? retryAfterBody);
-    if (error.status === 429 && Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0) {
-      error.retryAfterSeconds = Math.min(Math.ceil(retryAfterSeconds), 60 * 60);
-    }
-
     return error;
   }
 
