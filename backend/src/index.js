@@ -1,14 +1,9 @@
-
 // ============================================================
 // SYNCDOC BACKEND - MAIN SERVER
 // Express + Socket.IO + Yjs + Static Uploads
 // ============================================================
 
 'use strict';
-
-// ============================================================
-// CORE MODULES
-// ============================================================
 
 const express = require('express');
 const http = require('http');
@@ -24,18 +19,9 @@ const path = require('path');
 const fs = require('fs');
 
 const { Server } = require('socket.io');
-
 const { setupWSConnection } = require('y-websocket/bin/utils');
 
-// ============================================================
-// LOAD ENVIRONMENT
-// ============================================================
-
 dotenv.config();
-
-// ============================================================
-// APPLICATION MODULES
-// ============================================================
 
 const routes = require('./routes');
 
@@ -45,7 +31,6 @@ const {
 } = require('./middleware/errorHandler');
 
 const loggerModule = require('./config/logger');
-
 const logger = loggerModule?.logger || console;
 
 const {
@@ -55,21 +40,11 @@ const {
 } = require('./config/redis');
 
 const { connectDB } = require('./config/database');
-
 const { setupSocketHandlers } = require('./socket');
-
 const requestContext = require('./middleware/requestContext');
-
-// ============================================================
-// EXPRESS APPLICATION
-// ============================================================
 
 const app = express();
 const server = http.createServer(app);
-
-// ============================================================
-// ENVIRONMENT
-// ============================================================
 
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const PORT = Number(process.env.PORT) || 5000;
@@ -78,6 +53,8 @@ app.disable('x-powered-by');
 
 // ============================================================
 // TRUST PROXY
+// Set TRUST_PROXY=1 for a single trusted reverse proxy such as
+// Render. Configure this according to your actual proxy setup.
 // ============================================================
 
 const trustProxySetting = String(
@@ -117,17 +94,14 @@ const configuredCorsOrigins = String(
     .filter(Boolean);
 
 const isAllowedOrigin = (origin) => {
-    if (!origin) {
-        return true;
-    }
+    if (!origin) return true;
 
     const normalizedOrigin = origin.trim().replace(/\/$/, '');
 
-    if (configuredCorsOrigins.includes(normalizedOrigin)) {
-        return true;
-    }
-
-    return allowedOrigins.includes(normalizedOrigin);
+    return (
+        configuredCorsOrigins.includes(normalizedOrigin) ||
+        allowedOrigins.includes(normalizedOrigin)
+    );
 };
 
 const corsOptions = {
@@ -178,25 +152,23 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
 // ============================================================
-// SECURITY HEADERS
+// SECURITY, COMPRESSION AND BODY PARSING
 // ============================================================
 
 app.use(
     helmet({
         contentSecurityPolicy: false,
         crossOriginEmbedderPolicy: false,
+
+        // Allows frontend pages on a different origin to display
+        // public profile-avatar images served by this API.
+        crossOriginResourcePolicy: {
+            policy: 'cross-origin',
+        },
     })
 );
 
-// ============================================================
-// RESPONSE COMPRESSION
-// ============================================================
-
 app.use(compression());
-
-// ============================================================
-// BODY PARSERS
-// ============================================================
 
 app.use(express.json({ limit: '10mb' }));
 
@@ -214,10 +186,6 @@ app.use(
 const yjsWss = new WebSocket.Server({
     noServer: true,
 });
-
-// ============================================================
-// YJS JWT VERIFICATION
-// ============================================================
 
 const verifyYjsToken = (token) => {
     if (!token) {
@@ -237,10 +205,6 @@ const verifyYjsToken = (token) => {
     return jwt.verify(token, jwtSecret);
 };
 
-// ============================================================
-// YJS DOCUMENT ID EXTRACTION
-// ============================================================
-
 const extractYjsDocumentId = (pathname) => {
     if (!pathname || !pathname.startsWith('/yjs/')) {
         return null;
@@ -252,7 +216,7 @@ const extractYjsDocumentId = (pathname) => {
 };
 
 // ============================================================
-// YJS WEBSOCKET UPGRADE
+// YJS WEBSOCKET AUTHENTICATION AND DOCUMENT PERMISSIONS
 // ============================================================
 
 server.on('upgrade', async (request, socket, head) => {
@@ -266,7 +230,7 @@ server.on('upgrade', async (request, socket, head) => {
 
         const pathname = requestUrl.pathname;
 
-        // Socket.IO handles its own WebSocket endpoint.
+        // Socket.IO manages its own WebSocket endpoint.
         if (!pathname.startsWith('/yjs/')) {
             return;
         }
@@ -368,11 +332,9 @@ server.on('upgrade', async (request, socket, head) => {
             )
             : null;
 
-        const isCollaborator = Boolean(collaborator);
-
         if (
             !ownsDocument &&
-            !isCollaborator &&
+            !collaborator &&
             activeUser.role !== 'admin'
         ) {
             socket.write(
@@ -431,10 +393,6 @@ server.on('upgrade', async (request, socket, head) => {
         }
     }
 });
-
-// ============================================================
-// YJS CONNECTION HANDLER
-// ============================================================
 
 yjsWss.on('connection', (ws, request) => {
     try {
@@ -537,21 +495,47 @@ app.get('/api/system/status', (req, res) => {
 });
 
 // ============================================================
+// GLOBAL RATE LIMIT CONFIGURATION
+// ============================================================
+
+const parseGlobalRateLimit = (value, fallback, variableName) => {
+    const raw = value == null ? '' : String(value).trim();
+
+    if (!raw) return fallback;
+
+    const parsed = Number(raw);
+
+    if (!Number.isSafeInteger(parsed) || parsed < 100) {
+        logger.warn(
+            `[Rate Limit] Invalid ${variableName}="${raw}". ` +
+            `Using fallback ${fallback}.`
+        );
+
+        return fallback;
+    }
+
+    return parsed;
+};
+
+// ============================================================
 // START APPLICATION
 // ============================================================
 
 const start = async () => {
+    let io;
+    let collaborationService;
+    let isShuttingDown = false;
+
     try {
         // --------------------------------------------------------
         // DATABASE
         // --------------------------------------------------------
 
         await connectDB();
-
         logger.info('MongoDB connected successfully');
 
         // --------------------------------------------------------
-        // REDIS
+        // REDIS IS OPTIONAL
         // --------------------------------------------------------
 
         try {
@@ -577,52 +561,24 @@ const start = async () => {
         app.use(requestContext);
 
         // --------------------------------------------------------
-        // GLOBAL RATE LIMITING
+        // GLOBAL RATE LIMITER
         // --------------------------------------------------------
 
-        const parseGlobalRateLimit = (
-            value,
-            fallback,
-            variableName
-        ) => {
-            const raw = value == null ? '' : String(value).trim();
-
-            if (!raw) {
-                return fallback;
-            }
-
-            const parsed = Number(raw);
-
-            if (
-                !Number.isSafeInteger(parsed) ||
-                parsed < 100
-            ) {
-                logger.warn(
-                    `[Rate Limit] Invalid ${variableName}="${raw}". ` +
-                    `Using fallback ${fallback}.`
-                );
-
-                return fallback;
-            }
-
-            return parsed;
-        };
-
-        const configuredDevelopmentLimit = parseGlobalRateLimit(
+        const developmentLimit = parseGlobalRateLimit(
             process.env.DEV_GLOBAL_RATE_LIMIT,
             50000,
             'DEV_GLOBAL_RATE_LIMIT'
         );
 
-        const configuredProductionLimit = parseGlobalRateLimit(
+        const productionLimit = parseGlobalRateLimit(
             process.env.GLOBAL_RATE_LIMIT,
             1200,
             'GLOBAL_RATE_LIMIT'
         );
 
         const globalRateLimit = NODE_ENV === 'development'
-            ? configuredDevelopmentLimit
-            : configuredProductionLimit;
+            ? developmentLimit
+            : productionLimit;
 
         const excludedHealthPaths = new Set([
             '/health',
@@ -638,15 +594,9 @@ const start = async () => {
             legacyHeaders: false,
 
             skip(req) {
-                if (req.method === 'OPTIONS') {
-                    return true;
-                }
+                if (req.method === 'OPTIONS') return true;
 
-                if (excludedHealthPaths.has(req.path)) {
-                    return true;
-                }
-
-                return false;
+                return excludedHealthPaths.has(req.path);
             },
 
             handler(req, res) {
@@ -688,27 +638,34 @@ const start = async () => {
         });
 
         // --------------------------------------------------------
-        // STATIC UPLOADS — AVATARS AND OTHER UPLOADS
+        // STATIC UPLOADS
+        //
+        // Default:
+        // backend/uploads/
+        //
+        // Avatar URL:
+        // /api/uploads/profile-avatars/<filename>
+        //
+        // UPLOADS_DIRECTORY can override the storage root.
+        // It must match the directory used by the upload middleware.
         // --------------------------------------------------------
 
-        // Expected layout:
-        // backend/
-        //   uploads/
-        //     profile-avatars/
-        //
-        // The directory must match your Multer/upload destination.
-        const uploadsDirectory = path.resolve(__dirname, '../uploads');
+        const uploadsDirectory = path.resolve(
+            process.env.UPLOADS_DIRECTORY ||
+            path.join(__dirname, '../uploads')
+        );
 
-        if (fs.existsSync(uploadsDirectory)) {
-            logger.info(
-                `[Uploads] Serving static files from ${uploadsDirectory}`
-            );
-        } else {
-            logger.warn(
-                `[Uploads] Directory not found: ${uploadsDirectory}. ` +
-                'Check the configured upload destination.'
-            );
-        }
+        const avatarDirectory = path.join(
+            uploadsDirectory,
+            'profile-avatars'
+        );
+
+        // Ensure the expected directories exist on startup.
+        // This does not restore files that are missing from disk.
+        fs.mkdirSync(avatarDirectory, { recursive: true });
+
+        logger.info(`[Uploads] Storage root: ${uploadsDirectory}`);
+        logger.info(`[Uploads] Avatar directory: ${avatarDirectory}`);
 
         app.use(
             '/api/uploads',
@@ -717,11 +674,29 @@ const start = async () => {
                 dotfiles: 'deny',
                 fallthrough: true,
                 maxAge: '1d',
+                immutable: false,
 
                 setHeaders(res) {
                     res.setHeader(
                         'X-Content-Type-Options',
                         'nosniff'
+                    );
+
+                    // Public images may be displayed by the frontend
+                    // even when it is hosted on a different origin.
+                    res.setHeader(
+                        'Cross-Origin-Resource-Policy',
+                        'cross-origin'
+                    );
+
+                    res.setHeader(
+                        'Access-Control-Allow-Origin',
+                        '*'
+                    );
+
+                    res.setHeader(
+                        'Cache-Control',
+                        'public, max-age=86400'
                     );
                 },
             })
@@ -753,7 +728,7 @@ const start = async () => {
         });
 
         // --------------------------------------------------------
-        // 404 AND ERROR HANDLERS
+        // 404 AND ERROR HANDLERS — MUST BE LAST
         // --------------------------------------------------------
 
         app.use(notFoundHandler);
@@ -763,7 +738,7 @@ const start = async () => {
         // SOCKET.IO
         // --------------------------------------------------------
 
-        const io = new Server(server, {
+        io = new Server(server, {
             cors: {
                 origin(origin, callback) {
                     if (isAllowedOrigin(origin)) {
@@ -792,31 +767,41 @@ const start = async () => {
             },
         });
 
-        // --------------------------------------------------------
-        // SOCKET HANDLERS
-        // --------------------------------------------------------
-
-        const collaborationService = setupSocketHandlers(io);
+        collaborationService = setupSocketHandlers(io);
 
         app.set('io', io);
         app.set('yjsWss', yjsWss);
         app.set('collaborationService', collaborationService);
 
         // --------------------------------------------------------
-        // START HTTP SERVER
+        // SERVER START
         // --------------------------------------------------------
 
         server.listen(PORT, () => {
             logger.info('============================================================');
             logger.info('SyncDoc Backend Started');
-            logger.info(`Port: ${PORT}`);
+            logger.info(`Server: http://localhost:${PORT}`);
+            logger.info(`Health: http://localhost:${PORT}/api/health`);
+            logger.info(`System Status: http://localhost:${PORT}/api/system/status`);
             logger.info(`Environment: ${NODE_ENV}`);
             logger.info(`Global rate limit: ${globalRateLimit} / 15 minutes`);
-            logger.info(`MongoDB: ${mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'}`);
-            logger.info(`Redis: ${isRedisConnected() ? 'connected' : 'optional/unavailable'}`);
+            logger.info(
+                `MongoDB: ${
+                    mongoose.connection.readyState === 1
+                        ? 'connected'
+                        : 'disconnected'
+                }`
+            );
+            logger.info(
+                `Redis: ${
+                    isRedisConnected()
+                        ? 'connected'
+                        : 'optional/unavailable'
+                }`
+            );
+            logger.info(`Uploads: ${uploadsDirectory}`);
             logger.info('Socket.IO: enabled');
             logger.info('Yjs WebSocket: enabled');
-            logger.info(`Uploads: ${uploadsDirectory}`);
             logger.info('============================================================');
         });
 
@@ -824,20 +809,19 @@ const start = async () => {
         // GRACEFUL SHUTDOWN
         // --------------------------------------------------------
 
-        let isShuttingDown = false;
-
         const shutdown = async (signal) => {
-            if (isShuttingDown) {
-                return;
-            }
+            if (isShuttingDown) return;
 
             isShuttingDown = true;
-
             logger.info(`${signal} received. Shutting down gracefully...`);
 
             server.close(async () => {
                 try {
-                    io.close();
+                    if (io) {
+                        await new Promise((resolve) => {
+                            io.close(() => resolve());
+                        });
+                    }
 
                     for (const client of yjsWss.clients) {
                         try {
